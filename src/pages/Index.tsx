@@ -16,7 +16,7 @@ const Index = () => {
         <div className="flex flex-col gap-8 animate-slide-up">
           <section className="text-center max-w-3xl mx-auto mb-4">
             <h1 className="text-4xl md:text-5xl font-bold mb-4 bg-clip-text text-transparent bg-memecoin-gradient animate-gradient-shift">
-              Memecoin Profit Finder
+              SAVAG3 D3 Tradez
             </h1>
             <p className="text-lg text-muted-foreground">
               Discover trending Solana memecoins, analyze on-chain data, and maximize potential returns

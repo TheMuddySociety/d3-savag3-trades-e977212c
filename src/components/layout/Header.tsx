@@ -25,11 +25,11 @@ export function Header() {
         <div className="flex items-center space-x-2">
           <img 
             src="/lovable-uploads/bb8128a0-c9a0-4849-8520-af85d4a40e33.png" 
-            alt="Memebot Profit Finder" 
+            alt="SAVAG3 D3 Tradez" 
             className="w-10 h-10 animate-float"
           />
           <span className="text-xl font-bold bg-clip-text text-transparent bg-memecoin-gradient animate-gradient-shift">
-            MemeBot Profit Finder
+            SAVAG3 D3 Tradez
           </span>
         </div>
         
