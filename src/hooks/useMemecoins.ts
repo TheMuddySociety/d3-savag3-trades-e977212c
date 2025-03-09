@@ -89,7 +89,20 @@ export function useMemecoins() {
 
   const sortedMemecoins = [...memecoins].sort((a, b) => {
     const direction = sortDirection === 'asc' ? 1 : -1;
-    return direction * (a[sortBy as keyof MemeToken] as number - b[sortBy as keyof MemeToken] as number);
+    
+    // Get the values to compare
+    const valueA = a[sortBy as keyof MemeToken];
+    const valueB = b[sortBy as keyof MemeToken];
+    
+    // Handle different data types appropriately
+    if (typeof valueA === 'number' && typeof valueB === 'number') {
+      return direction * (valueA - valueB);
+    } else if (typeof valueA === 'string' && typeof valueB === 'string') {
+      return direction * valueA.localeCompare(valueB);
+    } else {
+      // Fallback for other types or mixed types
+      return direction * ((valueA as any) > (valueB as any) ? 1 : -1);
+    }
   });
 
   const handleSort = (field: string) => {
