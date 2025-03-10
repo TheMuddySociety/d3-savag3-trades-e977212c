@@ -5,6 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Wallet } from "lucide-react";
 import { toast } from "sonner";
 
+// Admin wallet address for direct access to admin dashboard
+const ADMIN_WALLET = "Hn1NxCYHwbhVyFbPmxnjdKVYR5BnhyKCvHvAFPBrBkn9";
+
 const Landing = () => {
   const navigate = useNavigate();
   const [connecting, setConnecting] = useState(false);
@@ -16,12 +19,31 @@ const Landing = () => {
       // Simulate wallet connection and verification
       await new Promise(resolve => setTimeout(resolve, 1500));
       
+      // For demo purposes, randomly generate a wallet address (or use admin)
+      // In production, this would come from the actual wallet connection
+      const isAdminDemo = Math.random() > 0.7; // 30% chance of simulating admin login
+      const walletAddress = isAdminDemo 
+        ? ADMIN_WALLET 
+        : `So1ana${Math.random().toString(36).substring(2, 10)}`;
+      
+      console.log("Connected wallet:", walletAddress);
+      localStorage.setItem('connectedWallet', walletAddress);
+      
       // Simulate checking for NFT or token ownership
       const hasAccess = Math.random() > 0.2; // 80% chance of success for demo
       
       if (hasAccess) {
-        toast.success("Access granted! Welcome to SAVAG3 D3 Tradez");
-        navigate('/dashboard');
+        // Check if admin wallet
+        if (walletAddress === ADMIN_WALLET) {
+          toast.success("Admin access granted! Welcome to SAVAG3 D3 Tradez");
+          navigate('/admin');
+        } else {
+          toast.success("Access granted! Welcome to SAVAG3 D3 Tradez");
+          navigate('/dashboard');
+        }
+        
+        // Set wallet as connected for authorization purposes
+        localStorage.setItem('walletConnected', 'true');
       } else {
         toast.error("Access denied. You need to own our NFT or tokens to access the app.");
       }

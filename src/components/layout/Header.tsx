@@ -1,15 +1,19 @@
 
 import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
-import { Moon, Sun, Wallet, LogOut } from "lucide-react";
+import { Moon, Sun, Wallet, LogOut, Shield } from "lucide-react";
 import { useTheme } from "@/hooks/use-theme";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/components/ui/use-toast";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
+
+// Admin wallet address for checking admin status
+const ADMIN_WALLET = "Hn1NxCYHwbhVyFbPmxnjdKVYR5BnhyKCvHvAFPBrBkn9";
 
 export function Header() {
   const { theme, setTheme } = useTheme();
   const [isConnected, setIsConnected] = useState(true); // Default to true for dashboard
+  const [isAdmin, setIsAdmin] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -26,7 +30,12 @@ export function Header() {
           variant: "destructive"
         });
         navigate('/');
+        return;
       }
+      
+      // Check if admin
+      const connectedWallet = localStorage.getItem('connectedWallet') || "";
+      setIsAdmin(connectedWallet === ADMIN_WALLET);
     };
     
     checkConnection();
@@ -34,6 +43,7 @@ export function Header() {
 
   const handleDisconnect = () => {
     localStorage.removeItem('walletConnected');
+    localStorage.removeItem('connectedWallet');
     setIsConnected(false);
     toast({
       title: "Wallet Disconnected",
@@ -57,6 +67,25 @@ export function Header() {
         </div>
         
         <div className="flex items-center space-x-4">
+          {isAdmin && (
+            <Link 
+              to="/admin" 
+              className={`text-red-500 hover:text-red-400 flex items-center gap-1 ${window.location.pathname === '/admin' ? 'font-bold' : ''}`}
+            >
+              <Shield className="h-4 w-4" />
+              Admin
+            </Link>
+          )}
+          
+          {isAdmin && window.location.pathname === '/admin' && (
+            <Link 
+              to="/dashboard" 
+              className="text-gray-400 hover:text-white flex items-center gap-1"
+            >
+              Dashboard
+            </Link>
+          )}
+          
           <Button
             variant="ghost"
             size="icon"

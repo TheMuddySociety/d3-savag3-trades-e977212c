@@ -8,14 +8,15 @@ import { LaunchCalendar } from "@/components/dashboard/LaunchCalendar";
 import { PerformanceMetrics } from "@/components/dashboard/PerformanceMetrics";
 import { BlockchainAnalytics } from "@/components/dashboard/BlockchainAnalytics";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 const Index = () => {
   const [isAuthorized, setIsAuthorized] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Simulate authorization check - replace with actual wallet check in production
-    const checkAuth = () => {
+    // Check for authorization based on wallet ownership and NFT/token holdings
+    const checkAuth = async () => {
       const walletConnected = localStorage.getItem('walletConnected') === 'true';
       
       if (!walletConnected) {
@@ -23,9 +24,25 @@ const Index = () => {
         return;
       }
       
-      // For demo purposes, we'll set this to true
-      // In a real app, you would verify NFT or token ownership here
-      localStorage.setItem('walletConnected', 'true');
+      const connectedWallet = localStorage.getItem('connectedWallet');
+      
+      if (!connectedWallet) {
+        toast.error("Wallet not found. Please reconnect.");
+        navigate('/');
+        return;
+      }
+      
+      console.log("Dashboard accessed by wallet:", connectedWallet);
+      
+      // In a real app, we would check if the wallet owns any of the approved NFTs or tokens
+      // For now, we'll use the tokens and collections added by the admin
+      const adminTokens = JSON.parse(localStorage.getItem('adminTokens') || '[]');
+      const adminCollections = JSON.parse(localStorage.getItem('adminCollections') || '[]');
+      
+      console.log("Approved tokens:", adminTokens);
+      console.log("Approved NFT collections:", adminCollections);
+      
+      // For demo purposes, we'll set authorized to true
       setIsAuthorized(true);
     };
     
