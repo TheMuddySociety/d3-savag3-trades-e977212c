@@ -5,8 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Wallet } from "lucide-react";
 import { toast } from "sonner";
 
-// Admin wallet address for direct access to admin dashboard
-const ADMIN_WALLET = "Hn1NxCYHwbhVyFbPmxnjdKVYR5BnhyKCvHvAFPBrBkn9";
+// Admin wallet addresses for direct access to admin dashboard
+const ADMIN_WALLETS = [
+  "Hn1NxCYHwbhVyFbPmxnjdKVYR5BnhyKCvHvAFPBrBkn9",
+  "Cra8LAvpQAk3hx4By5STHp4xrq7HSAnZLk4Jwzv1wUAH"
+];
 
 const Landing = () => {
   const navigate = useNavigate();
@@ -23,7 +26,7 @@ const Landing = () => {
       // In production, this would come from the actual wallet connection
       const isAdminDemo = Math.random() > 0.7; // 30% chance of simulating admin login
       const walletAddress = isAdminDemo 
-        ? ADMIN_WALLET 
+        ? ADMIN_WALLETS[Math.floor(Math.random() * ADMIN_WALLETS.length)]
         : `So1ana${Math.random().toString(36).substring(2, 10)}`;
       
       console.log("Connected wallet:", walletAddress);
@@ -34,7 +37,7 @@ const Landing = () => {
       
       if (hasAccess) {
         // Check if admin wallet
-        if (walletAddress === ADMIN_WALLET) {
+        if (ADMIN_WALLETS.includes(walletAddress)) {
           toast.success("Admin access granted! Welcome to SAVAG3 D3 Tradez");
           navigate('/admin');
         } else {

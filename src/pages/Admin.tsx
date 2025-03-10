@@ -9,7 +9,11 @@ import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Clipboard, Save, Plus, Trash } from "lucide-react";
 
-const ADMIN_WALLET = "Hn1NxCYHwbhVyFbPmxnjdKVYR5BnhyKCvHvAFPBrBkn9"; // Admin wallet address
+// Admin wallet addresses
+const ADMIN_WALLETS = [
+  "Hn1NxCYHwbhVyFbPmxnjdKVYR5BnhyKCvHvAFPBrBkn9",
+  "Cra8LAvpQAk3hx4By5STHp4xrq7HSAnZLk4Jwzv1wUAH"
+];
 
 const Admin = () => {
   const navigate = useNavigate();
@@ -32,7 +36,7 @@ const Admin = () => {
       // In production, this would verify the connected wallet matches the admin wallet
       // For demo purposes, we'll simulate this check
       const connectedWallet = localStorage.getItem('connectedWallet') || "";
-      const isAdminWallet = connectedWallet === ADMIN_WALLET;
+      const isAdminWallet = ADMIN_WALLETS.includes(connectedWallet);
       
       if (!isAdminWallet) {
         toast.error("Admin access denied. You don't have permission to view this page.");

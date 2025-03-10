@@ -7,8 +7,11 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/components/ui/use-toast";
 import { useNavigate, Link } from "react-router-dom";
 
-// Admin wallet address for checking admin status
-const ADMIN_WALLET = "Hn1NxCYHwbhVyFbPmxnjdKVYR5BnhyKCvHvAFPBrBkn9";
+// Admin wallet addresses for checking admin status
+const ADMIN_WALLETS = [
+  "Hn1NxCYHwbhVyFbPmxnjdKVYR5BnhyKCvHvAFPBrBkn9",
+  "Cra8LAvpQAk3hx4By5STHp4xrq7HSAnZLk4Jwzv1wUAH"
+];
 
 export function Header() {
   const { theme, setTheme } = useTheme();
@@ -35,7 +38,7 @@ export function Header() {
       
       // Check if admin
       const connectedWallet = localStorage.getItem('connectedWallet') || "";
-      setIsAdmin(connectedWallet === ADMIN_WALLET);
+      setIsAdmin(ADMIN_WALLETS.includes(connectedWallet));
     };
     
     checkConnection();
