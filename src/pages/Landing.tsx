@@ -69,11 +69,13 @@ const Landing = () => {
         </p>
         
         <div className="flex flex-col items-center">
-          <img 
-            src="/lovable-uploads/034236bf-7a4a-4d94-b426-562b05b5288a.png" 
-            alt="SAVAG3 Bull Logo" 
-            className="w-64 h-64 mb-8 animate-pulse-glow" 
-          />
+          <div className="w-48 h-48 mb-8 relative">
+            <img 
+              src="/lovable-uploads/034236bf-7a4a-4d94-b426-562b05b5288a.png" 
+              alt="SAVAG3 Bull Logo" 
+              className="w-full h-full object-contain animate-pulse-glow" 
+            />
+          </div>
           
           <div className="flex flex-col items-center">
             <WalletMultiButton className="bg-red-600 hover:bg-red-700 text-white flex items-center gap-2 rounded-full px-10 py-6 text-xl shadow-lg hover:shadow-red-600/20 transition-all" />
