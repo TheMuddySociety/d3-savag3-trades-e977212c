@@ -7,10 +7,10 @@ import { MemeScanner } from "@/components/dashboard/MemeScanner";
 import { LaunchCalendar } from "@/components/dashboard/LaunchCalendar";
 import { TokenSwap } from "@/components/dashboard/TokenSwap";
 import { Header } from "@/components/layout/Header";
-import { useMobile } from "@/hooks/use-mobile";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const Index = () => {
-  const isMobile = useMobile();
+  const isMobile = useIsMobile();
   
   return (
     <div className="flex flex-col min-h-screen bg-background">
