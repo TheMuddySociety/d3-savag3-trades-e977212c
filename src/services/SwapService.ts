@@ -13,6 +13,7 @@ export class SwapService {
    * @param toToken Token to swap to (mint address)
    * @param amount Amount to swap in lamports
    * @param slippageBps Slippage tolerance in basis points (100 = 1%)
+   * @param maxAccounts Optional parameter to limit the number of accounts in the transaction
    * @returns Transaction signature or null if failed
    */
   static async swapTokens(
@@ -21,7 +22,8 @@ export class SwapService {
     fromToken: string,
     toToken: string,
     amount: number,
-    slippageBps: number = 100
+    slippageBps: number = 100,
+    maxAccounts?: number
   ): Promise<string | null> {
     try {
       if (!wallet.publicKey || !wallet.signTransaction) {
@@ -32,7 +34,7 @@ export class SwapService {
       console.log(`Swapping ${amount} of ${fromToken} to ${toToken} with ${slippageBps} bps slippage`);
       
       // Get quote from Jupiter API
-      const quoteResponse = await this.getJupiterQuote(fromToken, toToken, amount, slippageBps);
+      const quoteResponse = await this.getJupiterQuote(fromToken, toToken, amount, slippageBps, maxAccounts);
       if (!quoteResponse) return null;
       
       // Get swap transaction from Jupiter API
@@ -67,17 +69,24 @@ export class SwapService {
    * @param outputMint Output token mint address
    * @param amount Amount to swap in lamports
    * @param slippageBps Slippage tolerance in basis points
+   * @param maxAccounts Optional parameter to limit the number of accounts in the transaction
    * @returns Quote response from Jupiter API or null if failed
    */
   static async getJupiterQuote(
     inputMint: string,
     outputMint: string, 
     amount: number,
-    slippageBps: number = 100
+    slippageBps: number = 100,
+    maxAccounts?: number
   ): Promise<any | null> {
     try {
       // Jupiter V6 API endpoint for quotes
-      const quoteUrl = `https://quote-api.jup.ag/v6/quote?inputMint=${inputMint}&outputMint=${outputMint}&amount=${amount}&slippageBps=${slippageBps}`;
+      let quoteUrl = `https://quote-api.jup.ag/v6/quote?inputMint=${inputMint}&outputMint=${outputMint}&amount=${amount}&slippageBps=${slippageBps}`;
+      
+      // Add maxAccounts parameter if provided
+      if (maxAccounts !== undefined) {
+        quoteUrl += `&maxAccounts=${maxAccounts}`;
+      }
       
       console.log(`Fetching Jupiter quote: ${quoteUrl}`);
       const response = await fetch(quoteUrl);
@@ -149,13 +158,15 @@ export class SwapService {
    * @param fromToken Token to swap from (mint address)
    * @param toToken Token to swap to (mint address)
    * @param amount Amount to swap in lamports
+   * @param maxAccounts Optional parameter to limit the number of accounts in the transaction
    * @returns Quote information or null if failed
    */
   static async getSwapQuote(
     connection: Connection,
     fromToken: string,
     toToken: string,
-    amount: number
+    amount: number,
+    maxAccounts?: number
   ): Promise<{
     inAmount: number;
     outAmount: number;
@@ -166,7 +177,7 @@ export class SwapService {
       console.log(`Getting quote for ${amount} of ${fromToken} to ${toToken}`);
       
       // Get real quote from Jupiter API
-      const jupiterQuote = await this.getJupiterQuote(fromToken, toToken, amount, 100);
+      const jupiterQuote = await this.getJupiterQuote(fromToken, toToken, amount, 100, maxAccounts);
       
       if (jupiterQuote && jupiterQuote.outAmount) {
         return {

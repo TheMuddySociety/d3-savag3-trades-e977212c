@@ -4,13 +4,18 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { ArrowDownUp, RefreshCw, Info } from "lucide-react";
+import { ArrowDownUp, RefreshCw, Info, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useWallet, useConnection } from '@solana/wallet-adapter-react';
 import { toast } from "sonner";
 import { SwapService } from '@/services/SwapService';
 import { formatNumber } from "@/utils/format";
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
+import { 
+  Popover,
+  PopoverContent,
+  PopoverTrigger
+} from "@/components/ui/popover";
 
 export function TokenSwap() {
   const { connection } = useConnection();
@@ -21,6 +26,7 @@ export function TokenSwap() {
   const [toToken, setToToken] = useState<string>('');
   const [amount, setAmount] = useState<number>(1);
   const [slippage, setSlippage] = useState<number>(1); // 1%
+  const [maxAccounts, setMaxAccounts] = useState<number | undefined>(undefined);
   const [quote, setQuote] = useState<any>(null);
   const [isGettingQuote, setIsGettingQuote] = useState(false);
 
@@ -41,7 +47,7 @@ export function TokenSwap() {
     if (fromToken && toToken && amount > 0) {
       getQuote();
     }
-  }, [fromToken, toToken, amount]);
+  }, [fromToken, toToken, amount, maxAccounts]);
 
   const getQuote = async () => {
     if (!fromToken || !toToken || amount <= 0) return;
@@ -53,7 +59,8 @@ export function TokenSwap() {
         connection,
         fromToken,
         toToken,
-        amount
+        amount,
+        maxAccounts
       );
       
       setQuote(quoteResult);
@@ -84,7 +91,8 @@ export function TokenSwap() {
         fromToken,
         toToken,
         amount,
-        slippage * 100 // Convert percentage to basis points
+        slippage * 100, // Convert percentage to basis points
+        maxAccounts
       );
       
       if (!quoteResult) {
@@ -144,13 +152,45 @@ export function TokenSwap() {
   return (
     <Card className="memecoin-card">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-xl">
-          <ArrowDownUp className="h-5 w-5 text-solana" />
-          Swap Tokens
-        </CardTitle>
-        <CardDescription>
-          Swap your tokens at the best rates across multiple DEXs
-        </CardDescription>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="flex items-center gap-2 text-xl">
+              <ArrowDownUp className="h-5 w-5 text-solana" />
+              Swap Tokens
+            </CardTitle>
+            <CardDescription>
+              Swap your tokens at the best rates across multiple DEXs
+            </CardDescription>
+          </div>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="icon">
+                <Settings className="h-4 w-4" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-80">
+              <div className="space-y-4">
+                <h4 className="font-medium">Advanced Settings</h4>
+                <div className="space-y-2">
+                  <Label htmlFor="maxAccounts">Max Accounts (optional)</Label>
+                  <Input
+                    id="maxAccounts"
+                    type="number"
+                    value={maxAccounts || ''}
+                    onChange={(e) => setMaxAccounts(e.target.value ? Number(e.target.value) : undefined)}
+                    placeholder="Default: no limit"
+                    min={1}
+                    max={64}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Limit the number of accounts in the transaction (1-64). 
+                    Useful when combining with other instructions.
+                  </p>
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
+        </div>
       </CardHeader>
       <CardContent className="space-y-4">
         {/* From Token */}
@@ -277,6 +317,12 @@ export function TokenSwap() {
               <span className="text-muted-foreground">Route</span>
               <span>{quote.routeInfo}</span>
             </div>
+            {maxAccounts && (
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Max Accounts</span>
+                <span>{maxAccounts}</span>
+              </div>
+            )}
             {isGettingQuote && (
               <div className="flex justify-center">
                 <RefreshCw className="h-4 w-4 animate-spin text-muted-foreground" />
