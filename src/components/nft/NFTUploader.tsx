@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Upload, Image, X, Plus, FileImage } from "lucide-react";
+import { Rocket } from "lucide-react";
 
 interface NFTUploaderProps {
   onComplete: () => void;
