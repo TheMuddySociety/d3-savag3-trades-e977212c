@@ -1,3 +1,4 @@
+
 import { PublicKey, Connection, Keypair, Transaction } from '@solana/web3.js';
 import { toast } from 'sonner';
 import { SolanaService } from './SolanaService';
@@ -84,7 +85,10 @@ export class NFTService {
       const collectionMint = Keypair.generate();
       
       // Find the metadata address using MPL Core's PDA helpers
-      const metadataAddress = mplCore.accounts.Metadata.getPda(collectionMint.publicKey);
+      // Using the correct API based on the mpl-core package structure
+      const metadataAddress = new PublicKey(
+        mplCore.findMetadataPda(collectionMint.publicKey.toBuffer())
+      );
       
       // Log details about what would happen in a real implementation
       console.log('Collection mint created:', collectionMint.publicKey.toString());
@@ -128,7 +132,10 @@ export class NFTService {
         const nftMint = Keypair.generate();
         
         // Find the metadata address for this NFT using MPL Core's PDA helpers
-        const metadataAddress = mplCore.accounts.Metadata.getPda(nftMint.publicKey);
+        // Using the correct API based on the mpl-core package structure
+        const metadataAddress = new PublicKey(
+          mplCore.findMetadataPda(nftMint.publicKey.toBuffer())
+        );
         
         // Create metadata and verify instructions
         // In a real implementation, we would use the actual instruction builders from MPL Core
@@ -230,7 +237,10 @@ export class NFTService {
       // 3. Fetch and parse the metadata account data
       
       const mintPublicKey = new PublicKey(mintAddress);
-      const metadataAddress = mplCore.accounts.Metadata.getPda(mintPublicKey);
+      // Using the correct API based on the mpl-core package structure
+      const metadataAddress = new PublicKey(
+        mplCore.findMetadataPda(mintPublicKey.toBuffer())
+      );
       
       console.log('Metadata account address:', metadataAddress.toString());
       console.log('Using Metaplex Core to fetch metadata');
