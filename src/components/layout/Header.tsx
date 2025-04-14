@@ -1,11 +1,11 @@
 
 import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
-import { Moon, Sun, Shield, LogOut } from "lucide-react";
+import { Moon, Sun, Shield, LogOut, Image } from "lucide-react";
 import { useTheme } from "@/hooks/use-theme";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/components/ui/use-toast";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useLocation } from "react-router-dom";
 import { useWallet } from '@solana/wallet-adapter-react';
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 
@@ -20,6 +20,7 @@ export function Header() {
   const [isAdmin, setIsAdmin] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const location = useLocation();
   const { publicKey, connected, disconnect } = useWallet();
 
   useEffect(() => {
@@ -58,6 +59,8 @@ export function Header() {
     navigate('/');
   };
 
+  const isActive = (path: string) => location.pathname === path;
+
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-black/80 backdrop-blur-md border-b border-gray-800">
       <div className="container flex items-center justify-between h-16 px-4 mx-auto">
@@ -73,22 +76,32 @@ export function Header() {
         </div>
         
         <div className="flex items-center space-x-4">
+          {connected && (
+            <>
+              <Link 
+                to="/dashboard" 
+                className={`text-gray-400 hover:text-white flex items-center gap-1 ${isActive('/dashboard') ? 'text-white font-bold' : ''}`}
+              >
+                Dashboard
+              </Link>
+              
+              <Link 
+                to="/nft-launch" 
+                className={`text-gray-400 hover:text-white flex items-center gap-1 ${isActive('/nft-launch') ? 'text-white font-bold' : ''}`}
+              >
+                <Image className="h-4 w-4" />
+                NFT Launch
+              </Link>
+            </>
+          )}
+          
           {isAdmin && (
             <Link 
               to="/admin" 
-              className={`text-red-500 hover:text-red-400 flex items-center gap-1 ${window.location.pathname === '/admin' ? 'font-bold' : ''}`}
+              className={`text-red-500 hover:text-red-400 flex items-center gap-1 ${isActive('/admin') ? 'font-bold' : ''}`}
             >
               <Shield className="h-4 w-4" />
               Admin
-            </Link>
-          )}
-          
-          {isAdmin && window.location.pathname === '/admin' && (
-            <Link 
-              to="/dashboard" 
-              className="text-gray-400 hover:text-white flex items-center gap-1"
-            >
-              Dashboard
             </Link>
           )}
           
@@ -133,4 +146,4 @@ export function Header() {
       </div>
     </header>
   );
-}
+};
