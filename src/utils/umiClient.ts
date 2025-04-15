@@ -9,6 +9,7 @@ import { PublicKey } from '@solana/web3.js';
  * @returns Configured UMI instance
  */
 export function createUmiClient(endpoint: string = 'https://api.devnet.solana.com') {
+  // Create UMI instance with better browser compatibility
   return createUmi(endpoint);
 }
 
