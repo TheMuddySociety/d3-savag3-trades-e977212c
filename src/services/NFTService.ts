@@ -3,7 +3,7 @@ import { toast } from 'sonner';
 import { SolanaService } from './SolanaService';
 import { createSolanaClient } from '@/utils/solanaClient';
 import * as mplCore from '@metaplex-foundation/mpl-core';
-import { createUmi } from '@metaplex-foundation/umi-bundle-defaults';
+import { createUmiClient } from '@/utils/umiClient';
 
 /**
  * Service for managing NFT operations using Metaplex Core standards
@@ -20,7 +20,7 @@ export class NFTService {
    */
   private static createUmiInstance() {
     // Create a UMI instance with default plugins for devnet
-    return createUmi('https://api.devnet.solana.com');
+    return createUmiClient('https://api.devnet.solana.com');
   }
 
   /**
