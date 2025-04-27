@@ -19,8 +19,15 @@ export class NFTBaseService {
    * Create a Umi instance for Metaplex operations
    */
   protected static createUmiInstance() {
-    // Create a UMI instance with Candy Machine plugin for devnet
-    return createUmiClient('https://api.devnet.solana.com');
+    try {
+      // Create a UMI instance with Candy Machine plugin for devnet
+      console.log('Creating UMI instance from NFTBaseService');
+      return createUmiClient('https://api.devnet.solana.com');
+    } catch (error) {
+      console.error('Failed to create UMI instance:', error);
+      // Return null and handle in calling code
+      return null;
+    }
   }
   
   /**

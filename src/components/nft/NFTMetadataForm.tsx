@@ -93,7 +93,10 @@ export const NFTMetadataForm: React.FC<NFTMetadataFormProps> = ({ onComplete, on
     }
     
     const filteredAttributes = attributes.filter(attr => 
-      attr.trait_type.trim() !== '' && attr.value.trim() !== ''
+      typeof attr.trait_type === 'string' && 
+      attr.trait_type.trim() !== '' && 
+      typeof attr.value === 'string' && 
+      attr.value.trim() !== ''
     );
     
     localStorage.setItem('nftMetadata', JSON.stringify({

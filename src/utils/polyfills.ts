@@ -13,7 +13,7 @@ if (typeof window !== 'undefined' && typeof window.global === 'undefined') {
 // Polyfill for 'Buffer' if needed
 if (typeof window !== 'undefined' && typeof window.Buffer === 'undefined') {
   // @ts-ignore - Intentionally adding to window
-  window.Buffer = null; // Will be provided by the actual Buffer polyfill from Vite
+  window.Buffer = require('buffer').Buffer;
 }
 
 // Polyfill for process.env

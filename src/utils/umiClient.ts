@@ -10,11 +10,23 @@ import { mplCandyMachine } from '@metaplex-foundation/mpl-core-candy-machine';
  * @returns Configured UMI instance
  */
 export function createUmiClient(endpoint: string = 'https://api.devnet.solana.com') {
-  // Create UMI instance with better browser compatibility
-  const umi = createUmi(endpoint);
-  
-  // Add the Candy Machine plugin
-  return umi.use(mplCandyMachine());
+  try {
+    console.log('Creating UMI client with endpoint:', endpoint);
+    
+    // Create UMI instance with better browser compatibility
+    const umi = createUmi(endpoint);
+    
+    // Add the Candy Machine plugin
+    const umiWithCandyMachine = umi.use(mplCandyMachine());
+    
+    console.log('UMI client created successfully');
+    return umiWithCandyMachine;
+  } catch (error) {
+    console.error('Error creating UMI client:', error);
+    // Return a minimal UMI instance that won't crash the app
+    // This is just to prevent runtime errors
+    return createUmi(endpoint);
+  }
 }
 
 /**
