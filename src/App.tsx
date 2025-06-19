@@ -19,7 +19,6 @@ import Landing from "./pages/Landing";
 import Index from "./pages/Index";
 import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
-import MetaplexLaunch from "./pages/MetaplexLaunch";
 
 const queryClient = new QueryClient();
 
@@ -46,7 +45,6 @@ const App = () => {
                     <Route path="/" element={<Landing />} />
                     <Route path="/dashboard" element={<Index />} />
                     <Route path="/admin" element={<Admin />} />
-                    <Route path="/nft-launch" element={<MetaplexLaunch />} />
                     <Route path="*" element={<NotFound />} />
                   </Routes>
                 </BrowserRouter>
