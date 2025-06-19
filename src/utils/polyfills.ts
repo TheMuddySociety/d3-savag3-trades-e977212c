@@ -24,31 +24,4 @@ if (typeof window !== 'undefined' && typeof window.process === 'undefined') {
   window.process = { env: {} };
 }
 
-// Polyfill for stream (needed by Metaplex)
-if (typeof window !== 'undefined' && typeof window.stream === 'undefined') {
-  // @ts-ignore - Intentionally adding to window
-  window.stream = {
-    Readable: class ReadableStream {},
-    PassThrough: class PassThroughStream {},
-  };
-}
-
-// Polyfill for http (needed by Metaplex)
-if (typeof window !== 'undefined' && typeof window.http === 'undefined') {
-  // @ts-ignore - Intentionally adding to window
-  window.http = {
-    STATUS_CODES: {}
-  };
-}
-
-// Polyfill for url (needed by Metaplex)
-if (typeof window !== 'undefined' && typeof window.url === 'undefined') {
-  // @ts-ignore - Intentionally adding to window
-  window.url = {
-    URL: URL,
-    parse: () => ({}),
-    format: () => ''
-  };
-}
-
 export {};

@@ -18,12 +18,8 @@ export default defineConfig(({ mode }) => ({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
-      // Add aliases for Node.js built-ins
-      stream: 'stream-browserify',
-      buffer: 'buffer',
     },
   },
-  // Improve compatibility with Node.js built-ins
   optimizeDeps: {
     esbuildOptions: {
       define: {
@@ -31,7 +27,6 @@ export default defineConfig(({ mode }) => ({
       },
     },
   },
-  // Define global for the entire build
   define: {
     global: 'window',
     'process.env': {},
