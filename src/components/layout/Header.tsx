@@ -10,7 +10,6 @@ import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 
 // Admin wallet addresses for checking admin status
 const ADMIN_WALLETS = [
-  "Hn1NxCYHwbhVyFbPmxnjdKVYR5BnhyKCvHvAFPBrBkn9",
   "Cra8LAvpQAk3hx4By5STHp4xrq7HSAnZLk4Jwzv1wUAH"
 ];
 

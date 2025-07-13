@@ -11,7 +11,6 @@ import { Clipboard, Save, Plus, Trash } from "lucide-react";
 
 // Admin wallet addresses
 const ADMIN_WALLETS = [
-  "Hn1NxCYHwbhVyFbPmxnjdKVYR5BnhyKCvHvAFPBrBkn9",
   "Cra8LAvpQAk3hx4By5STHp4xrq7HSAnZLk4Jwzv1wUAH"
 ];
 
