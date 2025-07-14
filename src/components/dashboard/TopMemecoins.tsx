@@ -28,6 +28,13 @@ const handleTokenClick = (tokenAddress?: string) => {
   }
 };
 
+const handlePumpFunClick = (tokenAddress?: string) => {
+  if (tokenAddress) {
+    const pumpFunUrl = `https://pump.fun/${tokenAddress}`;
+    window.open(pumpFunUrl, '_blank', 'noopener,noreferrer');
+  }
+};
+
 export function TopMemecoins() {
   const { tokens, loading, error } = usePumpFunTokens(10);
 
@@ -83,7 +90,7 @@ export function TopMemecoins() {
               key={coin.id}
               className={cn(
                 "glass-effect p-3 rounded-lg transition-all duration-300 hover:scale-105",
-                "border border-white/10 hover:border-white/20 min-h-[180px]",
+                "border border-white/10 hover:border-white/20 min-h-[200px]",
                 coin.tokenAddress ? "cursor-pointer hover:bg-white/5" : ""
               )}
               onClick={() => coin.tokenAddress && handleTokenClick(coin.tokenAddress)}
@@ -150,8 +157,8 @@ export function TopMemecoins() {
                   </Badge>
                 </div>
 
-                <div className="flex items-center justify-between">
-                  <div className="text-left">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="text-left flex-1">
                     <p className="font-bold text-white text-sm">{formatPrice(coin.price)}</p>
                     <div className="flex items-center gap-1">
                       {coin.change24h >= 0 ? (
@@ -168,17 +175,31 @@ export function TopMemecoins() {
                     </div>
                   </div>
 
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="glass-effect border-green-500/30 text-green-400 hover:bg-green-500/10 hover:border-green-400/50 text-xs h-7 px-2"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      // Add buy functionality here
-                    }}
-                  >
-                    Buy
-                  </Button>
+                  <div className="flex flex-col gap-1">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="glass-effect border-purple-500/30 text-purple-400 hover:bg-purple-500/10 hover:border-purple-400/50 text-xs h-6 px-2"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handlePumpFunClick(coin.tokenAddress);
+                      }}
+                    >
+                      Pump.Fun
+                    </Button>
+                    
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="glass-effect border-green-500/30 text-green-400 hover:bg-green-500/10 hover:border-green-400/50 text-xs h-6 px-2"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        // Add buy functionality here
+                      }}
+                    >
+                      Buy
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>
