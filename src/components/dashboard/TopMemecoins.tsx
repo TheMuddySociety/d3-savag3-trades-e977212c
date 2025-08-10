@@ -38,174 +38,232 @@ const handlePumpFunClick = (tokenAddress?: string) => {
 export function TopMemecoins() {
   const { tokens, loading, error } = usePumpFunTokens(10);
 
+  // Categorize tokens based on bonding curve progress
+  const categorizeTokens = (tokens: any[]) => {
+    return {
+      newlyCreated: tokens.filter(t => (t.bondingCurveProgress || 0) < 0.8),
+      aboutToGraduate: tokens.filter(t => (t.bondingCurveProgress || 0) >= 0.8 && (t.bondingCurveProgress || 0) < 1),
+      graduated: tokens.filter(t => (t.bondingCurveProgress || 0) >= 1)
+    };
+  };
+
   if (loading) {
     return (
-      <Card className="glass-effect border-white/10">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-xl font-bold bg-gradient-to-r from-purple-400 via-red-400 to-green-400 bg-clip-text text-transparent flex items-center gap-2">
-            <TrendingUp className="h-5 w-5 text-yellow-400" />
-            Top 10 Trending from Pump.Fun
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-center py-8">
-            <Loader2 className="h-8 w-8 animate-spin text-yellow-400" />
+      <div className="space-y-6">
+        <div className="flex items-center gap-4 mb-8">
+          <div className="w-12 h-12 rounded-xl bg-gradient-to-r from-green-400 to-emerald-500 flex items-center justify-center animate-pulse">
+            <TrendingUp className="h-6 w-6 text-white" />
           </div>
-        </CardContent>
-      </Card>
+          <div>
+            <h2 className="text-3xl font-bold text-white">Trading Dashboard</h2>
+            <p className="text-muted-foreground">Live trending tokens from Pump.Fun</p>
+          </div>
+        </div>
+        
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {[...Array(3)].map((_, categoryIndex) => (
+            <div key={categoryIndex} className="space-y-4">
+              <div className="h-8 bg-white/10 rounded-lg animate-pulse" />
+              <div className="space-y-3">
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className="h-32 bg-white/5 rounded-xl border border-white/10 animate-pulse" />
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
     );
   }
 
   if (error) {
     return (
-      <Card className="glass-effect border-white/10">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-xl font-bold bg-gradient-to-r from-purple-400 via-red-400 to-green-400 bg-clip-text text-transparent flex items-center gap-2">
-            <TrendingUp className="h-5 w-5 text-yellow-400" />
-            Top 10 Trending from Pump.Fun
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-8">
-            <p className="text-muted-foreground">Failed to load trending tokens</p>
-            <p className="text-sm text-red-500">{error}</p>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="text-center py-16">
+        <div className="w-16 h-16 rounded-xl bg-gradient-to-r from-red-400 to-red-500 flex items-center justify-center mx-auto mb-4">
+          <span className="text-white font-bold text-xl">⚠️</span>
+        </div>
+        <h3 className="text-xl font-bold text-white mb-2">Failed to Load Data</h3>
+        <p className="text-muted-foreground mb-2">Unable to fetch trending tokens</p>
+        <p className="text-sm text-red-400">{error}</p>
+      </div>
     );
   }
 
-  return (
-    <Card className="glass-effect border-white/10">
-      <CardHeader className="pb-3">
-        <CardTitle className="text-xl font-bold bg-gradient-to-r from-purple-400 via-red-400 to-green-400 bg-clip-text text-transparent flex items-center gap-2">
-          <TrendingUp className="h-5 w-5 text-yellow-400" />
-          Top 10 Trending from Pump.Fun
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="p-3">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
-          {tokens.map((coin, index) => (
-            <div
-              key={coin.id}
-              className={cn(
-                "glass-effect p-3 rounded-lg transition-all duration-300 hover:scale-105",
-                "border border-white/10 hover:border-white/20 min-h-[200px]",
-                coin.tokenAddress ? "cursor-pointer hover:bg-white/5" : ""
-              )}
-              onClick={() => coin.tokenAddress && handleTokenClick(coin.tokenAddress)}
-            >
-              <div className="flex flex-col h-full">
-                <div className="flex items-start justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <Badge 
-                      variant="outline" 
-                      className="bg-gradient-to-r from-purple-500 to-red-500 text-white border-none text-xs h-5 px-2"
-                    >
-                      #{index + 1}
-                    </Badge>
-                    <div className="w-8 h-8 rounded-full overflow-hidden ring-1 ring-white/20">
-                      <img 
-                        src={coin.logoUrl} 
-                        alt={coin.name}
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          e.currentTarget.src = '/placeholder.svg';
-                        }}
-                      />
-                    </div>
+  const categories = categorizeTokens(tokens);
+  
+  const CategorySection = ({ title, tokens, bgGradient, iconBg, icon }: any) => (
+    <div className="space-y-4">
+      <div className={cn(
+        "flex items-center gap-3 p-4 rounded-xl backdrop-blur-sm",
+        "border border-white/10",
+        bgGradient
+      )}>
+        <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center", iconBg)}>
+          <span className="text-white font-bold text-sm">{icon}</span>
+        </div>
+        <div>
+          <h3 className="font-bold text-white text-lg">{title}</h3>
+          <p className="text-sm text-white/70">{tokens.length} tokens</p>
+        </div>
+      </div>
+      
+      <div className="space-y-3">
+        {tokens.slice(0, 5).map((coin: any, index: number) => (
+          <div
+            key={coin.id}
+            className={cn(
+              "group relative overflow-hidden rounded-xl transition-all duration-300",
+              "bg-gradient-to-r from-white/5 to-white/2 backdrop-blur-sm",
+              "border border-white/10 hover:border-white/20",
+              "hover:scale-[1.02] hover:shadow-lg hover:shadow-primary/10",
+              "cursor-pointer"
+            )}
+            onClick={() => coin.tokenAddress && handleTokenClick(coin.tokenAddress)}
+          >
+            <div className="p-4">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full overflow-hidden ring-2 ring-white/20">
+                    <img 
+                      src={coin.logoUrl} 
+                      alt={coin.name}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.currentTarget.src = '/placeholder.svg';
+                      }}
+                    />
                   </div>
-                  
-                  {coin.tokenAddress && (
-                    <ExternalLink className="h-3 w-3 text-muted-foreground opacity-60" />
-                  )}
-                </div>
-
-                <div className="flex-1 min-w-0 mb-2">
-                  <h3 className="font-bold text-white text-sm truncate">{coin.name}</h3>
-                  <div className="flex items-center gap-1 mb-1">
-                    <Badge variant="secondary" className="text-xs bg-white/10 text-gray-300 px-1 py-0">
-                      {coin.symbol}
-                    </Badge>
+                  <div>
+                    <h4 className="font-bold text-white text-sm">{coin.name}</h4>
+                    <p className="text-xs text-muted-foreground">{coin.symbol}</p>
                   </div>
-                  <p className="text-xs text-gray-400 truncate">{formatMarketCap(coin.marketCap)}</p>
                 </div>
                 
-                {/* Bonding Curve Progress */}
-                <div className="mb-3">
-                  <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
-                    <span>Bonding Curve</span>
-                    <span>{((coin.bondingCurveProgress || 0) * 100).toFixed(1)}%</span>
-                  </div>
-                  
-                  <Progress 
-                    value={(coin.bondingCurveProgress || 0) * 100} 
-                    className="h-1.5 mb-2"
-                  />
-                  
-                  <Badge 
-                    variant={coin.bondingCurveProgress && coin.bondingCurveProgress >= 1 ? "default" : 
-                            coin.bondingCurveProgress && coin.bondingCurveProgress > 0.8 ? "secondary" : "outline"} 
-                    className="text-xs h-5 px-2"
-                  >
-                    {coin.bondingCurveProgress && coin.bondingCurveProgress >= 1 
-                      ? "Graduated" 
-                      : coin.bondingCurveProgress && coin.bondingCurveProgress > 0.8 
-                      ? "Near Graduate" 
-                      : "Bonding"
-                    }
-                  </Badge>
-                </div>
-
-                <div className="flex items-center justify-between gap-2">
-                  <div className="text-left flex-1">
-                    <p className="font-bold text-white text-sm">{formatPrice(coin.price)}</p>
-                    <div className="flex items-center gap-1">
-                      {coin.change24h >= 0 ? (
-                        <TrendingUp className="h-3 w-3 text-green-400" />
-                      ) : (
-                        <TrendingDown className="h-3 w-3 text-red-400" />
-                      )}
-                      <span className={cn(
-                        "text-xs font-medium",
-                        coin.change24h >= 0 ? "text-green-400" : "text-red-400"
-                      )}>
-                        {coin.change24h >= 0 ? '+' : ''}{coin.change24h.toFixed(1)}%
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col gap-1">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="glass-effect border-purple-500/30 text-purple-400 hover:bg-purple-500/10 hover:border-purple-400/50 text-xs h-6 px-2"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handlePumpFunClick(coin.tokenAddress);
-                      }}
-                    >
-                      Pump.Fun
-                    </Button>
-                    
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="glass-effect border-green-500/30 text-green-400 hover:bg-green-500/10 hover:border-green-400/50 text-xs h-6 px-2"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        // Add buy functionality here
-                      }}
-                    >
-                      Buy
-                    </Button>
+                <div className="text-right">
+                  <p className="font-bold text-white text-sm">{formatPrice(coin.price)}</p>
+                  <div className="flex items-center gap-1">
+                    {coin.change24h >= 0 ? (
+                      <TrendingUp className="h-3 w-3 text-green-400" />
+                    ) : (
+                      <TrendingDown className="h-3 w-3 text-red-400" />
+                    )}
+                    <span className={cn(
+                      "text-xs font-medium",
+                      coin.change24h >= 0 ? "text-green-400" : "text-red-400"
+                    )}>
+                      {coin.change24h >= 0 ? '+' : ''}{coin.change24h.toFixed(1)}%
+                    </span>
                   </div>
                 </div>
               </div>
+              
+              <div className="space-y-2 mb-3">
+                <div className="flex justify-between text-xs">
+                  <span className="text-muted-foreground">Market Cap</span>
+                  <span className="text-white font-medium">{formatMarketCap(coin.marketCap)}</span>
+                </div>
+                
+                <div className="space-y-1">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-muted-foreground">Progress</span>
+                    <span className="text-white font-medium">{((coin.bondingCurveProgress || 0) * 100).toFixed(1)}%</span>
+                  </div>
+                  <div className="relative w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
+                    <div
+                      className={cn(
+                        "absolute inset-y-0 left-0 rounded-full transition-all duration-1000 ease-out",
+                        title === "GRADUATED" ? "bg-gradient-to-r from-green-400 to-emerald-500" :
+                        title === "ABOUT TO GRADUATE" ? "bg-gradient-to-r from-yellow-400 to-orange-500" :
+                        "bg-gradient-to-r from-blue-400 to-cyan-500"
+                      )}
+                      style={{ width: `${Math.min((coin.bondingCurveProgress || 0) * 100, 100)}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex-1 glass-effect border-purple-500/30 text-purple-400 hover:bg-purple-500/20 hover:border-purple-400/50 text-xs font-medium"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handlePumpFunClick(coin.tokenAddress);
+                  }}
+                >
+                  View
+                </Button>
+                
+                <Button
+                  size="sm"
+                  className="flex-1 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white border-0 text-xs font-medium"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    // Add buy functionality here
+                  }}
+                >
+                  +0.01
+                </Button>
+              </div>
             </div>
-          ))}
+            
+            {/* Hover glow effect */}
+            <div className="absolute inset-0 bg-gradient-to-t from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="space-y-8">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-gradient-to-r from-green-400 to-emerald-500 flex items-center justify-center shadow-lg shadow-green-500/25">
+            <TrendingUp className="h-6 w-6 text-white" />
+          </div>
+          <div>
+            <h2 className="text-3xl font-bold text-white">Trading Dashboard</h2>
+            <p className="text-muted-foreground">Live trending tokens from Pump.Fun</p>
+          </div>
         </div>
-      </CardContent>
-    </Card>
+        
+        <div className="flex items-center gap-3">
+          <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+          <Badge className="bg-green-500/20 text-green-400 border-green-500/30">
+            Scan Live
+          </Badge>
+        </div>
+      </div>
+      
+      {/* Token Categories */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <CategorySection
+          title="NEWLY CREATED"
+          tokens={categories.newlyCreated}
+          bgGradient="bg-gradient-to-r from-blue-500/10 to-cyan-500/10"
+          iconBg="bg-gradient-to-r from-blue-500 to-cyan-500"
+          icon="🆕"
+        />
+        
+        <CategorySection
+          title="ABOUT TO GRADUATE"
+          tokens={categories.aboutToGraduate}
+          bgGradient="bg-gradient-to-r from-yellow-500/10 to-orange-500/10"
+          iconBg="bg-gradient-to-r from-yellow-500 to-orange-500"
+          icon="🎓"
+        />
+        
+        <CategorySection
+          title="GRADUATED"
+          tokens={categories.graduated}
+          bgGradient="bg-gradient-to-r from-green-500/10 to-emerald-500/10"
+          iconBg="bg-gradient-to-r from-green-500 to-emerald-500"
+          icon="✅"
+        />
+      </div>
+    </div>
   );
 }
