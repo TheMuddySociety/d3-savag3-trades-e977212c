@@ -2,69 +2,31 @@ import { useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { ArrowDownUp } from "lucide-react";
 import { useWallet } from '@solana/wallet-adapter-react';
-
-declare global {
-  interface Window {
-    Jupiter: {
-      init: (config: any) => void;
-      syncProps: (props: any) => void;
-    };
-  }
-}
+import "@jup-ag/plugin/css";
 
 export function TokenSwap() {
-  const passthroughWalletContextState = useWallet();
-
-  // To make sure passthrough wallet are synced
-  useEffect(() => {
-    if (!window.Jupiter?.syncProps) return;
-    window.Jupiter.syncProps({ passthroughWalletContextState });
-  }, [passthroughWalletContextState.connected, passthroughWalletContextState.publicKey]);
+  const walletProps = useWallet();
 
   useEffect(() => {
-    // Load Jupiter Terminal script
-    const script = document.createElement('script');
-    script.src = 'https://terminal.jup.ag/main-v2.js';
-    script.async = true;
-    script.onload = () => {
-      console.log('Jupiter script loaded successfully');
-      if (window.Jupiter) {
-        console.log('Initializing Jupiter terminal...');
-        window.Jupiter.init({
+    if (typeof window !== "undefined") {
+      import("@jup-ag/plugin").then((mod) => {
+        const init = mod.init;
+        init({
           displayMode: "integrated",
           integratedTargetId: "target-container",
-          endpoint: "https://api.mainnet-beta.solana.com",
           formProps: {
-            fixedOutputMint: false,
-            swapMode: "ExactIn",
-            initialAmount: "1000000",
-            initialInputMint: "So11111111111111111111111111111111111111112",
-            initialOutputMint: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+            fixedAmount: true,
+            fixedMint: "So11111111111111111111111111111111111111112",
+            referralAccount: "F4qYkXAcogrjQHw3ngKWjisMmmRFR4Ea6c9DCCpK5gBr",
+            referralFee: 150,
           },
-          enableWalletPassthrough: true,
-          onSuccess: ({ txid }) => {
-            console.log('Swap successful:', txid);
+          branding: {
+            name: "D3 SAVAGE SWAP",
+            logoUri: "https://ibb.co/0VFDBzYQ",
           },
-          onSwapError: ({ error }) => {
-            console.error('Swap error:', error);
-          }
         });
-      } else {
-        console.error('Jupiter object not available');
-      }
-    };
-    script.onerror = (error) => {
-      console.error('Failed to load Jupiter Terminal script:', error);
-    };
-    document.head.appendChild(script);
-
-    return () => {
-      // Cleanup script
-      const existingScript = document.querySelector('script[src="https://terminal.jup.ag/main-v2.js"]');
-      if (existingScript) {
-        document.head.removeChild(existingScript);
-      }
-    };
+      });
+    }
   }, []);
 
   return (
