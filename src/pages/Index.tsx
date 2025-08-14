@@ -14,43 +14,40 @@ const Index = () => {
   const isMobile = useIsMobile();
   
   return (
-    <div className="flex flex-col min-h-screen bg-background">
-      <Header />
-      
-      <main className="flex-1 container mx-auto px-2 py-4 md:py-6 max-w-screen-2xl">
-        <div className="space-y-4 md:space-y-6">
-          <BotAccess />
-          <TopMemecoins />
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div className="lg:col-span-2">
-              <BlockchainAnalytics />
+    <div className="min-h-screen bg-background p-2">
+      <div className="max-w-4xl mx-auto space-y-2">
+        {/* Retro PC Header */}
+        <div className="retro-terminal p-2 mb-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <h1 className="text-sm font-bold text-primary font-mono tracking-wider">
+                &gt; MEMEFLOW.EXE
+              </h1>
+              <span className="bg-primary/20 text-primary border border-primary/50 font-mono text-xs px-1">
+                v1.0
+              </span>
             </div>
-            
-            <div>
-              <PerformanceMetrics />
+            <div className="text-xs font-mono text-muted-foreground">
+              [{new Date().toLocaleTimeString()}]
             </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div className="lg:col-span-1">
-              <ProfitSimulator />
-            </div>
-            
-            <div className="lg:col-span-1">
-              {isMobile ? <TokenSwap /> : <MemeScanner />}
-            </div>
-            
-            <div className="lg:col-span-1">
-              {isMobile ? <MemeScanner /> : <TokenSwap />}
-            </div>
-          </div>
-          
-          <div>
-            <LaunchCalendar />
           </div>
         </div>
-      </main>
+        
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
+          {/* Main Trading Section */}
+          <div className="space-y-2">
+            <TokenSwap />
+            <TopMemecoins />
+          </div>
+          
+          {/* Sidebar */}
+          <div className="space-y-2">
+            <MemeScanner />
+            <PerformanceMetrics />
+            <BotAccess />
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
