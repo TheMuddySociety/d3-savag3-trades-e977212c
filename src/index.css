@@ -34,6 +34,14 @@
     --ring: 0 100% 50%;
 
     --radius: 0.75rem;
+
+    /* Jupiter Plugin CSS Variables */
+    --jupiter-plugin-primary: 153, 20, 20;
+    --jupiter-plugin-background: 0, 0, 0;
+    --jupiter-plugin-primary-text: 232, 249, 255;
+    --jupiter-plugin-warning: 251, 191, 36;
+    --jupiter-plugin-interactive: 33, 42, 54;
+    --jupiter-plugin-module: 132, 0, 0;
   }
 
   .dark {
