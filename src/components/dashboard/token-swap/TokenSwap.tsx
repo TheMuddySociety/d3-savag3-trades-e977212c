@@ -1,6 +1,4 @@
 import { useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { ArrowDownUp } from "lucide-react";
 import { useWallet } from '@solana/wallet-adapter-react';
 import "@jup-ag/plugin/css";
 
@@ -30,22 +28,17 @@ export function TokenSwap() {
   }, []);
 
   return (
-    <Card className="memecoin-card">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-xl">
-          <ArrowDownUp className="h-5 w-5 text-solana" />
-          D3 SAVAGE SWAP
-        </CardTitle>
-        <CardDescription>
-          Swap your tokens at the best rates across multiple DEXs
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
+    <div className="w-full max-w-md mx-auto">
+      <div className="bg-card/80 backdrop-blur-sm rounded-2xl border border-border/50 shadow-lg overflow-hidden">
+        <div className="px-4 py-3 border-b border-border/30">
+          <h2 className="text-lg font-semibold text-foreground">Swap</h2>
+          <p className="text-xs text-muted-foreground">Best rates across DEXs</p>
+        </div>
         <div 
           id="target-container"
-          className="min-h-[400px] w-full"
+          className="min-h-[380px] w-full p-2"
         />
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
