@@ -12,35 +12,39 @@ const Index = () => {
   const isMobile = useIsMobile();
   
   return (
-    <div className="min-h-screen bg-background p-2">
-      <div className="max-w-4xl mx-auto space-y-2">
-        {/* Retro PC Header */}
-        <div className="retro-terminal p-2 mb-2">
+    <div className="min-h-screen bg-background p-3 md:p-4">
+      <div className="max-w-4xl mx-auto space-y-3">
+        {/* Cute Bubbly Header */}
+        <div className="retro-terminal p-3 mb-3">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <h1 className="text-sm font-bold text-primary font-mono tracking-wider">
-                &gt; MEMEFLOW.EXE
+            <div className="flex items-center space-x-3">
+              <div className="text-2xl">🚀</div>
+              <h1 className="text-base font-bold text-primary tracking-wide">
+                MEMEFLOW
               </h1>
-              <span className="bg-primary/20 text-primary border border-primary/50 font-mono text-xs px-1">
+              <span className="bg-primary/20 text-primary border-2 border-primary/50 font-semibold text-xs px-2 py-0.5 rounded-full">
                 v1.0
               </span>
             </div>
-            <div className="text-xs font-mono text-muted-foreground">
-              [{new Date().toLocaleTimeString()}]
+            <div className="flex items-center gap-2">
+              <span className="text-xl">✨</span>
+              <div className="text-xs text-muted-foreground bg-muted/50 px-3 py-1 rounded-full">
+                {new Date().toLocaleTimeString()}
+              </div>
             </div>
           </div>
         </div>
         
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-2">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
           {/* Main Trading Section */}
-          <div className="lg:col-span-2 space-y-2">
+          <div className="lg:col-span-2 space-y-3">
             <TokenSwap />
             <TopMemecoins />
           </div>
           
           {/* Sidebar */}
-          <div className="space-y-2">
-            <div className="grid grid-cols-1 gap-2">
+          <div className="space-y-3">
+            <div className="grid grid-cols-1 gap-3">
               <MiniChart title="SOL/USD" currentValue={67.4} change={12.3} />
               <MiniChart title="MEME INDEX" currentValue={234.8} change={-5.2} />
             </div>

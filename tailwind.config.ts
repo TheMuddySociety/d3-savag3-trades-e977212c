@@ -71,9 +71,9 @@ export default {
 				}
 			},
 			borderRadius: {
-				lg: '0px',
-				md: '0px',
-				sm: '0px'
+				lg: '1.5rem',
+				md: '1rem',
+				sm: '0.75rem'
 			},
 			fontFamily: {
 				mono: ['"Courier New"', 'monospace'],

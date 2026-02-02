@@ -29,14 +29,17 @@ export function TokenSwap() {
 
   return (
     <div className="w-full max-w-md mx-auto">
-      <div className="bg-card/80 backdrop-blur-sm rounded-2xl border border-border/50 shadow-lg overflow-hidden">
-        <div className="px-4 py-3 border-b border-border/30">
-          <h2 className="text-lg font-semibold text-foreground">Swap</h2>
-          <p className="text-xs text-muted-foreground">Best rates across DEXs</p>
+      <div className="bg-card/90 backdrop-blur-xl rounded-3xl border-2 border-primary/30 shadow-xl overflow-hidden">
+        <div className="px-5 py-4 border-b border-border/30 bg-gradient-to-r from-primary/10 to-accent/10">
+          <div className="flex items-center gap-2">
+            <span className="text-xl">💫</span>
+            <h2 className="text-lg font-bold text-foreground">Swap</h2>
+          </div>
+          <p className="text-xs text-muted-foreground mt-1">Best rates across DEXs ✨</p>
         </div>
         <div 
           id="target-container"
-          className="min-h-[380px] w-full p-2"
+          className="min-h-[380px] w-full p-3"
         />
       </div>
     </div>
