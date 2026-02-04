@@ -1,8 +1,9 @@
 import React, { useState, useMemo } from 'react';
-import { Loader2 } from 'lucide-react';
-import { useLaunchpadTokens } from '@/hooks/useLaunchpadTokens';
+import { Loader2, Wifi, WifiOff } from 'lucide-react';
+import { useRealtimeTokens } from '@/hooks/useRealtimeTokens';
 import { TrendingCarousel, FilterTabs, TokenTable, FilterType } from './pumpfun';
 import { MemeToken } from '@/types/memeToken';
+import { cn } from '@/lib/utils';
 
 const handleTokenClick = (token: MemeToken) => {
   if (token.tokenAddress) {
@@ -17,7 +18,7 @@ export function TopMemecoins() {
   const [sortField, setSortField] = useState<string>('volume24h');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   
-  const { tokens, loading, error } = useLaunchpadTokens('pumpfun', 20);
+  const { tokens, loading, error, isConnected, lastUpdate } = useRealtimeTokens('pumpfun', 20);
 
   const handleSort = (field: string) => {
     if (sortField === field) {
@@ -84,6 +85,31 @@ export function TopMemecoins() {
 
   return (
     <div className="space-y-6">
+      {/* Connection Status Indicator */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          {isConnected ? (
+            <>
+              <div className="relative">
+                <Wifi className="h-4 w-4 text-accent" />
+                <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-accent animate-pulse" />
+              </div>
+              <span className="text-xs text-muted-foreground">Live updates active</span>
+            </>
+          ) : (
+            <>
+              <WifiOff className="h-4 w-4 text-muted-foreground" />
+              <span className="text-xs text-muted-foreground">Connecting...</span>
+            </>
+          )}
+        </div>
+        {lastUpdate && (
+          <span className="text-xs text-muted-foreground">
+            Last update: {lastUpdate.toLocaleTimeString()}
+          </span>
+        )}
+      </div>
+
       {/* Trending Cards Carousel */}
       <div className="rounded-2xl border border-border bg-card/30 backdrop-blur-sm p-6">
         <TrendingCarousel tokens={sortedTokens} onTokenClick={handleTokenClick} />
