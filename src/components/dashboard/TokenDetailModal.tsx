@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -11,6 +11,14 @@ import {
   AreaChart, Area, ResponsiveContainer,
   XAxis, YAxis, Tooltip, CartesianGrid, PieChart, Pie, Cell,
 } from 'recharts';
+import {
+  ExternalLink, TrendingUp, TrendingDown, Users, Droplets,
+  BarChart3, Clock, Copy, ArrowUpRight, ArrowDownRight, Loader2,
+  ArrowRightLeft, ChevronDown, ChevronUp,
+} from 'lucide-react';
+import { MemeToken } from '@/types/memeToken';
+import { cn } from '@/lib/utils';
+import { supabase } from '@/integrations/supabase/client';
 import {
   ExternalLink, TrendingUp, TrendingDown, Users, Droplets,
   BarChart3, Clock, Copy, ArrowUpRight, ArrowDownRight, Loader2,
