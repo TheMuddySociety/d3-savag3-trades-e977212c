@@ -10,9 +10,10 @@ import { useToast } from "@/hooks/use-toast";
 
 interface Props {
   sim: any;
+  isLive?: boolean;
 }
 
-export const VolumeBot = ({ sim }: Props) => {
+export const VolumeBot = ({ sim, isLive = false }: Props) => {
   const { toast } = useToast();
   const [isRunning, setIsRunning] = useState(false);
   const [tokenAddress, setTokenAddress] = useState("");
@@ -25,9 +26,7 @@ export const VolumeBot = ({ sim }: Props) => {
   const volumeInterval = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    return () => {
-      if (volumeInterval.current) clearInterval(volumeInterval.current);
-    };
+    return () => { if (volumeInterval.current) clearInterval(volumeInterval.current); };
   }, []);
 
   const startVolumeBot = () => {
@@ -35,30 +34,22 @@ export const VolumeBot = ({ sim }: Props) => {
       toast({ title: "Missing token", description: "Enter a token address", variant: "destructive" });
       return;
     }
+    if (isLive) {
+      toast({ title: "Not available in Live Mode", description: "Volume bot is only available in paper trading mode for safety", variant: "destructive" });
+      return;
+    }
 
     setIsRunning(true);
     setTxCount(0);
     let count = 0;
-
     const intervalMs = (60000 / txPerMinute[0]);
 
     const executeVolumeTx = async () => {
-      // Alternate buy and sell to generate volume
       const isBuy = count % 2 === 0;
       if (isBuy) {
-        await sim.simulateBuy(
-          tokenAddress,
-          tokenSymbol || tokenAddress.slice(0, 6),
-          parseFloat(solPerTx),
-          'volume'
-        );
+        await sim.simulateBuy(tokenAddress, tokenSymbol || tokenAddress.slice(0, 6), parseFloat(solPerTx), 'volume');
       } else {
-        await sim.simulateSell(
-          tokenAddress,
-          tokenSymbol || tokenAddress.slice(0, 6),
-          50, // Sell 50% each time
-          'volume'
-        );
+        await sim.simulateSell(tokenAddress, tokenSymbol || tokenAddress.slice(0, 6), 50, 'volume');
       }
       count++;
       setTxCount(count);
@@ -70,10 +61,7 @@ export const VolumeBot = ({ sim }: Props) => {
 
   const stopVolumeBot = () => {
     setIsRunning(false);
-    if (volumeInterval.current) {
-      clearInterval(volumeInterval.current);
-      volumeInterval.current = null;
-    }
+    if (volumeInterval.current) { clearInterval(volumeInterval.current); volumeInterval.current = null; }
     toast({ title: "Volume Bot Stopped", description: `Executed ${txCount} transactions` });
   };
 
@@ -91,6 +79,11 @@ export const VolumeBot = ({ sim }: Props) => {
           <BarChart3 className="h-4 w-4 text-accent" />
           <span className="text-sm font-medium text-foreground">Volume Bot</span>
         </div>
+        {isLive && (
+          <Badge variant="outline" className="text-[10px] bg-muted/30 text-muted-foreground border-border">
+            Paper Only
+          </Badge>
+        )}
         {isRunning && (
           <Badge className="bg-accent/20 text-accent border-accent/30 animate-pulse">
             {txCount} txs
@@ -101,69 +94,30 @@ export const VolumeBot = ({ sim }: Props) => {
       <div className="space-y-3">
         <div>
           <Label className="text-xs text-muted-foreground">Token Address</Label>
-          <Input
-            placeholder="Enter token mint address..."
-            value={tokenAddress}
-            onChange={(e) => setTokenAddress(e.target.value)}
-            className="bg-muted/30 border-border text-sm font-mono"
-            disabled={isRunning}
-          />
+          <Input placeholder="Enter token mint address..." value={tokenAddress} onChange={(e) => setTokenAddress(e.target.value)} className="bg-muted/30 border-border text-sm font-mono" disabled={isRunning} />
         </div>
-
         <div>
           <Label className="text-xs text-muted-foreground">Token Symbol (optional)</Label>
-          <Input
-            placeholder="e.g. BONK"
-            value={tokenSymbol}
-            onChange={(e) => setTokenSymbol(e.target.value)}
-            className="bg-muted/30 border-border text-sm"
-            disabled={isRunning}
-          />
+          <Input placeholder="e.g. BONK" value={tokenSymbol} onChange={(e) => setTokenSymbol(e.target.value)} className="bg-muted/30 border-border text-sm" disabled={isRunning} />
         </div>
-
         <div>
           <Label className="text-xs text-muted-foreground">SOL per Transaction</Label>
-          <Input
-            type="number"
-            value={solPerTx}
-            onChange={(e) => setSolPerTx(e.target.value)}
-            className="bg-muted/30 border-border text-sm"
-            disabled={isRunning}
-            min="0.01"
-            step="0.01"
-          />
+          <Input type="number" value={solPerTx} onChange={(e) => setSolPerTx(e.target.value)} className="bg-muted/30 border-border text-sm" disabled={isRunning} min="0.01" step="0.01" />
         </div>
-
         <div>
           <div className="flex justify-between mb-1">
             <Label className="text-xs text-muted-foreground">Transactions / min</Label>
             <span className="text-xs font-mono text-foreground">{txPerMinute[0]}</span>
           </div>
-          <Slider
-            value={txPerMinute}
-            onValueChange={setTxPerMinute}
-            min={1}
-            max={10}
-            step={1}
-            disabled={isRunning}
-          />
+          <Slider value={txPerMinute} onValueChange={setTxPerMinute} min={1} max={10} step={1} disabled={isRunning} />
         </div>
-
         <div>
           <div className="flex justify-between mb-1">
             <Label className="text-xs text-muted-foreground">Simulated Wallets</Label>
             <span className="text-xs font-mono text-foreground">{numWallets[0]}</span>
           </div>
-          <Slider
-            value={numWallets}
-            onValueChange={setNumWallets}
-            min={1}
-            max={10}
-            step={1}
-            disabled={isRunning}
-          />
+          <Slider value={numWallets} onValueChange={setNumWallets} min={1} max={10} step={1} disabled={isRunning} />
         </div>
-
         <div className="flex items-center justify-between p-2 rounded-lg bg-muted/20 border border-border">
           <div className="flex items-center gap-2">
             <Wallet className="h-3 w-3 text-muted-foreground" />
@@ -185,7 +139,7 @@ export const VolumeBot = ({ sim }: Props) => {
 
         <Button
           onClick={handleToggle}
-          disabled={sim.isLoading}
+          disabled={sim.isLoading || isLive}
           className={`w-full ${isRunning ? 'bg-destructive hover:bg-destructive/90 text-destructive-foreground' : 'bg-accent hover:bg-accent/90 text-accent-foreground'}`}
           size="sm"
         >

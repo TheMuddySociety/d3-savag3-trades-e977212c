@@ -11,6 +11,7 @@ import { PhantomWalletAdapter, SolflareWalletAdapter } from '@solana/wallet-adap
 import { WalletModalProvider } from '@solana/wallet-adapter-react-ui';
 import { clusterApiUrl } from '@solana/web3.js';
 import { useMemo } from 'react';
+import { TradingModeProvider } from "@/hooks/useTradingMode";
 
 // Import wallet adapter CSS
 import '@solana/wallet-adapter-react-ui/styles.css';
@@ -37,6 +38,7 @@ const App = () => {
         <ConnectionProvider endpoint={endpoint}>
           <WalletProvider wallets={wallets} autoConnect>
             <WalletModalProvider>
+              <TradingModeProvider>
               <TooltipProvider>
                 <Toaster />
                 <Sonner />
@@ -49,6 +51,7 @@ const App = () => {
                   </Routes>
                 </BrowserRouter>
               </TooltipProvider>
+              </TradingModeProvider>
             </WalletModalProvider>
           </WalletProvider>
         </ConnectionProvider>

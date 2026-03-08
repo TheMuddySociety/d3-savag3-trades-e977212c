@@ -3,7 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Bot, Clock, Crosshair, BarChart3, Brain, Wallet, RotateCcw, History } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Bot, Clock, Crosshair, BarChart3, Brain, Wallet, RotateCcw, History, Zap } from "lucide-react";
 import { DCABot } from "./bot-tools/DCABot";
 import { BuySniper } from "./bot-tools/BuySniper";
 import { VolumeBot } from "./bot-tools/VolumeBot";
@@ -11,13 +12,25 @@ import { AutoStrategies } from "./bot-tools/AutoStrategies";
 import { SimPortfolio } from "./bot-tools/SimPortfolio";
 import { TradeHistory } from "./bot-tools/TradeHistory";
 import { useSimTrading } from "@/hooks/useSimTrading";
+import { useTradingMode } from "@/hooks/useTradingMode";
 import { useWallet } from "@solana/wallet-adapter-react";
 
 export const BotAccess = () => {
   const { publicKey } = useWallet();
   const walletAddress = publicKey?.toBase58() || null;
   const sim = useSimTrading(walletAddress);
+  const { isLive, hasPaid, isPaymentPending, toggleMode, payAccessFee } = useTradingMode();
   const [showHistory, setShowHistory] = useState(false);
+
+  const handleLiveToggle = async () => {
+    if (isLive) {
+      toggleMode(); // Switch back to paper
+    } else if (hasPaid) {
+      toggleMode(); // Switch to live (already paid)
+    } else {
+      await payAccessFee(); // Pay & switch
+    }
+  };
 
   return (
     <Card className="w-full">
@@ -25,45 +38,80 @@ export const BotAccess = () => {
         <div className="flex items-center gap-2">
           <Bot className="h-5 w-5 text-primary" />
           <CardTitle className="text-sm">Bot Trading Tools</CardTitle>
-          <Badge variant="outline" className="text-[10px] bg-[hsl(var(--fun-yellow))]/20 text-[hsl(var(--fun-yellow))] border-[hsl(var(--fun-yellow))]/30 ml-auto">
-            PAPER
+          <Badge
+            variant="outline"
+            className={`text-[10px] ml-auto ${
+              isLive
+                ? "bg-destructive/20 text-destructive border-destructive/30"
+                : "bg-[hsl(var(--fun-yellow))]/20 text-[hsl(var(--fun-yellow))] border-[hsl(var(--fun-yellow))]/30"
+            }`}
+          >
+            {isLive ? "🔴 LIVE" : "PAPER"}
           </Badge>
         </div>
+
+        {/* Go Live Toggle */}
+        {walletAddress && (
+          <div className="flex items-center justify-between mt-2 p-2 rounded-lg bg-muted/20 border border-border">
+            <div className="flex items-center gap-2">
+              <Zap className={`h-3.5 w-3.5 ${isLive ? "text-destructive" : "text-muted-foreground"}`} />
+              <div>
+                <span className="text-xs font-medium text-foreground">Go Live</span>
+                {!hasPaid && (
+                  <span className="text-[10px] text-muted-foreground block">0.04141 SOL access fee</span>
+                )}
+              </div>
+            </div>
+            <Switch
+              checked={isLive}
+              onCheckedChange={handleLiveToggle}
+              disabled={isPaymentPending || !walletAddress}
+            />
+          </div>
+        )}
+
         {walletAddress && sim.wallet && (
           <div className="flex items-center justify-between mt-1">
             <div className="flex items-center gap-1.5 text-xs">
               <Wallet className="h-3 w-3 text-muted-foreground" />
-              <span className="text-muted-foreground">Sim Balance:</span>
-              <span className="font-mono text-foreground font-medium">
-                {sim.wallet.sol_balance.toFixed(4)} SOL
-              </span>
+              <span className="text-muted-foreground">{isLive ? "Wallet:" : "Sim Balance:"}</span>
+              {!isLive && (
+                <span className="font-mono text-foreground font-medium">
+                  {sim.wallet.sol_balance.toFixed(4)} SOL
+                </span>
+              )}
+              {isLive && (
+                <span className="font-mono text-foreground font-medium">Connected</span>
+              )}
             </div>
-            <div className="flex gap-1">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-6 w-6 p-0"
-                onClick={() => setShowHistory(!showHistory)}
-                title="Trade History"
-              >
-                <History className="h-3 w-3" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-6 w-6 p-0"
-                onClick={sim.resetWallet}
-                title="Reset to 10 SOL"
-              >
-                <RotateCcw className="h-3 w-3" />
-              </Button>
-            </div>
+            {!isLive && (
+              <div className="flex gap-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 w-6 p-0"
+                  onClick={() => setShowHistory(!showHistory)}
+                  title="Trade History"
+                >
+                  <History className="h-3 w-3" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 w-6 p-0"
+                  onClick={sim.resetWallet}
+                  title="Reset to 10 SOL"
+                >
+                  <RotateCcw className="h-3 w-3" />
+                </Button>
+              </div>
+            )}
           </div>
         )}
       </CardHeader>
 
       <CardContent className="pt-0">
-        {showHistory ? (
+        {showHistory && !isLive ? (
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium text-foreground">Trade History</span>
@@ -96,16 +144,16 @@ export const BotAccess = () => {
             </TabsList>
 
             <TabsContent value="sniper" className="mt-0">
-              <BuySniper sim={sim} />
+              <BuySniper sim={sim} isLive={isLive} />
             </TabsContent>
             <TabsContent value="dca" className="mt-0">
-              <DCABot sim={sim} />
+              <DCABot sim={sim} isLive={isLive} />
             </TabsContent>
             <TabsContent value="volume" className="mt-0">
-              <VolumeBot sim={sim} />
+              <VolumeBot sim={sim} isLive={isLive} />
             </TabsContent>
             <TabsContent value="auto" className="mt-0">
-              <AutoStrategies sim={sim} />
+              <AutoStrategies sim={sim} isLive={isLive} />
             </TabsContent>
           </Tabs>
         )}
