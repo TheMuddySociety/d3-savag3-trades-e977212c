@@ -338,6 +338,26 @@ export const tools: AITool[] = [
     ],
     marketCondition: "All conditions — risk-free strategy testing environment",
   },
+  {
+    id: "mev-sandwich-shield",
+    name: "MEV Sandwich Shield",
+    description: "Detect and protect against MEV sandwich attacks on Solana — monitors mempool activity, flags suspicious bundled txs, and routes swaps through private RPCs.",
+    category: "security",
+    icon: <Shield className="h-5 w-5" />,
+    tags: ["MEV", "Sandwich", "Protection", "Security"],
+    url: "https://github.com/solana-foundation/awesome-solana-ai",
+    profitRange: "Loss prevention — saves $50–$50,000+ per trade",
+    minFunding: "Free (open-source)",
+    timeframe: "Always-on protection",
+    setupSteps: [
+      "Clone repo and install: git clone <repo> && cd mev-shield && npm install",
+      "Set SOLANA_RPC (Jito or private RPC recommended) and PRIVATE_KEY in .env",
+      "Configure protection mode: detect-only, auto-reroute, or Jito bundle in config.json",
+      "Run: npm start — monitors pending txs for sandwich patterns in real-time",
+      "Integrate with your swap pipeline to auto-route trades through protected paths"
+    ],
+    marketCondition: "All conditions — MEV attacks increase during high-volume periods",
+  },
 ];
 
 export const categoryLabels: Record<ToolCategory, string> = {
