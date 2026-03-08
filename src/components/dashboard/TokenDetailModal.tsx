@@ -488,6 +488,33 @@ export function TokenDetailModal({ token, open, onOpenChange }: TokenDetailModal
               </button>
               {showSwap && (
                 <div className="border-t border-border/30">
+                  {/* Quick Buy Presets */}
+                  <div className="px-3 pt-3 pb-1">
+                    <p className="text-[11px] text-muted-foreground mb-2">⚡ Quick Buy</p>
+                    <div className="flex gap-2">
+                      {QUICK_BUY_AMOUNTS.map((amount) => (
+                        <Button
+                          key={amount}
+                          size="sm"
+                          variant={selectedAmount === amount ? "default" : "outline"}
+                          className={cn(
+                            "flex-1 h-9 text-xs font-mono gap-1 transition-all",
+                            selectedAmount === amount
+                              ? "bg-primary text-primary-foreground shadow-sm shadow-primary/20"
+                              : "border-border/50 hover:border-primary/50 hover:bg-primary/5"
+                          )}
+                          onClick={() => handleQuickBuy(amount)}
+                        >
+                          {amount} SOL
+                        </Button>
+                      ))}
+                    </div>
+                    {selectedAmount && token.price > 0 && (
+                      <p className="text-[10px] text-muted-foreground mt-1.5 text-center">
+                        ≈ {((selectedAmount * 67) / token.price).toLocaleString(undefined, { maximumFractionDigits: 0 })} {token.symbol} at current price
+                      </p>
+                    )}
+                  </div>
                   <div
                     id={swapContainerId}
                     className="min-h-[380px] w-full p-3"
