@@ -7,6 +7,7 @@ import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { BarChart3, Play, Pause, Wallet } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { LiveTradeConfirmDialog } from "./LiveTradeConfirmDialog";
 
 interface Props {
   sim: any;
@@ -23,22 +24,14 @@ export const VolumeBot = ({ sim, isLive = false }: Props) => {
   const [numWallets, setNumWallets] = useState([3]);
   const [useBundling, setUseBundling] = useState(true);
   const [txCount, setTxCount] = useState(0);
+  const [showConfirm, setShowConfirm] = useState(false);
   const volumeInterval = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     return () => { if (volumeInterval.current) clearInterval(volumeInterval.current); };
   }, []);
 
-  const startVolumeBot = () => {
-    if (!tokenAddress) {
-      toast({ title: "Missing token", description: "Enter a token address", variant: "destructive" });
-      return;
-    }
-    if (isLive) {
-      toast({ title: "Not available in Live Mode", description: "Volume bot is only available in paper trading mode for safety", variant: "destructive" });
-      return;
-    }
-
+  const proceedStart = () => {
     setIsRunning(true);
     setTxCount(0);
     let count = 0;
@@ -57,6 +50,20 @@ export const VolumeBot = ({ sim, isLive = false }: Props) => {
 
     executeVolumeTx();
     volumeInterval.current = setInterval(executeVolumeTx, intervalMs);
+    toast({ title: "Volume Bot Started", description: `${isLive ? "LIVE" : "Paper"} — Running on ${tokenSymbol || tokenAddress.slice(0, 8)}` });
+  };
+
+  const startVolumeBot = () => {
+    if (!tokenAddress) {
+      toast({ title: "Missing token", description: "Enter a token address", variant: "destructive" });
+      return;
+    }
+
+    if (isLive) {
+      setShowConfirm(true);
+    } else {
+      proceedStart();
+    }
   };
 
   const stopVolumeBot = () => {
@@ -74,19 +81,23 @@ export const VolumeBot = ({ sim, isLive = false }: Props) => {
 
   return (
     <div className="space-y-4">
+      <LiveTradeConfirmDialog
+        open={showConfirm}
+        onConfirm={() => { setShowConfirm(false); proceedStart(); }}
+        onCancel={() => setShowConfirm(false)}
+        action="Volume Bot"
+        tokenSymbol={tokenSymbol || tokenAddress.slice(0, 8)}
+        solAmount={parseFloat(solPerTx)}
+      />
+
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <BarChart3 className="h-4 w-4 text-accent" />
           <span className="text-sm font-medium text-foreground">Volume Bot</span>
         </div>
-        {isLive && (
-          <Badge variant="outline" className="text-[10px] bg-muted/30 text-muted-foreground border-border">
-            Paper Only
-          </Badge>
-        )}
         {isRunning && (
-          <Badge className="bg-accent/20 text-accent border-accent/30 animate-pulse">
-            {txCount} txs
+          <Badge className={`${isLive ? "bg-destructive/20 text-destructive border-destructive/30" : "bg-accent/20 text-accent border-accent/30"} animate-pulse`}>
+            {isLive ? `🔴 ${txCount} txs` : `${txCount} txs`}
           </Badge>
         )}
       </div>
@@ -137,10 +148,16 @@ export const VolumeBot = ({ sim, isLive = false }: Props) => {
           </div>
         </div>
 
+        {isLive && !isRunning && (
+          <div className="p-2 rounded-lg bg-destructive/10 border border-destructive/30">
+            <p className="text-[11px] text-destructive font-medium">⚠️ LIVE MODE — Real SOL will be spent. Transactions are irreversible.</p>
+          </div>
+        )}
+
         <Button
           onClick={handleToggle}
-          disabled={sim.isLoading || isLive}
-          className={`w-full ${isRunning ? 'bg-destructive hover:bg-destructive/90 text-destructive-foreground' : 'bg-accent hover:bg-accent/90 text-accent-foreground'}`}
+          disabled={sim.isLoading}
+          className={`w-full ${isRunning ? 'bg-destructive hover:bg-destructive/90 text-destructive-foreground' : isLive ? 'bg-destructive hover:bg-destructive/90 text-destructive-foreground' : 'bg-accent hover:bg-accent/90 text-accent-foreground'}`}
           size="sm"
         >
           {sim.isLoading ? (
@@ -148,7 +165,7 @@ export const VolumeBot = ({ sim, isLive = false }: Props) => {
           ) : isRunning ? (
             <><Pause className="h-4 w-4 mr-2" /> Stop Volume Bot</>
           ) : (
-            <><Play className="h-4 w-4 mr-2" /> Start Volume Bot (Paper)</>
+            <><Play className="h-4 w-4 mr-2" /> Start Volume Bot {isLive ? "(LIVE)" : "(Paper)"}</>
           )}
         </Button>
       </div>

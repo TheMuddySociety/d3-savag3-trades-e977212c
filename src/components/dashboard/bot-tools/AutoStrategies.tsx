@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Brain, TrendingUp, TrendingDown, ShieldCheck, Flame } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { LiveTradeConfirmDialog } from "./LiveTradeConfirmDialog";
 
 interface Strategy {
   id: string;
@@ -38,12 +39,10 @@ export const AutoStrategies = ({ sim, isLive = false }: Props) => {
   const { toast } = useToast();
   const [strategies, setStrategies] = useState<Strategy[]>(INITIAL_STRATEGIES);
   const [maxBudget, setMaxBudget] = useState("1.0");
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [pendingStrategyId, setPendingStrategyId] = useState<string | null>(null);
 
-  const toggleStrategy = (id: string) => {
-    if (isLive) {
-      toast({ title: "Not available in Live Mode", description: "Auto strategies are paper-only for safety", variant: "destructive" });
-      return;
-    }
+  const proceedToggle = (id: string) => {
     setStrategies((prev) =>
       prev.map((s) => {
         if (s.id === id) {
@@ -52,7 +51,7 @@ export const AutoStrategies = ({ sim, isLive = false }: Props) => {
             strategies: prev.map(st => st.id === id ? { ...st, enabled: next } : st).filter(st => st.enabled).map(st => st.id),
             maxBudget: parseFloat(maxBudget),
           }, next || prev.filter(st => st.id !== id).some(st => st.enabled));
-          toast({ title: next ? `${s.name} Enabled` : `${s.name} Disabled`, description: next ? `Paper trading: ${s.description}` : `Strategy deactivated` });
+          toast({ title: next ? `${s.name} Enabled` : `${s.name} Disabled`, description: next ? `${isLive ? "LIVE" : "Paper"} trading: ${s.description}` : `Strategy deactivated` });
           return { ...s, enabled: next };
         }
         return s;
@@ -60,24 +59,54 @@ export const AutoStrategies = ({ sim, isLive = false }: Props) => {
     );
   };
 
+  const toggleStrategy = (id: string) => {
+    const strategy = strategies.find(s => s.id === id);
+    if (!strategy) return;
+
+    // If disabling, no confirmation needed
+    if (strategy.enabled) {
+      proceedToggle(id);
+      return;
+    }
+
+    // If enabling in live mode, show confirmation
+    if (isLive) {
+      setPendingStrategyId(id);
+      setShowConfirm(true);
+    } else {
+      proceedToggle(id);
+    }
+  };
+
   const activeCount = strategies.filter((s) => s.enabled).length;
+  const pendingStrategy = strategies.find(s => s.id === pendingStrategyId);
 
   return (
     <div className="space-y-4">
+      <LiveTradeConfirmDialog
+        open={showConfirm}
+        onConfirm={() => {
+          setShowConfirm(false);
+          if (pendingStrategyId) {
+            proceedToggle(pendingStrategyId);
+            setPendingStrategyId(null);
+          }
+        }}
+        onCancel={() => { setShowConfirm(false); setPendingStrategyId(null); }}
+        action={`Auto Strategy: ${pendingStrategy?.name || "Unknown"}`}
+        tokenSymbol="All matching tokens"
+        solAmount={parseFloat(maxBudget)}
+      />
+
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Brain className="h-4 w-4 text-[hsl(var(--fun-purple))]" />
           <span className="text-sm font-medium text-foreground">Auto Strategies</span>
         </div>
         <div className="flex items-center gap-1">
-          {isLive && (
-            <Badge variant="outline" className="text-[10px] bg-muted/30 text-muted-foreground border-border">
-              Paper Only
-            </Badge>
-          )}
           {activeCount > 0 && (
-            <Badge className="bg-primary/20 text-primary border-primary/30">
-              {activeCount} active
+            <Badge className={`${isLive ? "bg-destructive/20 text-destructive border-destructive/30" : "bg-primary/20 text-primary border-primary/30"}`}>
+              {activeCount} active {isLive ? "(LIVE)" : ""}
             </Badge>
           )}
         </div>
@@ -88,16 +117,22 @@ export const AutoStrategies = ({ sim, isLive = false }: Props) => {
         <Input type="number" value={maxBudget} onChange={(e) => setMaxBudget(e.target.value)} className="bg-muted/30 border-border text-sm mt-1" min="0.1" step="0.1" />
       </div>
 
+      {isLive && (
+        <div className="p-2 rounded-lg bg-destructive/10 border border-destructive/30">
+          <p className="text-[11px] text-destructive font-medium">⚠️ LIVE MODE — Enabling strategies will execute real trades automatically.</p>
+        </div>
+      )}
+
       <div className="space-y-2">
         {strategies.map((strategy) => (
-          <div key={strategy.id} className={`p-3 rounded-lg border transition-all ${strategy.enabled ? "bg-primary/5 border-primary/30" : "bg-muted/10 border-border"}`}>
+          <div key={strategy.id} className={`p-3 rounded-lg border transition-all ${strategy.enabled ? (isLive ? "bg-destructive/5 border-destructive/30" : "bg-primary/5 border-primary/30") : "bg-muted/10 border-border"}`}>
             <div className="flex items-center justify-between mb-1">
               <div className="flex items-center gap-2">
-                <span className={strategy.enabled ? "text-primary" : "text-muted-foreground"}>{strategy.icon}</span>
+                <span className={strategy.enabled ? (isLive ? "text-destructive" : "text-primary") : "text-muted-foreground"}>{strategy.icon}</span>
                 <span className="text-sm font-medium text-foreground">{strategy.name}</span>
                 <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${riskColors[strategy.risk]}`}>{strategy.risk}</Badge>
               </div>
-              <Switch checked={strategy.enabled} onCheckedChange={() => toggleStrategy(strategy.id)} disabled={isLive} />
+              <Switch checked={strategy.enabled} onCheckedChange={() => toggleStrategy(strategy.id)} />
             </div>
             <p className="text-xs text-muted-foreground pl-6">{strategy.description}</p>
           </div>
