@@ -24,6 +24,17 @@ export function TopMemecoins() {
   const [birdeyeError, setBirdeyeError] = useState<string | null>(null);
   const [selectedToken, setSelectedToken] = useState<MemeToken | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const [alertToken, setAlertToken] = useState<MemeToken | null>(null);
+  const [alertDialogOpen, setAlertDialogOpen] = useState(false);
+
+  const { publicKey } = useWallet();
+  const walletAddress = publicKey?.toBase58() || null;
+  const { createAlert } = usePriceAlerts(walletAddress);
+
+  const handleSetAlert = (token: MemeToken) => {
+    setAlertToken(token);
+    setAlertDialogOpen(true);
+  };
 
   const handleTokenClick = (token: MemeToken) => {
     setSelectedToken(token);
