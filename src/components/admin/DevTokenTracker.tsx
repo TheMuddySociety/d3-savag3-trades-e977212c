@@ -4,7 +4,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Plus, Trash, Search, Download, AlertTriangle, Skull, TrendingDown } from "lucide-react";
+import { Plus, Trash, Search, Download, AlertTriangle, Skull, TrendingDown, Loader2, RefreshCw } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 interface TrackedDev {
   walletAddress: string;
@@ -16,6 +17,9 @@ interface TrackedDev {
   riskLevel: "low" | "medium" | "high" | "critical";
   addedAt: string;
   notes: string;
+  tokens?: { mint: string; name: string; symbol: string; supply: number; burnt: boolean }[];
+  transactionCount?: number;
+  suspiciousPatterns?: number;
 }
 
 const RISK_COLORS: Record<string, string> = {
@@ -29,6 +33,8 @@ export function DevTokenTracker() {
   const [devAddress, setDevAddress] = useState("");
   const [devAlias, setDevAlias] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [refreshingAddress, setRefreshingAddress] = useState<string | null>(null);
   const [trackedDevs, setTrackedDevs] = useState<TrackedDev[]>(() => {
     const saved = localStorage.getItem("trackedDevs");
     return saved ? JSON.parse(saved) : [];
@@ -39,9 +45,41 @@ export function DevTokenTracker() {
     localStorage.setItem("trackedDevs", JSON.stringify(devs));
   };
 
-  const handleAddDev = () => {
+  const fetchDevData = async (walletAddress: string): Promise<Omit<TrackedDev, 'alias' | 'addedAt' | 'notes'> | null> => {
+    try {
+      const { data, error } = await supabase.functions.invoke('dev-tracker', {
+        body: { walletAddress },
+      });
+
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.error || 'Failed to fetch dev data');
+
+      const d = data.data;
+      return {
+        walletAddress: d.walletAddress,
+        tokensLaunched: d.tokensLaunched,
+        rugPulls: d.rugPulls,
+        honeypots: d.honeypots,
+        avgLifespan: d.avgLifespan,
+        riskLevel: d.riskLevel as TrackedDev['riskLevel'],
+        tokens: d.tokens,
+        transactionCount: d.transactionCount,
+        suspiciousPatterns: d.suspiciousPatterns,
+      };
+    } catch (err) {
+      console.error('Dev tracker fetch error:', err);
+      toast.error(`Failed to fetch on-chain data: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      return null;
+    }
+  };
+
+  const handleAddDev = async () => {
     if (!devAddress) {
       toast.error("Enter a developer wallet address");
+      return;
+    }
+    if (devAddress.length < 32) {
+      toast.error("Invalid Solana wallet address");
       return;
     }
     if (trackedDevs.some((d) => d.walletAddress === devAddress)) {
@@ -49,29 +87,40 @@ export function DevTokenTracker() {
       return;
     }
 
-    // Simulated data — in production you'd pull from on-chain analysis
-    const riskOptions: TrackedDev["riskLevel"][] = ["low", "medium", "high", "critical"];
-    const randomRisk = riskOptions[Math.floor(Math.random() * riskOptions.length)];
-    const randomTokens = Math.floor(Math.random() * 50) + 1;
-    const randomRugs = Math.floor(Math.random() * Math.min(randomTokens, 15));
-    const randomHoneypots = Math.floor(Math.random() * Math.min(randomTokens - randomRugs, 10));
+    setLoading(true);
+    toast.info("Fetching on-chain data from Helius...");
 
-    const newDev: TrackedDev = {
-      walletAddress: devAddress,
-      alias: devAlias || `Dev-${devAddress.slice(0, 6)}`,
-      tokensLaunched: randomTokens,
-      rugPulls: randomRugs,
-      honeypots: randomHoneypots,
-      avgLifespan: `${Math.floor(Math.random() * 72) + 1}h`,
-      riskLevel: randomRisk,
-      addedAt: new Date().toISOString(),
-      notes: "",
-    };
+    const result = await fetchDevData(devAddress);
 
-    persist([newDev, ...trackedDevs]);
-    setDevAddress("");
-    setDevAlias("");
-    toast.success(`Now tracking ${newDev.alias}`);
+    if (result) {
+      const newDev: TrackedDev = {
+        ...result,
+        alias: devAlias || `Dev-${devAddress.slice(0, 6)}`,
+        addedAt: new Date().toISOString(),
+        notes: "",
+      };
+      persist([newDev, ...trackedDevs]);
+      setDevAddress("");
+      setDevAlias("");
+      toast.success(`Now tracking ${newDev.alias} — ${result.tokensLaunched} tokens found on-chain`);
+    }
+
+    setLoading(false);
+  };
+
+  const handleRefresh = async (address: string) => {
+    setRefreshingAddress(address);
+    const result = await fetchDevData(address);
+    if (result) {
+      const updated = trackedDevs.map((d) =>
+        d.walletAddress === address
+          ? { ...d, ...result }
+          : d
+      );
+      persist(updated);
+      toast.success("Dev data refreshed from on-chain");
+    }
+    setRefreshingAddress(null);
   };
 
   const handleRemove = (address: string) => {
@@ -90,9 +139,19 @@ export function DevTokenTracker() {
       toast.error("No data to export");
       return;
     }
-    const headers = ["Alias", "Wallet", "Tokens Launched", "Rug Pulls", "Honeypots", "Avg Lifespan", "Risk Level", "Added"];
+    const headers = ["Alias", "Wallet", "Tokens Launched", "Rug Pulls", "Honeypots", "Suspicious Patterns", "Avg Lifespan", "Risk Level", "TX Count", "Top Tokens", "Added"];
     const rows = trackedDevs.map((d) => [
-      d.alias, d.walletAddress, d.tokensLaunched, d.rugPulls, d.honeypots, d.avgLifespan, d.riskLevel, new Date(d.addedAt).toLocaleDateString(),
+      d.alias,
+      d.walletAddress,
+      d.tokensLaunched,
+      d.rugPulls,
+      d.honeypots,
+      d.suspiciousPatterns ?? 0,
+      d.avgLifespan,
+      d.riskLevel,
+      d.transactionCount ?? 0,
+      `"${(d.tokens || []).map((t) => `${t.symbol}(${t.mint.slice(0, 8)})`).join('; ')}"`,
+      new Date(d.addedAt).toLocaleDateString(),
     ]);
     const csv = [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
@@ -105,7 +164,6 @@ export function DevTokenTracker() {
     toast.success("Report downloaded");
   };
 
-  // Summary stats
   const totalDevs = trackedDevs.length;
   const totalRugs = trackedDevs.reduce((s, d) => s + d.rugPulls, 0);
   const totalHoneypots = trackedDevs.reduce((s, d) => s + d.honeypots, 0);
@@ -117,6 +175,7 @@ export function DevTokenTracker() {
         <CardTitle className="text-xl flex items-center gap-2">
           <Skull className="h-5 w-5 text-destructive" />
           Dev Token Scam Tracker
+          <Badge variant="outline" className="text-[10px] border-primary/40 text-primary ml-2">LIVE ON-CHAIN</Badge>
         </CardTitle>
         <Button variant="outline" size="sm" onClick={downloadReport}>
           <Download className="h-4 w-4 mr-2" />
@@ -148,8 +207,9 @@ export function DevTokenTracker() {
         <div className="flex flex-col md:flex-row gap-3">
           <Input placeholder="Developer wallet address" value={devAddress} onChange={(e) => setDevAddress(e.target.value)} className="flex-1 font-mono text-sm" />
           <Input placeholder="Alias (optional)" value={devAlias} onChange={(e) => setDevAlias(e.target.value)} className="w-full md:w-40" />
-          <Button onClick={handleAddDev} className="bg-destructive hover:bg-destructive/80 text-destructive-foreground">
-            <Plus className="h-4 w-4 mr-2" /> Track Dev
+          <Button onClick={handleAddDev} disabled={loading} className="bg-destructive hover:bg-destructive/80 text-destructive-foreground">
+            {loading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />}
+            {loading ? 'Scanning...' : 'Track Dev'}
           </Button>
         </div>
 
@@ -175,13 +235,16 @@ export function DevTokenTracker() {
             </thead>
             <tbody>
               {filteredDevs.length === 0 ? (
-                <tr><td colSpan={7} className="text-center p-8 text-muted-foreground">No developers tracked yet</td></tr>
+                <tr><td colSpan={7} className="text-center p-8 text-muted-foreground">No developers tracked yet — enter a Solana wallet above to scan on-chain</td></tr>
               ) : (
                 filteredDevs.map((dev) => (
                   <tr key={dev.walletAddress} className="border-t border-border hover:bg-muted/20">
                     <td className="p-3">
                       <div className="font-medium text-foreground">{dev.alias}</div>
                       <div className="font-mono text-xs text-muted-foreground truncate max-w-[140px]">{dev.walletAddress}</div>
+                      {dev.transactionCount !== undefined && (
+                        <div className="text-[10px] text-muted-foreground mt-0.5">{dev.transactionCount} txns analyzed</div>
+                      )}
                     </td>
                     <td className="p-3 font-mono">{dev.tokensLaunched}</td>
                     <td className="p-3 font-mono text-destructive">{dev.rugPulls}</td>
@@ -190,7 +253,16 @@ export function DevTokenTracker() {
                     <td className="p-3">
                       <Badge className={`${RISK_COLORS[dev.riskLevel]} text-xs uppercase`}>{dev.riskLevel}</Badge>
                     </td>
-                    <td className="p-3 text-center">
+                    <td className="p-3 text-center space-x-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleRefresh(dev.walletAddress)}
+                        disabled={refreshingAddress === dev.walletAddress}
+                        className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
+                      >
+                        <RefreshCw className={`h-4 w-4 ${refreshingAddress === dev.walletAddress ? 'animate-spin' : ''}`} />
+                      </Button>
                       <Button variant="ghost" size="sm" onClick={() => handleRemove(dev.walletAddress)} className="h-7 w-7 p-0 text-destructive hover:text-destructive/80">
                         <Trash className="h-4 w-4" />
                       </Button>
