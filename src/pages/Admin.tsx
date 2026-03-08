@@ -39,6 +39,26 @@ const Admin = () => {
   const [collectionName, setCollectionName] = useState("");
   const [collections, setCollections] = useState<{address: string, name: string}[]>([]);
 
+  // Payments State
+  const [payments, setPayments] = useState<PaymentRecord[]>([]);
+  const [paymentsLoading, setPaymentsLoading] = useState(false);
+
+  const fetchPayments = async () => {
+    setPaymentsLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('access_payments')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      setPayments(data || []);
+    } catch (err) {
+      toast.error("Failed to load payments");
+    } finally {
+      setPaymentsLoading(false);
+    }
+  };
+
   useEffect(() => {
     // Check if the user is an admin
     const checkAdminAccess = () => {
