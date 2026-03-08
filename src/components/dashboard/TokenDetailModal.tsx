@@ -19,13 +19,6 @@ import {
 import { MemeToken } from '@/types/memeToken';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
-import {
-  ExternalLink, TrendingUp, TrendingDown, Users, Droplets,
-  BarChart3, Clock, Copy, ArrowUpRight, ArrowDownRight, Loader2,
-} from 'lucide-react';
-import { MemeToken } from '@/types/memeToken';
-import { cn } from '@/lib/utils';
-import { supabase } from '@/integrations/supabase/client';
 
 interface TokenDetailModalProps {
   token: MemeToken | null;
