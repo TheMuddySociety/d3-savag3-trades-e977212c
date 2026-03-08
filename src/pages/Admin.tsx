@@ -7,9 +7,11 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Clipboard, Plus, Trash, RefreshCw, DollarSign, Wallet, Clock } from "lucide-react";
+import { Clipboard, RefreshCw, DollarSign, Wallet, Clock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
+import { DevTokenTracker } from "@/components/admin/DevTokenTracker";
+import { NFTCollectionTracker } from "@/components/admin/NFTCollectionTracker";
 
 interface PaymentRecord {
   id: string;
