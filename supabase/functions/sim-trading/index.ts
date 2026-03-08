@@ -34,6 +34,11 @@ serve(async (req) => {
     const body = await req.json();
     const { action, wallet_address } = body;
 
+    // Leaderboard doesn't require wallet
+    if (action === 'leaderboard') {
+      return ok(await getLeaderboard(supabase, body.limit || 20));
+    }
+
     if (!wallet_address || wallet_address.length < 30) {
       return err('Valid wallet_address is required', 400);
     }
