@@ -1,143 +1,59 @@
 import { useState } from "react";
-import { useConnection, useWallet } from "@solana/wallet-adapter-react";
-import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
-import { LAMPORTS_PER_SOL, PublicKey, SystemProgram, Transaction } from "@solana/web3.js";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Bot, Zap, Lock, Unlock } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Bot, Clock, Crosshair, BarChart3, Brain } from "lucide-react";
+import { DCABot } from "./bot-tools/DCABot";
+import { BuySniper } from "./bot-tools/BuySniper";
+import { VolumeBot } from "./bot-tools/VolumeBot";
+import { AutoStrategies } from "./bot-tools/AutoStrategies";
 
 export const BotAccess = () => {
-  const { connection } = useConnection();
-  const { publicKey, sendTransaction, connected } = useWallet();
-  const { toast } = useToast();
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [hasAccess, setHasAccess] = useState(true);
-
-  const PAYMENT_AMOUNT = 0.04141; // SOL
-  const PAYMENT_DESTINATION = "11111111111111111111111111111112"; // System program (placeholder)
-
-  const handlePayment = async () => {
-    if (!publicKey || !connected) {
-      toast({
-        title: "Wallet not connected",
-        description: "Please connect your wallet first",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsProcessing(true);
-
-    try {
-      const transaction = new Transaction().add(
-        SystemProgram.transfer({
-          fromPubkey: publicKey,
-          toPubkey: new PublicKey(PAYMENT_DESTINATION),
-          lamports: PAYMENT_AMOUNT * LAMPORTS_PER_SOL,
-        })
-      );
-
-      const signature = await sendTransaction(transaction, connection);
-      await connection.confirmTransaction(signature, 'confirmed');
-
-      setHasAccess(true);
-      toast({
-        title: "Payment successful!",
-        description: "You now have access to bot trading tools",
-      });
-    } catch (error) {
-      console.error("Payment failed:", error);
-      toast({
-        title: "Payment failed",
-        description: "Please try again",
-        variant: "destructive",
-      });
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
   return (
     <Card className="w-full">
-      <CardHeader>
+      <CardHeader className="pb-2">
         <div className="flex items-center gap-2">
           <Bot className="h-5 w-5 text-primary" />
-          <CardTitle>Bot Trading Access</CardTitle>
-          {hasAccess && (
-            <Badge variant="default" className="ml-auto">
-              <Unlock className="h-3 w-3 mr-1" />
-              Active
-            </Badge>
-          )}
+          <CardTitle className="text-sm">Bot Trading Tools</CardTitle>
+          <span className="text-[10px] bg-accent/20 text-accent px-2 py-0.5 rounded-full font-medium ml-auto">
+            LIVE
+          </span>
         </div>
-        <CardDescription>
-          Access advanced trading bots and automated strategies
-        </CardDescription>
       </CardHeader>
-      
-      <CardContent className="space-y-4">
-        {!connected ? (
-          <div className="text-center space-y-4">
-            <div className="flex items-center justify-center gap-2 text-muted-foreground">
-              <Lock className="h-4 w-4" />
-              <span>Connect wallet to access bot features</span>
-            </div>
-            <WalletMultiButton className="!bg-primary hover:!bg-primary/90" />
-          </div>
-        ) : !hasAccess ? (
-          <div className="space-y-4">
-            <div className="p-4 bg-muted/30 rounded-lg">
-              <h4 className="font-medium mb-2">Premium Bot Features Include:</h4>
-              <ul className="text-sm text-muted-foreground space-y-1">
-                <li>• Automated trading strategies</li>
-                <li>• Real-time market analysis</li>
-                <li>• Risk management tools</li>
-                <li>• Portfolio optimization</li>
-              </ul>
-            </div>
-            
-            <div className="flex items-center justify-between p-3 bg-primary/10 rounded-lg">
-              <div>
-                <span className="font-medium">One-time access fee</span>
-                <p className="text-sm text-muted-foreground">Lifetime access to all bot features</p>
-              </div>
-              <Badge variant="secondary" className="font-mono">
-                {PAYMENT_AMOUNT} SOL
-              </Badge>
-            </div>
 
-            <Button 
-              onClick={handlePayment}
-              disabled={isProcessing}
-              className="w-full"
-              size="lg"
-            >
-              {isProcessing ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-                  Processing...
-                </>
-              ) : (
-                <>
-                  <Zap className="h-4 w-4 mr-2" />
-                  Unlock Bot Access
-                </>
-              )}
-            </Button>
-          </div>
-        ) : (
-          <div className="text-center space-y-4">
-            <div className="flex items-center justify-center gap-2 text-green-600">
-              <Unlock className="h-4 w-4" />
-              <span className="font-medium">Bot trading tools activated!</span>
-            </div>
-            <p className="text-sm text-muted-foreground">
-              You now have access to all premium trading features
-            </p>
-          </div>
-        )}
+      <CardContent className="pt-0">
+        <Tabs defaultValue="sniper" className="w-full">
+          <TabsList className="w-full grid grid-cols-4 bg-muted/30 h-8 mb-3">
+            <TabsTrigger value="sniper" className="text-xs gap-1 data-[state=active]:bg-primary/20">
+              <Crosshair className="h-3 w-3" />
+              <span className="hidden sm:inline">Sniper</span>
+            </TabsTrigger>
+            <TabsTrigger value="dca" className="text-xs gap-1 data-[state=active]:bg-accent/20">
+              <Clock className="h-3 w-3" />
+              <span className="hidden sm:inline">DCA</span>
+            </TabsTrigger>
+            <TabsTrigger value="volume" className="text-xs gap-1 data-[state=active]:bg-accent/20">
+              <BarChart3 className="h-3 w-3" />
+              <span className="hidden sm:inline">Volume</span>
+            </TabsTrigger>
+            <TabsTrigger value="auto" className="text-xs gap-1 data-[state=active]:bg-primary/20">
+              <Brain className="h-3 w-3" />
+              <span className="hidden sm:inline">Auto</span>
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="sniper" className="mt-0">
+            <BuySniper />
+          </TabsContent>
+          <TabsContent value="dca" className="mt-0">
+            <DCABot />
+          </TabsContent>
+          <TabsContent value="volume" className="mt-0">
+            <VolumeBot />
+          </TabsContent>
+          <TabsContent value="auto" className="mt-0">
+            <AutoStrategies />
+          </TabsContent>
+        </Tabs>
       </CardContent>
     </Card>
   );
