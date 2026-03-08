@@ -41,7 +41,7 @@ export function ToolCard({ tool }: { tool: AITool }) {
               {tool.description}
             </p>
             <div className="flex items-center gap-3 mt-1.5 flex-wrap">
-              <span className="text-[10px] text-green-400 flex items-center gap-0.5 font-medium">
+              <span className="text-[10px] text-accent flex items-center gap-0.5 font-medium">
                 <DollarSign className="h-3 w-3" /> {tool.profitRange}
               </span>
               <span className="text-[10px] text-muted-foreground flex items-center gap-0.5">
