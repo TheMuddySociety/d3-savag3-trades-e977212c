@@ -235,6 +235,36 @@ const fmt = (v: number, type: 'usd' | 'compact' | 'pct' = 'usd') => {
 export function TokenDetailModal({ token, open, onOpenChange }: TokenDetailModalProps) {
   const { priceData, holders, trades, loading, dataSource } = useTokenDetail(token, open);
 
+  const [showSwap, setShowSwap] = useState(false);
+  const swapContainerId = `modal-swap-${token?.id || 'none'}`;
+
+  // Initialize Jupiter swap when panel opens
+  useEffect(() => {
+    if (!showSwap || !token?.tokenAddress) return;
+
+    const timer = setTimeout(() => {
+      import("@jup-ag/plugin").then((mod) => {
+        mod.init({
+          displayMode: "integrated",
+          integratedTargetId: swapContainerId,
+          formProps: {
+            fixedMint: undefined,
+            initialInputMint: "So11111111111111111111111111111111111111112",
+            initialOutputMint: token.tokenAddress,
+            referralAccount: "F4qYkXAcogrjQHw3ngKWjisMmmRFR4Ea6c9DCCpK5gBr",
+            referralFee: 150,
+          },
+          branding: {
+            name: "D3 SAVAGE SWAP",
+            logoUri: "https://ibb.co/0VFDBzYQ",
+          },
+        });
+      }).catch(console.error);
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, [showSwap, token?.tokenAddress, swapContainerId]);
+
   if (!token) return null;
 
   const isPositive = token.change24h >= 0;
