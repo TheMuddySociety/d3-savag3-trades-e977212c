@@ -14,7 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      price_alerts: {
+        Row: {
+          created_at: string
+          current_price_at_creation: number
+          direction: string
+          id: string
+          target_price: number
+          token_address: string
+          token_name: string
+          token_symbol: string
+          triggered: boolean
+          triggered_at: string | null
+          wallet_address: string
+        }
+        Insert: {
+          created_at?: string
+          current_price_at_creation: number
+          direction: string
+          id?: string
+          target_price: number
+          token_address: string
+          token_name: string
+          token_symbol: string
+          triggered?: boolean
+          triggered_at?: string | null
+          wallet_address: string
+        }
+        Update: {
+          created_at?: string
+          current_price_at_creation?: number
+          direction?: string
+          id?: string
+          target_price?: number
+          token_address?: string
+          token_name?: string
+          token_symbol?: string
+          triggered?: boolean
+          triggered_at?: string | null
+          wallet_address?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

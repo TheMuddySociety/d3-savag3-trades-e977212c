@@ -7,6 +7,9 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { tokenWebSocketService } from '@/services/websocket/TokenWebSocketService';
 import { TokenDetailModal } from './TokenDetailModal';
+import { CreateAlertDialog } from './CreateAlertDialog';
+import { usePriceAlerts } from '@/hooks/usePriceAlerts';
+import { useWallet } from '@solana/wallet-adapter-react';
 
 type DataSource = 'birdeye' | 'launchpad';
 
@@ -21,6 +24,17 @@ export function TopMemecoins() {
   const [birdeyeError, setBirdeyeError] = useState<string | null>(null);
   const [selectedToken, setSelectedToken] = useState<MemeToken | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const [alertToken, setAlertToken] = useState<MemeToken | null>(null);
+  const [alertDialogOpen, setAlertDialogOpen] = useState(false);
+
+  const { publicKey } = useWallet();
+  const walletAddress = publicKey?.toBase58() || null;
+  const { createAlert } = usePriceAlerts(walletAddress);
+
+  const handleSetAlert = (token: MemeToken) => {
+    setAlertToken(token);
+    setAlertDialogOpen(true);
+  };
 
   const handleTokenClick = (token: MemeToken) => {
     setSelectedToken(token);
@@ -203,6 +217,13 @@ export function TopMemecoins() {
         token={selectedToken}
         open={modalOpen}
         onOpenChange={setModalOpen}
+        onSetAlert={handleSetAlert}
+      />
+      <CreateAlertDialog
+        token={alertToken}
+        open={alertDialogOpen}
+        onOpenChange={setAlertDialogOpen}
+        onCreateAlert={createAlert}
       />
     </div>
   );

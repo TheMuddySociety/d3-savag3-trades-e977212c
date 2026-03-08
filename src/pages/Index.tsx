@@ -7,10 +7,14 @@ import { BotAccess } from "@/components/dashboard/BotAccess";
 import { MiniChart } from "@/components/dashboard/MiniChart";
 import { LiveSignalFeed } from "@/components/dashboard/LiveSignalFeed";
 import { AIToolsAgents } from "@/components/dashboard/AIToolsAgents";
+import { PriceAlerts } from "@/components/dashboard/PriceAlerts";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useWallet } from "@solana/wallet-adapter-react";
 
 const Index = () => {
   const isMobile = useIsMobile();
+  const { publicKey } = useWallet();
+  const walletAddress = publicKey?.toBase58() || null;
   
   return (
     <div className="min-h-screen bg-background p-3 md:p-4">
@@ -50,6 +54,7 @@ const Index = () => {
               <MiniChart title="SOL/USD" currentValue={67.4} change={12.3} />
               <MiniChart title="MEME INDEX" currentValue={234.8} change={-5.2} />
             </div>
+            <PriceAlerts walletAddress={walletAddress} />
             <LiveSignalFeed />
             <MemeScanner />
             <BotAccess />

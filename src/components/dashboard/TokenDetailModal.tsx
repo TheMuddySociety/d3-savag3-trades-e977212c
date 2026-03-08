@@ -14,7 +14,7 @@ import {
 import {
   ExternalLink, TrendingUp, TrendingDown, Users, Droplets,
   BarChart3, Clock, Copy, ArrowUpRight, ArrowDownRight, Loader2,
-  ArrowRightLeft, ChevronDown, ChevronUp,
+  ArrowRightLeft, ChevronDown, ChevronUp, Bell,
 } from 'lucide-react';
 import { MemeToken } from '@/types/memeToken';
 import { cn } from '@/lib/utils';
@@ -24,6 +24,7 @@ interface TokenDetailModalProps {
   token: MemeToken | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onSetAlert?: (token: MemeToken) => void;
 }
 
 interface PricePoint {
@@ -232,7 +233,7 @@ const fmt = (v: number, type: 'usd' | 'compact' | 'pct' = 'usd') => {
 
 // ── Component ───────────────────────────────────────────────────────
 
-export function TokenDetailModal({ token, open, onOpenChange }: TokenDetailModalProps) {
+export function TokenDetailModal({ token, open, onOpenChange, onSetAlert }: TokenDetailModalProps) {
   const { priceData, holders, trades, loading, dataSource } = useTokenDetail(token, open);
 
   const [showSwap, setShowSwap] = useState(false);
@@ -325,7 +326,7 @@ export function TokenDetailModal({ token, open, onOpenChange }: TokenDetailModal
                 </button>
               )}
             </div>
-            <div className="text-right">
+            <div className="text-right flex flex-col items-end gap-1">
               <div className="text-xl font-bold font-mono text-foreground">{fmt(token.price)}</div>
               <div className={cn(
                 "text-sm font-medium flex items-center justify-end gap-1",
@@ -334,6 +335,16 @@ export function TokenDetailModal({ token, open, onOpenChange }: TokenDetailModal
                 {isPositive ? <TrendingUp className="h-3.5 w-3.5" /> : <TrendingDown className="h-3.5 w-3.5" />}
                 {fmt(token.change24h, 'pct')}
               </div>
+              {onSetAlert && token.tokenAddress && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 text-xs gap-1 border-accent/30 hover:bg-accent/10 hover:text-accent mt-0.5"
+                  onClick={() => onSetAlert(token)}
+                >
+                  <Bell className="h-3 w-3" /> Set Alert
+                </Button>
+              )}
             </div>
           </div>
         </DialogHeader>
