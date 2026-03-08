@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Plus, Trash, Search, Download, AlertTriangle, Skull, TrendingDown, Loader2, RefreshCw, ChevronDown, ChevronUp, ShieldAlert, Zap, Copy, Clock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { DevTimeline } from "./DevTimeline";
 
 interface PatternFlag {
   type: string;
