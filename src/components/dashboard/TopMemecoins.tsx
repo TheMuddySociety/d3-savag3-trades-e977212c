@@ -6,15 +6,9 @@ import { MemeToken } from '@/types/memeToken';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { tokenWebSocketService } from '@/services/websocket/TokenWebSocketService';
+import { TokenDetailModal } from './TokenDetailModal';
 
 type DataSource = 'birdeye' | 'launchpad';
-
-const handleTokenClick = (token: MemeToken) => {
-  if (token.tokenAddress) {
-    const url = `https://pump.fun/${token.tokenAddress}`;
-    window.open(url, '_blank', 'noopener,noreferrer');
-  }
-};
 
 export function TopMemecoins() {
   const [activeFilter, setActiveFilter] = useState<FilterType>('movers');
