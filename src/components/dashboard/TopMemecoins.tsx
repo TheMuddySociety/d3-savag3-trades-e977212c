@@ -217,6 +217,13 @@ export function TopMemecoins() {
         token={selectedToken}
         open={modalOpen}
         onOpenChange={setModalOpen}
+        onSetAlert={handleSetAlert}
+      />
+      <CreateAlertDialog
+        token={alertToken}
+        open={alertDialogOpen}
+        onOpenChange={setAlertDialogOpen}
+        onCreateAlert={createAlert}
       />
     </div>
   );
