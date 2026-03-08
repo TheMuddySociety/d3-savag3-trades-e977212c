@@ -24,6 +24,7 @@ interface TokenDetailModalProps {
   token: MemeToken | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onSetAlert?: (token: MemeToken) => void;
 }
 
 interface PricePoint {
