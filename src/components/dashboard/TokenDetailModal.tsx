@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -8,15 +8,16 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
-  LineChart, Line, AreaChart, Area, ResponsiveContainer,
+  AreaChart, Area, ResponsiveContainer,
   XAxis, YAxis, Tooltip, CartesianGrid, PieChart, Pie, Cell,
 } from 'recharts';
 import {
   ExternalLink, TrendingUp, TrendingDown, Users, Droplets,
-  BarChart3, Clock, Copy, ArrowUpRight, ArrowDownRight,
+  BarChart3, Clock, Copy, ArrowUpRight, ArrowDownRight, Loader2,
 } from 'lucide-react';
 import { MemeToken } from '@/types/memeToken';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/integrations/supabase/client';
 
 interface TokenDetailModalProps {
   token: MemeToken | null;
@@ -24,45 +25,67 @@ interface TokenDetailModalProps {
   onOpenChange: (open: boolean) => void;
 }
 
-// Generate realistic-looking mock price data
-function generatePriceHistory(token: MemeToken) {
+interface PricePoint {
+  time: string;
+  price: number;
+  unixTime?: number;
+}
+
+interface HolderSegment {
+  name: string;
+  value: number;
+  color: string;
+}
+
+interface Trade {
+  id: number;
+  type: 'buy' | 'sell';
+  amount: number;
+  solAmount: number;
+  price: number;
+  time: string;
+  wallet: string;
+}
+
+const HOLDER_COLORS = [
+  'hsl(var(--primary))',
+  'hsl(var(--accent))',
+  'hsl(var(--muted-foreground))',
+  'hsl(var(--muted))',
+];
+
+// ── Mock fallback generators ────────────────────────────────────────
+
+function generateMockPriceHistory(token: MemeToken): PricePoint[] {
   const points = 48;
-  const data = [];
+  const data: PricePoint[] = [];
   let price = token.price * (1 - Math.abs(token.change24h) / 100);
   const trend = token.change24h >= 0 ? 1 : -1;
-
   for (let i = 0; i < points; i++) {
     const noise = (Math.random() - 0.45) * price * 0.06;
-    const drift = (trend * price * 0.003);
+    const drift = trend * price * 0.003;
     price = Math.max(price * 0.5, price + noise + drift);
     const time = new Date(Date.now() - (points - i) * 30 * 60000);
-    data.push({
-      time: time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      price: +price.toPrecision(4),
-      volume: Math.floor(Math.random() * token.volume24h / points * 2),
-    });
+    data.push({ time: time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), price: +price.toPrecision(4) });
   }
   return data;
 }
 
-// Generate mock holder distribution
-function generateHolderDistribution(token: MemeToken) {
+function generateMockHolders(): HolderSegment[] {
+  const top10 = 28 + Math.random() * 15;
+  const top50 = 15 + Math.random() * 10;
+  const top200 = 12 + Math.random() * 8;
+  const others = Math.max(5, 100 - top10 - top50 - top200);
   return [
-    { name: 'Top 10', value: 28 + Math.random() * 15, color: 'hsl(var(--primary))' },
-    { name: 'Top 11-50', value: 15 + Math.random() * 10, color: 'hsl(var(--accent))' },
-    { name: 'Top 51-200', value: 12 + Math.random() * 8, color: 'hsl(var(--muted-foreground))' },
-    { name: 'Others', value: 0, color: 'hsl(var(--muted))' },
-  ].map((item, _, arr) => {
-    if (item.name === 'Others') {
-      item.value = Math.max(5, 100 - arr.slice(0, 3).reduce((s, x) => s + x.value, 0));
-    }
-    return item;
-  });
+    { name: 'Top 10', value: +top10.toFixed(1), color: HOLDER_COLORS[0] },
+    { name: 'Top 11-50', value: +top50.toFixed(1), color: HOLDER_COLORS[1] },
+    { name: 'Top 51-200', value: +top200.toFixed(1), color: HOLDER_COLORS[2] },
+    { name: 'Others', value: +others.toFixed(1), color: HOLDER_COLORS[3] },
+  ];
 }
 
-// Generate mock trade history
-function generateTradeHistory(token: MemeToken) {
-  const trades = [];
+function generateMockTrades(token: MemeToken): Trade[] {
+  const trades: Trade[] = [];
   for (let i = 0; i < 15; i++) {
     const isBuy = Math.random() > 0.45;
     const amount = +(Math.random() * token.price * 50000).toPrecision(4);
@@ -81,6 +104,116 @@ function generateTradeHistory(token: MemeToken) {
   return trades;
 }
 
+// ── Data fetching hooks ─────────────────────────────────────────────
+
+function useTokenDetail(token: MemeToken | null, open: boolean) {
+  const [priceData, setPriceData] = useState<PricePoint[]>([]);
+  const [holders, setHolders] = useState<HolderSegment[]>([]);
+  const [trades, setTrades] = useState<Trade[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [dataSource, setDataSource] = useState<'live' | 'mock'>('mock');
+
+  useEffect(() => {
+    if (!token || !open) return;
+
+    let cancelled = false;
+    setLoading(true);
+
+    const fetchAll = async () => {
+      const address = token.tokenAddress;
+      if (!address) {
+        setPriceData(generateMockPriceHistory(token));
+        setHolders(generateMockHolders());
+        setTrades(generateMockTrades(token));
+        setDataSource('mock');
+        setLoading(false);
+        return;
+      }
+
+      // Fetch all three in parallel, fallback to mock on failure
+      const [priceResult, holderResult, tradeResult] = await Promise.allSettled([
+        supabase.functions.invoke('token-prices', {
+          body: { action: 'price_history', address, interval: '30m' },
+        }),
+        supabase.functions.invoke('token-prices', {
+          body: { action: 'token_holders', address },
+        }),
+        supabase.functions.invoke('token-prices', {
+          body: { action: 'token_trades', address, limit: 20 },
+        }),
+      ]);
+
+      if (cancelled) return;
+
+      let usedLive = false;
+
+      // Price history
+      if (priceResult.status === 'fulfilled' && priceResult.value.data?.success && priceResult.value.data.data?.length > 0) {
+        const items = priceResult.value.data.data;
+        setPriceData(items.map((p: { unixTime: number; value: number }) => ({
+          time: new Date(p.unixTime * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          price: p.value,
+        })));
+        usedLive = true;
+      } else {
+        setPriceData(generateMockPriceHistory(token));
+      }
+
+      // Holders
+      if (holderResult.status === 'fulfilled' && holderResult.value.data?.success && holderResult.value.data.data?.distribution) {
+        const dist = holderResult.value.data.data.distribution;
+        setHolders(dist.map((d: { name: string; value: number }, i: number) => ({
+          ...d,
+          value: +d.value.toFixed(1),
+          color: HOLDER_COLORS[i] || HOLDER_COLORS[3],
+        })));
+        usedLive = true;
+      } else {
+        setHolders(generateMockHolders());
+      }
+
+      // Trades
+      if (tradeResult.status === 'fulfilled' && tradeResult.value.data?.success && Array.isArray(tradeResult.value.data.data) && tradeResult.value.data.data.length > 0) {
+        const rawTrades = tradeResult.value.data.data;
+        setTrades(rawTrades.slice(0, 15).map((t: {
+          txHash: string;
+          side: string;
+          from: { amount: number; symbol: string; decimals: number; uiAmount: number };
+          to: { amount: number; symbol: string; decimals: number; uiAmount: number };
+          blockUnixTime: number;
+          owner: string;
+        }, i: number) => {
+          const isBuy = t.side === 'buy';
+          const solAmt = isBuy ? t.from?.uiAmount || 0 : t.to?.uiAmount || 0;
+          const tokenAmt = isBuy ? t.to?.uiAmount || 0 : t.from?.uiAmount || 0;
+          return {
+            id: i,
+            type: isBuy ? 'buy' as const : 'sell' as const,
+            amount: tokenAmt,
+            solAmount: +solAmt.toFixed(3),
+            price: tokenAmt > 0 ? solAmt * 67 / tokenAmt : 0,
+            time: new Date(t.blockUnixTime * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+            wallet: t.owner ? `${t.owner.slice(0, 4)}...${t.owner.slice(-4)}` : 'unknown',
+          };
+        }));
+        usedLive = true;
+      } else {
+        setTrades(generateMockTrades(token));
+      }
+
+      setDataSource(usedLive ? 'live' : 'mock');
+      setLoading(false);
+    };
+
+    fetchAll();
+    return () => { cancelled = true; };
+  }, [token?.id, open]);
+
+  return { priceData, holders, trades, loading, dataSource };
+}
+
+// ── Formatting ──────────────────────────────────────────────────────
+
 const fmt = (v: number, type: 'usd' | 'compact' | 'pct' = 'usd') => {
   if (type === 'pct') return `${v >= 0 ? '+' : ''}${v.toFixed(2)}%`;
   if (type === 'compact') {
@@ -92,14 +225,14 @@ const fmt = (v: number, type: 'usd' | 'compact' | 'pct' = 'usd') => {
   if (v >= 1e9) return `$${(v / 1e9).toFixed(2)}B`;
   if (v >= 1e6) return `$${(v / 1e6).toFixed(2)}M`;
   if (v >= 1e3) return `$${(v / 1e3).toFixed(2)}K`;
-  if (v < 0.001) return `$${v.toExponential(2)}`;
+  if (v < 0.001 && v > 0) return `$${v.toExponential(2)}`;
   return `$${v.toFixed(4)}`;
 };
 
+// ── Component ───────────────────────────────────────────────────────
+
 export function TokenDetailModal({ token, open, onOpenChange }: TokenDetailModalProps) {
-  const priceData = useMemo(() => token ? generatePriceHistory(token) : [], [token?.id]);
-  const holders = useMemo(() => token ? generateHolderDistribution(token) : [], [token?.id]);
-  const trades = useMemo(() => token ? generateTradeHistory(token) : [], [token?.id]);
+  const { priceData, holders, trades, loading, dataSource } = useTokenDetail(token, open);
 
   if (!token) return null;
 
@@ -126,14 +259,21 @@ export function TokenDetailModal({ token, open, onOpenChange }: TokenDetailModal
               />
             </div>
             <div className="flex-1 min-w-0">
-              <DialogTitle className="text-lg flex items-center gap-2">
+              <DialogTitle className="text-lg flex items-center gap-2 flex-wrap">
                 {token.name}
-                <Badge variant="outline" className="text-xs font-mono">
-                  {token.symbol}
-                </Badge>
+                <Badge variant="outline" className="text-xs font-mono">{token.symbol}</Badge>
                 {token.tags.map(tag => (
                   <Badge key={tag} variant="secondary" className="text-[10px]">{tag}</Badge>
                 ))}
+                <Badge
+                  variant="outline"
+                  className={cn(
+                    "text-[9px] ml-1",
+                    dataSource === 'live' ? "border-accent/50 text-accent" : "border-muted-foreground/30 text-muted-foreground"
+                  )}
+                >
+                  {loading ? 'Loading...' : dataSource === 'live' ? '● Live Data' : '○ Simulated'}
+                </Badge>
               </DialogTitle>
               {token.tokenAddress && (
                 <button
@@ -146,9 +286,7 @@ export function TokenDetailModal({ token, open, onOpenChange }: TokenDetailModal
               )}
             </div>
             <div className="text-right">
-              <div className="text-xl font-bold font-mono text-foreground">
-                {fmt(token.price)}
-              </div>
+              <div className="text-xl font-bold font-mono text-foreground">{fmt(token.price)}</div>
               <div className={cn(
                 "text-sm font-medium flex items-center justify-end gap-1",
                 isPositive ? "text-accent" : "text-destructive"
@@ -183,90 +321,66 @@ export function TokenDetailModal({ token, open, onOpenChange }: TokenDetailModal
             <h3 className="text-sm font-medium text-foreground mb-3 flex items-center gap-2">
               <Clock className="h-4 w-4 text-muted-foreground" />
               Price Chart (24h)
+              {loading && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
             </h3>
             <div className="h-52">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={priceData}>
-                  <defs>
-                    <linearGradient id="priceGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor={isPositive ? 'hsl(var(--accent))' : 'hsl(var(--destructive))'} stopOpacity={0.3} />
-                      <stop offset="95%" stopColor={isPositive ? 'hsl(var(--accent))' : 'hsl(var(--destructive))'} stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
-                  <XAxis
-                    dataKey="time"
-                    tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
-                    interval={7}
-                    axisLine={false}
-                    tickLine={false}
-                  />
-                  <YAxis
-                    tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
-                    axisLine={false}
-                    tickLine={false}
-                    width={55}
-                    tickFormatter={(v) => fmt(v)}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: 'hsl(var(--card))',
-                      border: '1px solid hsl(var(--border))',
-                      borderRadius: '8px',
-                      fontSize: '12px',
-                    }}
-                    labelStyle={{ color: 'hsl(var(--muted-foreground))' }}
-                    formatter={(value: number) => [fmt(value), 'Price']}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="price"
-                    stroke={isPositive ? 'hsl(var(--accent))' : 'hsl(var(--destructive))'}
-                    fill="url(#priceGradient)"
-                    strokeWidth={2}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
+              {priceData.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={priceData}>
+                    <defs>
+                      <linearGradient id="priceGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor={isPositive ? 'hsl(var(--accent))' : 'hsl(var(--destructive))'} stopOpacity={0.3} />
+                        <stop offset="95%" stopColor={isPositive ? 'hsl(var(--accent))' : 'hsl(var(--destructive))'} stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
+                    <XAxis dataKey="time" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} interval={7} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} axisLine={false} tickLine={false} width={55} tickFormatter={(v) => fmt(v)} />
+                    <Tooltip
+                      contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px', fontSize: '12px' }}
+                      labelStyle={{ color: 'hsl(var(--muted-foreground))' }}
+                      formatter={(value: number) => [fmt(value), 'Price']}
+                    />
+                    <Area type="monotone" dataKey="price" stroke={isPositive ? 'hsl(var(--accent))' : 'hsl(var(--destructive))'} fill="url(#priceGradient)" strokeWidth={2} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
+                  <Loader2 className="h-5 w-5 animate-spin mr-2" /> Loading chart...
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Holder Distribution + Trade History side by side */}
+          {/* Holder Distribution + Trade History */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Holder Distribution */}
             <div className="rounded-lg border border-border/50 bg-muted/20 p-4">
               <h3 className="text-sm font-medium text-foreground mb-3 flex items-center gap-2">
                 <Users className="h-4 w-4 text-muted-foreground" />
                 Holder Distribution
+                {loading && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
               </h3>
               <div className="h-40">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={holders}
-                      dataKey="value"
-                      nameKey="name"
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={35}
-                      outerRadius={60}
-                      strokeWidth={2}
-                      stroke="hsl(var(--card))"
-                    >
-                      {holders.map((entry, i) => (
-                        <Cell key={i} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: 'hsl(var(--card))',
-                        border: '1px solid hsl(var(--border))',
-                        borderRadius: '8px',
-                        fontSize: '12px',
-                      }}
-                      formatter={(value: number) => [`${value.toFixed(1)}%`, '']}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
+                {holders.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie data={holders} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={35} outerRadius={60} strokeWidth={2} stroke="hsl(var(--card))">
+                        {holders.map((entry, i) => (
+                          <Cell key={i} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px', fontSize: '12px' }}
+                        formatter={(value: number) => [`${value.toFixed(1)}%`, '']}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
+                    <Loader2 className="h-5 w-5 animate-spin mr-2" /> Loading...
+                  </div>
+                )}
               </div>
               <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 justify-center">
                 {holders.map(h => (
@@ -283,9 +397,10 @@ export function TokenDetailModal({ token, open, onOpenChange }: TokenDetailModal
               <h3 className="text-sm font-medium text-foreground mb-3 flex items-center gap-2">
                 <BarChart3 className="h-4 w-4 text-muted-foreground" />
                 Recent Trades
+                {loading && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
               </h3>
               <div className="space-y-1.5 max-h-56 overflow-y-auto scrollbar-thin">
-                {trades.map(trade => (
+                {trades.length > 0 ? trades.map(trade => (
                   <div
                     key={trade.id}
                     className={cn(
@@ -299,10 +414,7 @@ export function TokenDetailModal({ token, open, onOpenChange }: TokenDetailModal
                       ) : (
                         <ArrowDownRight className="h-3 w-3 text-destructive" />
                       )}
-                      <span className={cn(
-                        "font-medium",
-                        trade.type === 'buy' ? 'text-accent' : 'text-destructive'
-                      )}>
+                      <span className={cn("font-medium", trade.type === 'buy' ? 'text-accent' : 'text-destructive')}>
                         {trade.type === 'buy' ? 'BUY' : 'SELL'}
                       </span>
                       <span className="text-muted-foreground font-mono">{trade.wallet}</span>
@@ -312,7 +424,11 @@ export function TokenDetailModal({ token, open, onOpenChange }: TokenDetailModal
                       <span className="text-muted-foreground">{trade.time}</span>
                     </div>
                   </div>
-                ))}
+                )) : (
+                  <div className="h-20 flex items-center justify-center text-muted-foreground text-sm">
+                    <Loader2 className="h-5 w-5 animate-spin mr-2" /> Loading trades...
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -322,29 +438,17 @@ export function TokenDetailModal({ token, open, onOpenChange }: TokenDetailModal
             {token.tokenAddress && (
               <>
                 <Button size="sm" variant="outline" className="gap-1.5 text-xs flex-1" asChild>
-                  <a
-                    href={`https://solscan.io/token/${token.tokenAddress}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
+                  <a href={`https://solscan.io/token/${token.tokenAddress}`} target="_blank" rel="noopener noreferrer">
                     <ExternalLink className="h-3 w-3" /> Solscan
                   </a>
                 </Button>
                 <Button size="sm" variant="outline" className="gap-1.5 text-xs flex-1" asChild>
-                  <a
-                    href={`https://birdeye.so/token/${token.tokenAddress}?chain=solana`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
+                  <a href={`https://birdeye.so/token/${token.tokenAddress}?chain=solana`} target="_blank" rel="noopener noreferrer">
                     <ExternalLink className="h-3 w-3" /> Birdeye
                   </a>
                 </Button>
                 <Button size="sm" variant="outline" className="gap-1.5 text-xs flex-1" asChild>
-                  <a
-                    href={`https://pump.fun/${token.tokenAddress}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
+                  <a href={`https://pump.fun/${token.tokenAddress}`} target="_blank" rel="noopener noreferrer">
                     <ExternalLink className="h-3 w-3" /> Pump.Fun
                   </a>
                 </Button>
