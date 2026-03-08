@@ -7,7 +7,17 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Clipboard, Save, Plus, Trash } from "lucide-react";
+import { Clipboard, Plus, Trash, RefreshCw, DollarSign, Wallet, Clock } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { Badge } from "@/components/ui/badge";
+
+interface PaymentRecord {
+  id: string;
+  wallet_address: string;
+  tx_signature: string;
+  sol_amount: number;
+  created_at: string;
+}
 
 // Admin wallet addresses
 const ADMIN_WALLETS = [
