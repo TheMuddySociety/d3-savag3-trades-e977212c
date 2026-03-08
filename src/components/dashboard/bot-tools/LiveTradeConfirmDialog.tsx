@@ -1,4 +1,3 @@
-import { useState } from "react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -27,40 +26,47 @@ export const LiveTradeConfirmDialog = ({
   tokenSymbol,
   solAmount,
 }: LiveTradeConfirmDialogProps) => {
+  const handleConfirm = (e: React.MouseEvent) => {
+    e.preventDefault();
+    onConfirm();
+  };
+
   return (
-    <AlertDialog open={open} onOpenChange={(o) => !o && onCancel()}>
+    <AlertDialog open={open}>
       <AlertDialogContent className="bg-card border-destructive/50">
         <AlertDialogHeader>
           <AlertDialogTitle className="text-destructive flex items-center gap-2">
             ⚠️ Confirm Live Trade
           </AlertDialogTitle>
-          <AlertDialogDescription className="space-y-2">
-            <p className="text-foreground font-medium">
-              You are about to execute a <span className="text-destructive font-bold">REAL</span> {action} on Solana mainnet.
-            </p>
-            <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/30 space-y-1">
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Action</span>
-                <span className="text-foreground font-mono">{action}</span>
+          <AlertDialogDescription asChild>
+            <div className="space-y-2">
+              <p className="text-foreground font-medium">
+                You are about to execute a <span className="text-destructive font-bold">REAL</span> {action} on Solana mainnet.
+              </p>
+              <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/30 space-y-1">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Action</span>
+                  <span className="text-foreground font-mono">{action}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Token</span>
+                  <span className="text-foreground font-mono">{tokenSymbol || "Unknown"}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Amount</span>
+                  <span className="text-foreground font-mono">{solAmount} SOL</span>
+                </div>
               </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Token</span>
-                <span className="text-foreground font-mono">{tokenSymbol || "Unknown"}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Amount</span>
-                <span className="text-foreground font-mono">{solAmount} SOL</span>
-              </div>
+              <p className="text-destructive text-xs font-medium">
+                This transaction is irreversible. Real SOL will be spent from your wallet.
+              </p>
             </div>
-            <p className="text-destructive text-xs font-medium">
-              This transaction is irreversible. Real SOL will be spent from your wallet.
-            </p>
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel className="border-border">Cancel</AlertDialogCancel>
+          <AlertDialogCancel onClick={onCancel} className="border-border">Cancel</AlertDialogCancel>
           <AlertDialogAction
-            onClick={onConfirm}
+            onClick={handleConfirm}
             className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
           >
             Execute Live Trade
