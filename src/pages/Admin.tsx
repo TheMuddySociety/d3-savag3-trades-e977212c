@@ -7,7 +7,17 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Clipboard, Save, Plus, Trash } from "lucide-react";
+import { Clipboard, Plus, Trash, RefreshCw, DollarSign, Wallet, Clock } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { Badge } from "@/components/ui/badge";
+
+interface PaymentRecord {
+  id: string;
+  wallet_address: string;
+  tx_signature: string;
+  sol_amount: number;
+  created_at: string;
+}
 
 // Admin wallet addresses
 const ADMIN_WALLETS = [
@@ -28,6 +38,26 @@ const Admin = () => {
   const [collectionAddress, setCollectionAddress] = useState("");
   const [collectionName, setCollectionName] = useState("");
   const [collections, setCollections] = useState<{address: string, name: string}[]>([]);
+
+  // Payments State
+  const [payments, setPayments] = useState<PaymentRecord[]>([]);
+  const [paymentsLoading, setPaymentsLoading] = useState(false);
+
+  const fetchPayments = async () => {
+    setPaymentsLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('access_payments')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      setPayments(data || []);
+    } catch (err) {
+      toast.error("Failed to load payments");
+    } finally {
+      setPaymentsLoading(false);
+    }
+  };
 
   useEffect(() => {
     // Check if the user is an admin
@@ -56,6 +86,7 @@ const Admin = () => {
       
       setIsAdmin(true);
       setLoading(false);
+      fetchPayments();
     };
     
     checkAdminAccess();
@@ -138,9 +169,10 @@ const Admin = () => {
           </section>
           
           <Tabs defaultValue="tokens" className="w-full max-w-4xl mx-auto">
-            <TabsList className="grid w-full grid-cols-2 mb-8">
+            <TabsList className="grid w-full grid-cols-3 mb-8">
               <TabsTrigger value="tokens">Tokens</TabsTrigger>
               <TabsTrigger value="collections">NFT Collections</TabsTrigger>
+              <TabsTrigger value="payments">Access Payments</TabsTrigger>
             </TabsList>
             
             <TabsContent value="tokens">
@@ -306,6 +338,134 @@ const Admin = () => {
                         </tbody>
                       </table>
                     </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="payments">
+              <Card className="border-destructive/20 glass-card">
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <CardTitle className="text-xl flex items-center gap-2">
+                    <DollarSign className="h-5 w-5 text-primary" />
+                    Access Fee Payments
+                  </CardTitle>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={fetchPayments}
+                    disabled={paymentsLoading}
+                  >
+                    <RefreshCw className={`h-4 w-4 mr-2 ${paymentsLoading ? 'animate-spin' : ''}`} />
+                    Refresh
+                  </Button>
+                </CardHeader>
+                <CardContent>
+                  {/* Summary Stats */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <Card className="bg-muted/50 border-border">
+                      <CardContent className="p-4 flex items-center gap-3">
+                        <Wallet className="h-8 w-8 text-primary" />
+                        <div>
+                          <p className="text-sm text-muted-foreground">Total Payments</p>
+                          <p className="text-2xl font-bold text-foreground">{payments.length}</p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                    <Card className="bg-muted/50 border-border">
+                      <CardContent className="p-4 flex items-center gap-3">
+                        <DollarSign className="h-8 w-8 text-primary" />
+                        <div>
+                          <p className="text-sm text-muted-foreground">Total Revenue</p>
+                          <p className="text-2xl font-bold text-foreground">
+                            {payments.reduce((sum, p) => sum + p.sol_amount, 0).toFixed(5)} SOL
+                          </p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                    <Card className="bg-muted/50 border-border">
+                      <CardContent className="p-4 flex items-center gap-3">
+                        <Clock className="h-8 w-8 text-primary" />
+                        <div>
+                          <p className="text-sm text-muted-foreground">Latest Payment</p>
+                          <p className="text-sm font-bold text-foreground">
+                            {payments.length > 0
+                              ? new Date(payments[0].created_at).toLocaleDateString()
+                              : 'N/A'}
+                          </p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {/* Payments Table */}
+                  <div className="border rounded-md overflow-hidden border-border">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="bg-muted/50">
+                          <th className="text-left p-4 text-muted-foreground text-sm">Wallet Address</th>
+                          <th className="text-left p-4 text-muted-foreground text-sm">Amount</th>
+                          <th className="text-left p-4 text-muted-foreground text-sm">TX Signature</th>
+                          <th className="text-left p-4 text-muted-foreground text-sm">Date</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {paymentsLoading ? (
+                          <tr>
+                            <td colSpan={4} className="text-center p-8 text-muted-foreground">
+                              Loading payments...
+                            </td>
+                          </tr>
+                        ) : payments.length === 0 ? (
+                          <tr>
+                            <td colSpan={4} className="text-center p-8 text-muted-foreground">
+                              No payments recorded yet
+                            </td>
+                          </tr>
+                        ) : (
+                          payments.map((payment) => (
+                            <tr key={payment.id} className="border-t border-border hover:bg-muted/30">
+                              <td className="p-4 font-mono text-xs">
+                                <div className="flex items-center gap-2">
+                                  <span className="truncate max-w-[120px] md:max-w-[200px]">
+                                    {payment.wallet_address}
+                                  </span>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-6 w-6 p-0"
+                                    onClick={() => copyToClipboard(payment.wallet_address)}
+                                  >
+                                    <Clipboard className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                              </td>
+                              <td className="p-4">
+                                <Badge variant="secondary">{payment.sol_amount} SOL</Badge>
+                              </td>
+                              <td className="p-4 font-mono text-xs">
+                                <div className="flex items-center gap-2">
+                                  <span className="truncate max-w-[80px] md:max-w-[150px]">
+                                    {payment.tx_signature}
+                                  </span>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-6 w-6 p-0"
+                                    onClick={() => copyToClipboard(payment.tx_signature)}
+                                  >
+                                    <Clipboard className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                              </td>
+                              <td className="p-4 text-sm text-muted-foreground">
+                                {new Date(payment.created_at).toLocaleString()}
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
                   </div>
                 </CardContent>
               </Card>
