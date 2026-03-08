@@ -9,6 +9,7 @@ import { LiveSignalFeed } from "@/components/dashboard/LiveSignalFeed";
 import { AIToolsAgents } from "@/components/dashboard/AIToolsAgents";
 import { PriceAlerts } from "@/components/dashboard/PriceAlerts";
 import { Leaderboard } from "@/components/dashboard/Leaderboard";
+import { PortfolioTracker } from "@/components/dashboard/PortfolioTracker";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useWallet } from "@solana/wallet-adapter-react";
 
@@ -45,6 +46,7 @@ const Index = () => {
           {/* Main Trading Section */}
           <div className="lg:col-span-2 space-y-3">
             <TokenSwap />
+            <PortfolioTracker />
             <TopMemecoins />
             <Leaderboard />
             <AIToolsAgents />
