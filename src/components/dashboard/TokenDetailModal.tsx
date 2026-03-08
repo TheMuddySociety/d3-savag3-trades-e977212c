@@ -464,6 +464,30 @@ export function TokenDetailModal({ token, open, onOpenChange }: TokenDetailModal
             </div>
           </div>
 
+          {/* Swap Panel */}
+          {token.tokenAddress && (
+            <div className="rounded-lg border border-border/50 bg-muted/20 overflow-hidden">
+              <button
+                onClick={() => setShowSwap(!showSwap)}
+                className="w-full flex items-center justify-between p-3 hover:bg-muted/40 transition-colors"
+              >
+                <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                  <ArrowRightLeft className="h-4 w-4 text-primary" />
+                  Swap SOL → {token.symbol}
+                </div>
+                {showSwap ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+              </button>
+              {showSwap && (
+                <div className="border-t border-border/30">
+                  <div
+                    id={swapContainerId}
+                    className="min-h-[380px] w-full p-3"
+                  />
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Action Buttons */}
           <div className="flex gap-2">
             {token.tokenAddress && (
