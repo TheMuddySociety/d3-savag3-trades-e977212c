@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Plus, Trash, Search, Download, AlertTriangle, Skull, TrendingDown, Loader2, RefreshCw, ChevronDown, ChevronUp, ShieldAlert, Zap, Copy, Clock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { DevTimeline } from "./DevTimeline";
 
 interface PatternFlag {
   type: string;
@@ -24,7 +25,7 @@ interface TrackedDev {
   riskLevel: "low" | "medium" | "high" | "critical";
   addedAt: string;
   notes: string;
-  tokens?: { mint: string; name: string; symbol: string; supply: number; burnt: boolean }[];
+  tokens?: { mint: string; name: string; symbol: string; supply: number; burnt: boolean; createdAt?: number | null }[];
   transactionCount?: number;
   suspiciousPatterns?: number;
   patternFlags?: PatternFlag[];
@@ -286,7 +287,18 @@ export function DevTokenTracker() {
                       {isExpanded && (
                         <tr key={`${dev.walletAddress}-flags`}>
                           <td colSpan={7} className="p-0">
-                            <div className="bg-muted/5 border-t border-border px-4 py-3 space-y-3">
+                            <div className="bg-muted/5 border-t border-border px-4 py-3 space-y-4">
+                              {/* Timeline Chart */}
+                              {dev.tokens && dev.tokens.length > 0 && (
+                                <div className="border border-border rounded-lg p-4 bg-background/50">
+                                  <DevTimeline
+                                    tokens={dev.tokens}
+                                    patternFlags={flags}
+                                    walletAddress={dev.walletAddress}
+                                  />
+                                </div>
+                              )}
+
                               {flags.length === 0 ? (
                                 <p className="text-sm text-muted-foreground text-center py-2">No suspicious patterns detected for this developer</p>
                               ) : (
