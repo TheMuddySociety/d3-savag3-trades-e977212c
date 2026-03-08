@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
+// @ts-ignore - CSS module lacks type declarations
 import "@jup-ag/plugin/css";
 
 export function TokenSwap() {
