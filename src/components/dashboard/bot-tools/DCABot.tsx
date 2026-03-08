@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { useConnection } from "@solana/wallet-adapter-react";
 import { JupiterTransactionService } from "@/services/jupiter/transactions";
+import { LiveTradeConfirmDialog } from "./LiveTradeConfirmDialog";
 
 const SOL_MINT = "So11111111111111111111111111111111111111112";
 
@@ -37,22 +38,14 @@ export const DCABot = ({ sim, isLive = false }: Props) => {
   const [totalOrders, setTotalOrders] = useState("5");
   const [ordersExecuted, setOrdersExecuted] = useState(0);
   const [useRandomDelay, setUseRandomDelay] = useState(true);
+  const [showConfirm, setShowConfirm] = useState(false);
   const dcaInterval = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     return () => { if (dcaInterval.current) clearInterval(dcaInterval.current); };
   }, []);
 
-  const startDCA = () => {
-    if (!tokenAddress) {
-      toast({ title: "Missing token", description: "Enter a token address to DCA into", variant: "destructive" });
-      return;
-    }
-    if (isLive && !wallet.publicKey) {
-      toast({ title: "Wallet not connected", description: "Connect wallet for live trading", variant: "destructive" });
-      return;
-    }
-
+  const proceedStartDCA = () => {
     setIsRunning(true);
     setOrdersExecuted(0);
     let count = 0;
@@ -85,6 +78,22 @@ export const DCABot = ({ sim, isLive = false }: Props) => {
     }, baseInterval) as unknown as NodeJS.Timeout;
   };
 
+  const startDCA = () => {
+    if (!tokenAddress) {
+      toast({ title: "Missing token", description: "Enter a token address to DCA into", variant: "destructive" });
+      return;
+    }
+    if (isLive && !wallet.publicKey) {
+      toast({ title: "Wallet not connected", description: "Connect wallet for live trading", variant: "destructive" });
+      return;
+    }
+    if (isLive) {
+      setShowConfirm(true);
+    } else {
+      proceedStartDCA();
+    }
+  };
+
   const stopDCA = () => {
     setIsRunning(false);
     if (dcaInterval.current) { clearInterval(dcaInterval.current); dcaInterval.current = null; }
@@ -99,6 +108,15 @@ export const DCABot = ({ sim, isLive = false }: Props) => {
 
   return (
     <div className="space-y-4">
+      <LiveTradeConfirmDialog
+        open={showConfirm}
+        onConfirm={() => { setShowConfirm(false); proceedStartDCA(); }}
+        onCancel={() => setShowConfirm(false)}
+        action="DCA Buy"
+        tokenSymbol={tokenSymbol || tokenAddress.slice(0, 8)}
+        solAmount={totalSol}
+      />
+
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Clock className="h-4 w-4 text-accent" />

@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { useConnection } from "@solana/wallet-adapter-react";
 import { JupiterTransactionService } from "@/services/jupiter/transactions";
+import { LiveTradeConfirmDialog } from "./LiveTradeConfirmDialog";
 
 const SOL_MINT = "So11111111111111111111111111111111111111112";
 
@@ -29,6 +30,7 @@ export const BuySniper = ({ sim, isLive = false }: Props) => {
   const [priorityFee, setPriorityFee] = useState("0.005");
   const [autoSell, setAutoSell] = useState(false);
   const [takeProfitPercent, setTakeProfitPercent] = useState("100");
+  const [showConfirm, setShowConfirm] = useState(false);
   const sniperInterval = useRef<NodeJS.Timeout | null>(null);
 
   const executeLiveBuy = useCallback(async () => {
@@ -74,6 +76,12 @@ export const BuySniper = ({ sim, isLive = false }: Props) => {
     return () => { if (sniperInterval.current) clearInterval(sniperInterval.current); };
   }, []);
 
+  const proceedArm = () => {
+    setIsArmed(true);
+    startSniping();
+    toast({ title: "Sniper Armed 🎯", description: `${isLive ? "LIVE" : "Paper"} — Watching ${tokenAddress.slice(0, 8)}...` });
+  };
+
   const handleArm = () => {
     if (!tokenAddress) {
       toast({ title: "Missing token", description: "Enter a token address to snipe", variant: "destructive" });
@@ -84,9 +92,11 @@ export const BuySniper = ({ sim, isLive = false }: Props) => {
       return;
     }
     if (!isArmed) {
-      setIsArmed(true);
-      startSniping();
-      toast({ title: "Sniper Armed 🎯", description: `${isLive ? "LIVE" : "Paper"} — Watching ${tokenAddress.slice(0, 8)}...` });
+      if (isLive) {
+        setShowConfirm(true);
+      } else {
+        proceedArm();
+      }
     } else {
       setIsArmed(false);
       if (sniperInterval.current) clearInterval(sniperInterval.current);
@@ -96,6 +106,15 @@ export const BuySniper = ({ sim, isLive = false }: Props) => {
 
   return (
     <div className="space-y-4">
+      <LiveTradeConfirmDialog
+        open={showConfirm}
+        onConfirm={() => { setShowConfirm(false); proceedArm(); }}
+        onCancel={() => setShowConfirm(false)}
+        action="Buy Snipe"
+        tokenSymbol={tokenSymbol || tokenAddress.slice(0, 8)}
+        solAmount={parseFloat(buyAmount)}
+      />
+
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Crosshair className="h-4 w-4 text-primary" />
