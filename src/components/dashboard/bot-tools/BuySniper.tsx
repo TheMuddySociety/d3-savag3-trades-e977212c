@@ -16,9 +16,10 @@ const SOL_MINT = "So11111111111111111111111111111111111111112";
 interface Props {
   sim: any;
   isLive?: boolean;
+  killSignal?: number;
 }
 
-export const BuySniper = ({ sim, isLive = false }: Props) => {
+export const BuySniper = ({ sim, isLive = false, killSignal = 0 }: Props) => {
   const { toast } = useToast();
   const wallet = useWallet();
   const { connection } = useConnection();
@@ -75,6 +76,15 @@ export const BuySniper = ({ sim, isLive = false }: Props) => {
   useEffect(() => {
     return () => { if (sniperInterval.current) clearInterval(sniperInterval.current); };
   }, []);
+
+  // Kill switch listener
+  useEffect(() => {
+    if (killSignal > 0) {
+      setIsArmed(false);
+      setShowConfirm(false);
+      if (sniperInterval.current) { clearInterval(sniperInterval.current); sniperInterval.current = null; }
+    }
+  }, [killSignal]);
 
   const proceedArm = () => {
     setIsArmed(true);

@@ -12,9 +12,10 @@ import { LiveTradeConfirmDialog } from "./LiveTradeConfirmDialog";
 interface Props {
   sim: any;
   isLive?: boolean;
+  killSignal?: number;
 }
 
-export const VolumeBot = ({ sim, isLive = false }: Props) => {
+export const VolumeBot = ({ sim, isLive = false, killSignal = 0 }: Props) => {
   const { toast } = useToast();
   const [isRunning, setIsRunning] = useState(false);
   const [tokenAddress, setTokenAddress] = useState("");
@@ -30,6 +31,15 @@ export const VolumeBot = ({ sim, isLive = false }: Props) => {
   useEffect(() => {
     return () => { if (volumeInterval.current) clearInterval(volumeInterval.current); };
   }, []);
+
+  // Kill switch listener
+  useEffect(() => {
+    if (killSignal > 0) {
+      setIsRunning(false);
+      setShowConfirm(false);
+      if (volumeInterval.current) { clearInterval(volumeInterval.current); volumeInterval.current = null; }
+    }
+  }, [killSignal]);
 
   const proceedStart = () => {
     setIsRunning(true);

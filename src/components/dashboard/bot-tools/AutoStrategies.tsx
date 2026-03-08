@@ -33,9 +33,10 @@ const riskColors: Record<string, string> = {
 interface Props {
   sim: any;
   isLive?: boolean;
+  killSignal?: number;
 }
 
-export const AutoStrategies = ({ sim, isLive = false }: Props) => {
+export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) => {
   const { toast } = useToast();
   const [strategies, setStrategies] = useState<Strategy[]>(INITIAL_STRATEGIES);
   const [maxBudget, setMaxBudget] = useState("1.0");

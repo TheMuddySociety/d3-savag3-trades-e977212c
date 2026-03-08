@@ -24,9 +24,10 @@ const INTERVAL_OPTIONS = [
 interface Props {
   sim: any;
   isLive?: boolean;
+  killSignal?: number;
 }
 
-export const DCABot = ({ sim, isLive = false }: Props) => {
+export const DCABot = ({ sim, isLive = false, killSignal = 0 }: Props) => {
   const { toast } = useToast();
   const wallet = useWallet();
   const { connection } = useConnection();
@@ -44,6 +45,15 @@ export const DCABot = ({ sim, isLive = false }: Props) => {
   useEffect(() => {
     return () => { if (dcaInterval.current) clearInterval(dcaInterval.current); };
   }, []);
+
+  // Kill switch listener
+  useEffect(() => {
+    if (killSignal > 0) {
+      setIsRunning(false);
+      setShowConfirm(false);
+      if (dcaInterval.current) { clearInterval(dcaInterval.current); dcaInterval.current = null; }
+    }
+  }, [killSignal]);
 
   const proceedStartDCA = () => {
     setIsRunning(true);
