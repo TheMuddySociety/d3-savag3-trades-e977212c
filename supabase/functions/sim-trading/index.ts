@@ -397,6 +397,9 @@ async function fetchLivePrices(addresses: string[], apiKey: string) {
   if (!response.ok) {
     const text = await response.text();
     throw new Error(`Birdeye price fetch failed: ${text}`);
+  }
+  const result = await response.json();
+  return result.data || {};
 }
 
 // ── Leaderboard: aggregate P&L per wallet ──
