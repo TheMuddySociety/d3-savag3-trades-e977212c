@@ -22,14 +22,8 @@ export const BotAccess = () => {
   const { isLive, hasPaid, isPaymentPending, isCheckingPayment, toggleMode, payAccessFee } = useTradingMode();
   const [showHistory, setShowHistory] = useState(false);
 
-  const handleLiveToggle = async () => {
-    if (isLive) {
-      toggleMode(); // Switch back to paper
-    } else if (hasPaid) {
-      toggleMode(); // Switch to live (already paid)
-    } else {
-      await payAccessFee(); // Pay & switch
-    }
+  const handleLiveToggle = () => {
+    toggleMode();
   };
 
   return (

@@ -115,11 +115,11 @@ export const TradingModeProvider = ({ children }: { children: ReactNode }) => {
     if (isLive) {
       setIsLive(false);
       toast({ title: "📄 Paper Mode", description: "Switched back to paper trading" });
-    } else if (hasPaid) {
+    } else {
       setIsLive(true);
       toast({ title: "🔴 Live Mode", description: "Now executing real Solana transactions!" });
     }
-  }, [isLive, hasPaid, toast]);
+  }, [isLive, toast]);
 
   return (
     <TradingModeContext.Provider value={{ isLive, hasPaid, isPaymentPending, isCheckingPayment, toggleMode, payAccessFee }}>
