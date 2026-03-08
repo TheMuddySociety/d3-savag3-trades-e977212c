@@ -51,12 +51,6 @@ export const BotAccess = () => {
               <Zap className={`h-3.5 w-3.5 ${isLive ? "text-destructive" : "text-muted-foreground"}`} />
               <div>
                 <span className="text-xs font-medium text-foreground">Go Live</span>
-                {!hasPaid && !isCheckingPayment && (
-                  <span className="text-[10px] text-muted-foreground block">0.04141 SOL access fee</span>
-                )}
-                {hasPaid && (
-                  <span className="text-[10px] text-accent block">✓ Access unlocked</span>
-                )}
               </div>
             </div>
             <Switch
