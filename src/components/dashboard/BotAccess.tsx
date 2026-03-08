@@ -13,7 +13,7 @@ export const BotAccess = () => {
   const { publicKey, sendTransaction, connected } = useWallet();
   const { toast } = useToast();
   const [isProcessing, setIsProcessing] = useState(false);
-  const [hasAccess, setHasAccess] = useState(false);
+  const [hasAccess, setHasAccess] = useState(true);
 
   const PAYMENT_AMOUNT = 0.04141; // SOL
   const PAYMENT_DESTINATION = "11111111111111111111111111111112"; // System program (placeholder)
