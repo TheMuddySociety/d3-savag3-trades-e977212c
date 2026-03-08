@@ -14,6 +14,30 @@ export type Database = {
   }
   public: {
     Tables: {
+      access_payments: {
+        Row: {
+          created_at: string
+          id: string
+          sol_amount: number
+          tx_signature: string
+          wallet_address: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          sol_amount?: number
+          tx_signature: string
+          wallet_address: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          sol_amount?: number
+          tx_signature?: string
+          wallet_address?: string
+        }
+        Relationships: []
+      }
       price_alerts: {
         Row: {
           created_at: string
