@@ -358,6 +358,26 @@ export const tools: AITool[] = [
     ],
     marketCondition: "All conditions — MEV attacks increase during high-volume periods",
   },
+  {
+    id: "raydium-sniper",
+    name: "Raydium Sniper Skill",
+    description: "Snipe new token launches on Raydium DEX — monitors pool creation events, auto-buys at launch, and sets take-profit/stop-loss targets.",
+    category: "skills",
+    icon: <Zap className="h-5 w-5" />,
+    tags: ["Raydium", "Sniping", "Launches", "DEX"],
+    url: "https://github.com/solana-foundation/awesome-solana-ai",
+    profitRange: "$100 – $500,000+",
+    minFunding: "$10 – $500",
+    timeframe: "Seconds to minutes (speed is critical)",
+    setupSteps: [
+      "Clone repo: git clone <repo> && cd raydium-sniper && npm install",
+      "Set SOLANA_RPC (low-latency RPC required), PRIVATE_KEY in .env",
+      "Configure snipe params: max buy SOL, slippage, TP/SL targets in config.json",
+      "Run: npm start — listens for Raydium pool creation txs in real-time",
+      "Bot auto-buys on pool init and manages position with configured exit strategy"
+    ],
+    marketCondition: "Bull & hype cycles — highest returns during memecoin launch waves",
+  },
 ];
 
 export const categoryLabels: Record<ToolCategory, string> = {
