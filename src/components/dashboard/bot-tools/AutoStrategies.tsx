@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
@@ -42,6 +42,15 @@ export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) =
   const [maxBudget, setMaxBudget] = useState("1.0");
   const [showConfirm, setShowConfirm] = useState(false);
   const [pendingStrategyId, setPendingStrategyId] = useState<string | null>(null);
+
+  // Kill switch listener
+  useEffect(() => {
+    if (killSignal > 0) {
+      setStrategies(prev => prev.map(s => ({ ...s, enabled: false })));
+      setShowConfirm(false);
+      setPendingStrategyId(null);
+    }
+  }, [killSignal]);
 
   const proceedToggle = (id: string) => {
     setStrategies((prev) =>
