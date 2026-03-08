@@ -287,7 +287,18 @@ export function DevTokenTracker() {
                       {isExpanded && (
                         <tr key={`${dev.walletAddress}-flags`}>
                           <td colSpan={7} className="p-0">
-                            <div className="bg-muted/5 border-t border-border px-4 py-3 space-y-3">
+                            <div className="bg-muted/5 border-t border-border px-4 py-3 space-y-4">
+                              {/* Timeline Chart */}
+                              {dev.tokens && dev.tokens.length > 0 && (
+                                <div className="border border-border rounded-lg p-4 bg-background/50">
+                                  <DevTimeline
+                                    tokens={dev.tokens.map((t) => ({ ...t, createdAt: (t as any).createdAt ?? null }))}
+                                    patternFlags={flags}
+                                    walletAddress={dev.walletAddress}
+                                  />
+                                </div>
+                              )}
+
                               {flags.length === 0 ? (
                                 <p className="text-sm text-muted-foreground text-center py-2">No suspicious patterns detected for this developer</p>
                               ) : (
