@@ -199,6 +199,11 @@ export function TopMemecoins() {
           onSort={handleSort}
         />
       </div>
+      <TokenDetailModal
+        token={selectedToken}
+        open={modalOpen}
+        onOpenChange={setModalOpen}
+      />
     </div>
   );
 }
