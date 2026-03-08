@@ -19,6 +19,13 @@ export function TopMemecoins() {
   const [birdeyeTokens, setBirdeyeTokens] = useState<MemeToken[]>([]);
   const [birdeyeLoading, setBirdeyeLoading] = useState(false);
   const [birdeyeError, setBirdeyeError] = useState<string | null>(null);
+  const [selectedToken, setSelectedToken] = useState<MemeToken | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
+
+  const handleTokenClick = (token: MemeToken) => {
+    setSelectedToken(token);
+    setModalOpen(true);
+  };
   
   const { tokens: launchpadTokens, loading: launchpadLoading, error: launchpadError, isConnected, lastUpdate } = useRealtimeTokens('pumpfun', 20);
 
