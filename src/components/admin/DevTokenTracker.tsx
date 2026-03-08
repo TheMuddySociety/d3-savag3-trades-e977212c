@@ -292,7 +292,7 @@ export function DevTokenTracker() {
                               {dev.tokens && dev.tokens.length > 0 && (
                                 <div className="border border-border rounded-lg p-4 bg-background/50">
                                   <DevTimeline
-                                    tokens={dev.tokens.map((t) => ({ ...t, createdAt: (t as any).createdAt ?? null }))}
+                                    tokens={dev.tokens}
                                     patternFlags={flags}
                                     walletAddress={dev.walletAddress}
                                   />
