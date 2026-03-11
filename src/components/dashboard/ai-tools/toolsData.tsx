@@ -378,6 +378,26 @@ export const tools: AITool[] = [
     ],
     marketCondition: "Bull & hype cycles — highest returns during memecoin launch waves",
   },
+  {
+    id: "jito-bundles",
+    name: "Jito Bundle Optimizer",
+    description: "Jito MEV bundle submission with tip optimization — land transactions faster, avoid failed trades, and maximize inclusion probability.",
+    category: "skills",
+    icon: <Zap className="h-5 w-5" />,
+    tags: ["Jito", "MEV", "Bundles", "Trading"],
+    url: "https://github.com/solana-foundation/awesome-solana-ai",
+    profitRange: "$500 – $250,000+",
+    minFunding: "$50 – $2,000",
+    timeframe: "Seconds (bundle inclusion)",
+    setupSteps: [
+      "Clone repo: git clone <repo> && cd jito-bundles && npm install",
+      "Set SOLANA_RPC (Jito RPC required), PRIVATE_KEY, JITO_API_KEY in .env",
+      "Configure tip strategy: fixed, dynamic %, or smart optimization in config.json",
+      "Run: npm start — bundles txs with optimized tips for guaranteed inclusion",
+      "Integrate with sniper bots for instant execution on new pool launches"
+    ],
+    marketCondition: "High congestion — essential when network is busy and txs fail",
+  },
 ];
 
 export const categoryLabels: Record<ToolCategory, string> = {
