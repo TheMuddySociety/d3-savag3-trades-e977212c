@@ -233,9 +233,7 @@ async function fetchPriceHistory(address: string, _interval: string, _timeFrom?:
     
     const priceResp = await fetch(`${JUPITER_PRICE_API}?ids=${address}`, { headers });
     const priceData = await priceResp.json();
-    const currentPrice = priceData?.data?.[address]?.price 
-      ? parseFloat(priceData.data[address].price) 
-      : 0;
+    const currentPrice = priceData?.[address]?.usdPrice || 0;
 
     if (currentPrice === 0) return [];
 
