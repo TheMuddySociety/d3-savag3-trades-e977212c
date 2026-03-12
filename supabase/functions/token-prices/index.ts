@@ -145,9 +145,11 @@ async function fetchTrendingTokens() {
 
 // ── Token Overview via Helius DAS + Jupiter ─────────────────────────
 
-async function fetchTokenOverview(address: string, apiKey: string) {
-  // Fetch price from Jupiter
-  const pricePromise = fetch(`${JUPITER_PRICE_API}?ids=${address}`)
+async function fetchTokenOverview(address: string, apiKey: string, jupiterApiKey?: string) {
+  const headers: Record<string, string> = {};
+  if (jupiterApiKey) headers['x-api-key'] = jupiterApiKey;
+  
+  const pricePromise = fetch(`${JUPITER_PRICE_API}?ids=${address}`, { headers })
     .then(r => r.json())
     .catch(() => ({ data: {} }));
 
