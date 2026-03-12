@@ -166,7 +166,8 @@ async function fetchTokenOverview(address: string, apiKey: string, jupiterApiKey
 
   const [priceResult, metaResult] = await Promise.all([pricePromise, metaPromise]);
 
-  const priceData = priceResult?.data?.[address];
+  // V3 flat response: { [mint]: { usdPrice, ... } }
+  const priceInfo = priceResult?.[address];
   const asset = metaResult?.result || {};
   const content = asset?.content || {};
 
@@ -175,7 +176,7 @@ async function fetchTokenOverview(address: string, apiKey: string, jupiterApiKey
     name: content?.metadata?.name || '',
     symbol: content?.metadata?.symbol || '',
     logo: content?.links?.image || content?.files?.[0]?.uri || '',
-    price: priceData?.price ? parseFloat(priceData.price) : 0,
+    price: priceInfo?.usdPrice || 0,
     decimals: asset?.token_info?.decimals || 0,
     supply: asset?.token_info?.supply || 0,
   };
