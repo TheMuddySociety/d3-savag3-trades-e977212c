@@ -56,7 +56,7 @@ serve(async (req) => {
 
       case 'price_history':
         if (!address) return err('address is required', 400);
-        return ok(await fetchPriceHistory(address, body.interval || '30m', body.time_from, body.time_to));
+        return ok(await fetchPriceHistory(address, body.interval || '30m', body.time_from, body.time_to, JUPITER_API_KEY));
 
       case 'token_holders':
         if (!address) return err('address is required', 400);
