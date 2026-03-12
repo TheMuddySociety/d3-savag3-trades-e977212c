@@ -3,6 +3,7 @@ import { Connection } from '@solana/web3.js';
 import { 
   JupiterQuoteService, 
   JupiterTransactionService,
+  JupiterUltraService,
   TokenService 
 } from './jupiter';
 import { SolanaClient } from '@/utils/solanaClient';
