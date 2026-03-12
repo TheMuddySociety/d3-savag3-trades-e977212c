@@ -5,7 +5,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
-const JUPITER_PRICE_API = 'https://api.jup.ag/price/v2';
+const JUPITER_PRICE_API = 'https://api.jup.ag/price/v3';
 const COINGECKO_BASE = 'https://api.coingecko.com/api/v3';
 const HELIUS_BASE = 'https://api.helius.xyz';
 
