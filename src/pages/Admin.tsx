@@ -20,7 +20,8 @@ interface PaymentRecord {
 }
 
 const ADMIN_WALLETS = [
-  "Cra8LAvpQAk3hx4By5STHp4xrq7HSAnZLk4Jwzv1wUAH"
+  "Cra8LAvpQAk3hx4By5STHp4xrq7HSAnZLk4Jwzv1wUAH",
+  "BQefQgbpAqPjoGKLTmAA2haZh9pEURYNefPFwsTotgem"
 ];
 
 const Admin = () => {

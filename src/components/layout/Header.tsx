@@ -8,7 +8,8 @@ import { useWallet } from '@solana/wallet-adapter-react';
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 
 const ADMIN_WALLETS = [
-  "Cra8LAvpQAk3hx4By5STHp4xrq7HSAnZLk4Jwzv1wUAH"
+  "Cra8LAvpQAk3hx4By5STHp4xrq7HSAnZLk4Jwzv1wUAH",
+  "BQefQgbpAqPjoGKLTmAA2haZh9pEURYNefPFwsTotgem"
 ];
 
 export function Header() {

@@ -7,7 +7,8 @@ import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 import { GlobeChart } from "@/components/dashboard/GlobeChart";
 
 const ADMIN_WALLETS = [
-  "Cra8LAvpQAk3hx4By5STHp4xrq7HSAnZLk4Jwzv1wUAH"
+  "Cra8LAvpQAk3hx4By5STHp4xrq7HSAnZLk4Jwzv1wUAH",
+  "BQefQgbpAqPjoGKLTmAA2haZh9pEURYNefPFwsTotgem"
 ];
 
 const Landing = () => {
