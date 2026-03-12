@@ -90,13 +90,11 @@ async function fetchJupiterPrices(addresses: string[], apiKey?: string) {
   const result = await response.json();
   const prices: Record<string, { value: number }> = {};
   
-  // Jupiter returns { data: { [mint]: { id, type, price } } }
-  if (result.data) {
-    for (const [mint, info] of Object.entries(result.data)) {
-      const priceData = info as { price?: string };
-      if (priceData.price) {
-        prices[mint] = { value: parseFloat(priceData.price) };
-      }
+  // V3 returns flat: { [mint]: { usdPrice, decimals, blockId, priceChange24h } }
+  for (const [mint, info] of Object.entries(result)) {
+    const priceData = info as { usdPrice?: number };
+    if (priceData?.usdPrice) {
+      prices[mint] = { value: priceData.usdPrice };
     }
   }
   
