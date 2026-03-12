@@ -14,14 +14,11 @@ export function TokenSwap() {
           displayMode: "integrated",
           integratedTargetId: "target-container",
           formProps: {
-            fixedAmount: true,
             fixedMint: "So11111111111111111111111111111111111111112",
-            referralAccount: "F4qYkXAcogrjQHw3ngKWjisMmmRFR4Ea6c9DCCpK5gBr",
-            referralFee: 150,
           },
           branding: {
-            name: "D3 SAVAGE SWAP",
-            logoUri: "https://ibb.co/0VFDBzYQ",
+            name: "D3 SAVAG3 Ai",
+            logoUri: "https://i.ibb.co/QvtDd1yY/image-6483441-4.jpg",
           },
         });
       });
