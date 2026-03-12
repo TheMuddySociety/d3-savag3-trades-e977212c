@@ -30,6 +30,8 @@ serve(async (req) => {
   const HELIUS_API_KEY = Deno.env.get('HELIUS_API_KEY');
   if (!HELIUS_API_KEY) return err('HELIUS_API_KEY is not configured');
 
+  const JUPITER_API_KEY = Deno.env.get('JUPITER_API_KEY');
+
   try {
     const body = await req.json();
     const { action, addresses, address } = body;
