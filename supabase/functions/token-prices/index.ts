@@ -38,7 +38,7 @@ serve(async (req) => {
 
     switch (action) {
       case 'prices':
-        return ok(await fetchJupiterPrices(addresses));
+        return ok(await fetchJupiterPrices(addresses, JUPITER_API_KEY));
 
       case 'token_info':
         return ok(await fetchHeliusTokenInfo(addresses, HELIUS_API_KEY));
