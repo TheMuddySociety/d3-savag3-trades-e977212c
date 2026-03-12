@@ -74,12 +74,14 @@ serve(async (req) => {
 
 // ── Jupiter Price API (free, no key needed) ─────────────────────────
 
-async function fetchJupiterPrices(addresses: string[]) {
+async function fetchJupiterPrices(addresses: string[], apiKey?: string) {
   if (!addresses || addresses.length === 0) return {};
   
-  // Jupiter supports up to 100 addresses per request
   const ids = addresses.join(',');
-  const response = await fetch(`${JUPITER_PRICE_API}?ids=${ids}`);
+  const headers: Record<string, string> = {};
+  if (apiKey) headers['x-api-key'] = apiKey;
+  
+  const response = await fetch(`${JUPITER_PRICE_API}?ids=${ids}`, { headers });
   
   if (!response.ok) {
     throw new Error(`Jupiter price API failed [${response.status}]: ${await response.text()}`);
