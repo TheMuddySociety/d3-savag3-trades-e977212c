@@ -66,14 +66,13 @@ export class JupiterUltraService {
       if (error) throw new Error(error.message);
       if (!data?.success) throw new Error(data?.error || 'Order failed');
 
-      const order = data.data;
+      const order = data.data as UltraOrderResponse;
       
-      // Return even if order has errorCode — let caller decide
-      if (order?.errorCode) {
-        console.warn('Jupiter Ultra order has error:', order.errorMessage);
+      // Log warning if order has error but still return it for caller to handle
+      if ((order as any).errorCode) {
+        console.warn('Jupiter Ultra order has error:', (order as any).errorMessage);
       }
 
-      const order = data.data as UltraOrderResponse;
       console.log('Ultra order received:', {
         inAmount: order.inAmount,
         outAmount: order.outAmount,
