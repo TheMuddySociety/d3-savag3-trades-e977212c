@@ -24,9 +24,9 @@ export const useMemecoins = () => {
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const fetchMemecoins = useCallback(async () => {
+  const fetchMemecoins = useCallback(async (silent = false) => {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       const bullmeTokens = await BullmeService.getNewTokens();
       
       // Transform Bullme tokens to our MemeToken format
@@ -111,7 +111,7 @@ export const useMemecoins = () => {
 
   const refreshData = useCallback(() => {
     setIsRefreshing(true);
-    fetchMemecoins();
+    fetchMemecoins(false);
   }, [fetchMemecoins]);
 
   const handleSort = useCallback((field: string) => {
@@ -123,6 +123,13 @@ export const useMemecoins = () => {
 
   useEffect(() => {
     fetchMemecoins();
+    
+    // Poll Bullme API every 15 seconds for bonding curve price updates
+    const pollInterval = setInterval(() => {
+      fetchMemecoins(true); // silent refresh — no loading spinner
+    }, 15000);
+    
+    return () => clearInterval(pollInterval);
   }, [fetchMemecoins]);
 
   useEffect(() => {
