@@ -1,29 +1,40 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Briefcase, TrendingUp, TrendingDown, RefreshCw, Wallet, PieChart } from "lucide-react";
+import { Briefcase, RefreshCw, Wallet, DollarSign, Coins, ExternalLink } from "lucide-react";
 import { useWallet } from "@solana/wallet-adapter-react";
-import { useSimTrading } from "@/hooks/useSimTrading";
-import { useTradingMode } from "@/hooks/useTradingMode";
+import { useWalletPortfolio } from "@/hooks/useWalletPortfolio";
+import { cn } from "@/lib/utils";
+import { Skeleton } from "@/components/ui/skeleton";
+
+const formatUsd = (v: number) => {
+  if (v >= 1e6) return `$${(v / 1e6).toFixed(2)}M`;
+  if (v >= 1e3) return `$${(v / 1e3).toFixed(2)}K`;
+  if (v >= 1) return `$${v.toFixed(2)}`;
+  if (v > 0) return `$${v.toFixed(4)}`;
+  return "$0.00";
+};
+
+const formatAmount = (v: number) => {
+  if (v >= 1e9) return `${(v / 1e9).toFixed(2)}B`;
+  if (v >= 1e6) return `${(v / 1e6).toFixed(2)}M`;
+  if (v >= 1e3) return `${(v / 1e3).toFixed(1)}K`;
+  if (v >= 1) return v.toFixed(2);
+  return v.toFixed(6);
+};
 
 export const PortfolioTracker = () => {
   const { publicKey } = useWallet();
   const walletAddress = publicKey?.toBase58() || null;
-  const { wallet, holdings, totalValue, isLoading, refreshPortfolio } = useSimTrading(walletAddress);
-  const { isLive } = useTradingMode();
+  const { portfolio, isLoading, error, refresh } = useWalletPortfolio(walletAddress);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
-    await refreshPortfolio();
+    await refresh();
     setTimeout(() => setIsRefreshing(false), 500);
   };
-
-  const totalInvested = holdings.reduce((sum, h) => sum + h.total_invested, 0);
-  const totalPnlSol = wallet ? (wallet.sol_balance - 10 + totalInvested) : 0;
-  const totalPnlPercent = totalInvested > 0 ? ((totalValue - totalInvested) / totalInvested) * 100 : 0;
-  const portfolioValue = (wallet?.sol_balance || 0) + totalValue;
 
   if (!walletAddress) {
     return (
@@ -31,11 +42,11 @@ export const PortfolioTracker = () => {
         <CardHeader className="pb-2">
           <div className="flex items-center gap-2">
             <Briefcase className="h-5 w-5 text-primary" />
-            <CardTitle className="text-sm">Portfolio Tracker</CardTitle>
+            <CardTitle className="text-sm">Portfolio</CardTitle>
           </div>
         </CardHeader>
         <CardContent>
-          <p className="text-xs text-muted-foreground text-center py-4">Connect wallet to view portfolio</p>
+          <p className="text-xs text-muted-foreground text-center py-4">Connect wallet to view holdings</p>
         </CardContent>
       </Card>
     );
@@ -47,15 +58,9 @@ export const PortfolioTracker = () => {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Briefcase className="h-5 w-5 text-primary" />
-            <CardTitle className="text-sm">Portfolio Tracker</CardTitle>
-            <Badge
-              variant="outline"
-              className={`text-[10px] ${isLive
-                ? "bg-destructive/20 text-destructive border-destructive/30"
-                : "bg-[hsl(var(--fun-yellow))]/20 text-[hsl(var(--fun-yellow))] border-[hsl(var(--fun-yellow))]/30"
-              }`}
-            >
-              {isLive ? "LIVE" : "PAPER"}
+            <CardTitle className="text-sm">Portfolio</CardTitle>
+            <Badge variant="outline" className="text-[10px] bg-accent/20 text-accent border-accent/30">
+              LIVE
             </Badge>
           </div>
           <Button
@@ -63,132 +68,158 @@ export const PortfolioTracker = () => {
             size="sm"
             className="h-6 w-6 p-0"
             onClick={handleRefresh}
-            disabled={isRefreshing}
+            disabled={isRefreshing || isLoading}
           >
-            <RefreshCw className={`h-3 w-3 ${isRefreshing ? "animate-spin" : ""}`} />
+            <RefreshCw className={cn("h-3 w-3", (isRefreshing || isLoading) && "animate-spin")} />
           </Button>
         </div>
       </CardHeader>
 
       <CardContent className="space-y-3 pt-0">
-        {/* Portfolio Summary */}
-        <div className="grid grid-cols-2 gap-2">
-          <div className="p-2.5 rounded-lg bg-muted/20 border border-border">
-            <div className="flex items-center gap-1.5 mb-1">
-              <Wallet className="h-3 w-3 text-muted-foreground" />
-              <span className="text-[10px] text-muted-foreground">Total Value</span>
-            </div>
-            <p className="text-sm font-mono font-bold text-foreground">
-              {portfolioValue.toFixed(4)} <span className="text-xs text-muted-foreground">SOL</span>
-            </p>
+        {isLoading && !portfolio ? (
+          <div className="space-y-2">
+            <Skeleton className="h-16 w-full" />
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
           </div>
-          <div className="p-2.5 rounded-lg bg-muted/20 border border-border">
-            <div className="flex items-center gap-1.5 mb-1">
-              <PieChart className="h-3 w-3 text-muted-foreground" />
-              <span className="text-[10px] text-muted-foreground">Total P&L</span>
-            </div>
-            <div className="flex items-center gap-1">
-              {totalPnlSol >= 0 ? (
-                <TrendingUp className="h-3 w-3 text-accent" />
-              ) : (
-                <TrendingDown className="h-3 w-3 text-destructive" />
-              )}
-              <p className={`text-sm font-mono font-bold ${totalPnlSol >= 0 ? "text-accent" : "text-destructive"}`}>
-                {totalPnlSol >= 0 ? "+" : ""}{totalPnlSol.toFixed(4)}
+        ) : error && !portfolio ? (
+          <div className="text-center py-4">
+            <p className="text-xs text-destructive">{error}</p>
+            <Button variant="ghost" size="sm" className="mt-2 text-xs" onClick={handleRefresh}>
+              Retry
+            </Button>
+          </div>
+        ) : portfolio ? (
+          <>
+            {/* Total Portfolio Value */}
+            <div className="p-3 rounded-lg bg-primary/5 border border-primary/20">
+              <div className="flex items-center gap-1.5 mb-1">
+                <DollarSign className="h-3 w-3 text-primary" />
+                <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Total Portfolio</span>
+              </div>
+              <p className="text-xl font-mono font-bold text-foreground">
+                {formatUsd(portfolio.totalPortfolioUsd)}
               </p>
-            </div>
-          </div>
-        </div>
-
-        {/* SOL Balance */}
-        {wallet && (
-          <div className="flex items-center justify-between p-2 rounded-lg bg-primary/5 border border-primary/20">
-            <div className="flex items-center gap-2">
-              <div className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center text-[10px]">◎</div>
-              <div>
-                <span className="text-xs font-medium text-foreground">SOL</span>
-                <p className="text-[10px] text-muted-foreground">Solana</p>
+              <div className="flex items-center gap-3 mt-1 text-[10px] text-muted-foreground">
+                <span>{portfolio.tokenCount} tokens</span>
+                <span>·</span>
+                <span>{portfolio.solBalance.toFixed(4)} SOL</span>
               </div>
             </div>
-            <div className="text-right">
-              <p className="text-xs font-mono font-medium text-foreground">{wallet.sol_balance.toFixed(4)}</p>
-              <p className="text-[10px] text-muted-foreground">Available</p>
-            </div>
-          </div>
-        )}
 
-        {/* Token Holdings */}
-        {holdings.length > 0 ? (
-          <div className="space-y-1.5">
-            <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Token Holdings</span>
-            {holdings.map((h, i) => {
-              const pnl = h.pnl_percent || 0;
-              const currentVal = h.current_value || h.total_invested;
-              const pnlSol = currentVal - h.total_invested;
-
-              return (
-                <div
-                  key={h.id || i}
-                  className="flex items-center justify-between p-2 rounded-lg bg-muted/20 border border-border hover:bg-muted/30 transition-colors"
-                >
-                  <div className="flex items-center gap-2 min-w-0">
-                    <div className="w-5 h-5 rounded-full bg-accent/20 flex items-center justify-center text-[10px] shrink-0">
-                      {(h.token_symbol || "?")[0]}
-                    </div>
-                    <div className="min-w-0">
-                      <span className="text-xs font-medium text-foreground block truncate">
-                        {h.token_symbol || h.token_address?.slice(0, 6)}
-                      </span>
-                      <p className="text-[10px] text-muted-foreground font-mono">
-                        {h.amount.toLocaleString(undefined, { maximumFractionDigits: 2 })} tokens
-                      </p>
-                    </div>
-                  </div>
-                  <div className="text-right shrink-0 ml-2">
-                    <p className="text-xs font-mono text-foreground">{h.total_invested.toFixed(4)} SOL</p>
-                    <div className="flex items-center justify-end gap-0.5">
-                      {pnl >= 0 ? (
-                        <TrendingUp className="h-2.5 w-2.5 text-accent" />
-                      ) : (
-                        <TrendingDown className="h-2.5 w-2.5 text-destructive" />
-                      )}
-                      <span className={`text-[10px] font-mono font-medium ${pnl >= 0 ? "text-accent" : "text-destructive"}`}>
-                        {pnl >= 0 ? "+" : ""}{pnl.toFixed(1)}%
-                      </span>
-                    </div>
-                  </div>
+            {/* SOL Balance */}
+            <div className="flex items-center justify-between p-2.5 rounded-lg bg-muted/20 border border-border">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#9945FF] to-[#14F195] flex items-center justify-center text-xs font-bold text-white">
+                  ◎
                 </div>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="text-center py-4">
-            <p className="text-xs text-muted-foreground">No token holdings yet</p>
-            <p className="text-[10px] text-muted-foreground mt-1">Use the bot tools to start trading</p>
-          </div>
-        )}
+                <div>
+                  <span className="text-xs font-medium text-foreground">SOL</span>
+                  <p className="text-[10px] text-muted-foreground">Solana</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="text-xs font-mono font-medium text-foreground">
+                  {portfolio.solBalance.toFixed(4)}
+                </p>
+                <p className="text-[10px] text-muted-foreground font-mono">
+                  {formatUsd(portfolio.solValueUsd)}
+                </p>
+              </div>
+            </div>
 
-        {/* Stats Footer */}
-        {holdings.length > 0 && (
-          <div className="grid grid-cols-3 gap-2 pt-1 border-t border-border">
-            <div className="text-center">
-              <p className="text-[10px] text-muted-foreground">Tokens</p>
-              <p className="text-xs font-mono font-medium text-foreground">{holdings.length}</p>
+            {/* Token Holdings */}
+            {portfolio.tokens.length > 0 ? (
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
+                    Token Holdings
+                  </span>
+                  <span className="text-[10px] text-muted-foreground">
+                    {formatUsd(portfolio.totalTokenValueUsd)}
+                  </span>
+                </div>
+                <div className="space-y-1 max-h-[300px] overflow-y-auto hide-scrollbar">
+                  {portfolio.tokens.map((token) => (
+                    <div
+                      key={token.mint}
+                      className="flex items-center justify-between p-2 rounded-lg bg-muted/20 border border-border hover:bg-muted/30 transition-colors group"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-7 h-7 rounded-full overflow-hidden bg-muted shrink-0">
+                          {token.logoUrl ? (
+                            <img
+                              src={token.logoUrl}
+                              alt={token.symbol}
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                              }}
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-[10px] font-bold text-muted-foreground">
+                              {token.symbol[0]}
+                            </div>
+                          )}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1">
+                            <span className="text-xs font-medium text-foreground truncate">
+                              {token.symbol}
+                            </span>
+                            <a
+                              href={`https://solscan.io/token/${token.mint}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                              className="opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              <ExternalLink className="h-2.5 w-2.5 text-muted-foreground" />
+                            </a>
+                          </div>
+                          <p className="text-[10px] text-muted-foreground font-mono">
+                            {formatAmount(token.amount)}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right shrink-0 ml-2">
+                        <p className="text-xs font-mono text-foreground">
+                          {formatUsd(token.value)}
+                        </p>
+                        <p className="text-[10px] text-muted-foreground font-mono">
+                          @{token.price >= 0.01 ? `$${token.price.toFixed(4)}` : `$${token.price.toExponential(2)}`}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-3">
+                <Coins className="h-6 w-6 text-muted-foreground mx-auto mb-1" />
+                <p className="text-xs text-muted-foreground">No token holdings found</p>
+              </div>
+            )}
+
+            {/* Wallet address footer */}
+            <div className="flex items-center justify-between pt-1 border-t border-border">
+              <div className="flex items-center gap-1.5">
+                <Wallet className="h-3 w-3 text-muted-foreground" />
+                <span className="text-[10px] font-mono text-muted-foreground">
+                  {walletAddress.slice(0, 4)}…{walletAddress.slice(-4)}
+                </span>
+              </div>
+              <a
+                href={`https://solscan.io/account/${walletAddress}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[10px] text-primary hover:underline flex items-center gap-0.5"
+              >
+                Solscan <ExternalLink className="h-2.5 w-2.5" />
+              </a>
             </div>
-            <div className="text-center">
-              <p className="text-[10px] text-muted-foreground">Invested</p>
-              <p className="text-xs font-mono font-medium text-foreground">{totalInvested.toFixed(3)}</p>
-            </div>
-            <div className="text-center">
-              <p className="text-[10px] text-muted-foreground">Win Rate</p>
-              <p className="text-xs font-mono font-medium text-accent">
-                {holdings.length > 0
-                  ? ((holdings.filter(h => (h.pnl_percent || 0) > 0).length / holdings.length) * 100).toFixed(0)
-                  : 0}%
-              </p>
-            </div>
-          </div>
-        )}
+          </>
+        ) : null}
       </CardContent>
     </Card>
   );
