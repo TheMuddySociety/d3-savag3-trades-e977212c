@@ -67,6 +67,12 @@ export class JupiterUltraService {
       if (!data?.success) throw new Error(data?.error || 'Order failed');
 
       const order = data.data as UltraOrderResponse;
+      
+      // Log warning if order has error but still return it for caller to handle
+      if ((order as any).errorCode) {
+        console.warn('Jupiter Ultra order has error:', (order as any).errorMessage);
+      }
+
       console.log('Ultra order received:', {
         inAmount: order.inAmount,
         outAmount: order.outAmount,
@@ -132,6 +138,19 @@ export class JupiterUltraService {
       // 1. Get order via proxy
       const order = await this.getOrder(inputMint, outputMint, amount, taker, swapMode);
       if (!order) return null;
+
+      // Check for API-level errors (e.g. insufficient funds)
+      if ((order as any).errorCode || (order as any).error) {
+        const errMsg = (order as any).errorMessage || (order as any).error || 'Order error';
+        toast.error(errMsg);
+        return { status: 'Failed', error: errMsg, code: (order as any).errorCode || -1 } as UltraExecuteResponse;
+      }
+
+      // Ensure transaction data exists
+      if (!order.transaction) {
+        toast.error('No transaction returned from Jupiter');
+        return { status: 'Failed', error: 'Empty transaction', code: -1 } as UltraExecuteResponse;
+      }
 
       // 2. Deserialize and sign the transaction
       const transactionBuf = Buffer.from(order.transaction, 'base64');
