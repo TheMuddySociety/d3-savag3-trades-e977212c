@@ -5,7 +5,7 @@ import { Shield, LogOut, Activity, Sparkles } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import { useWallet } from '@solana/wallet-adapter-react';
-import { UnifiedWalletButton } from 'jupiverse-kit';
+import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 import { useTradingMode } from '@/hooks/useTradingMode';
 
 export function Header() {
