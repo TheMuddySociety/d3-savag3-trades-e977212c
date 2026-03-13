@@ -158,7 +158,7 @@ function useTokenDetail(token: MemeToken | null, open: boolean) {
         })));
         usedLive = true;
       } else {
-        setPriceData(generateMockPriceHistory(token));
+        setPriceData([]);
       }
 
       // Holders
