@@ -44,13 +44,9 @@ export const BotAccess = () => {
           <CardTitle className="text-sm">Bot Trading Tools</CardTitle>
           <Badge
             variant="outline"
-            className={`text-[10px] ml-auto ${
-              isLive
-                ? "bg-destructive/20 text-destructive border-destructive/30"
-                : "bg-[hsl(var(--fun-yellow))]/20 text-[hsl(var(--fun-yellow))] border-[hsl(var(--fun-yellow))]/30"
-            }`}
+            className="text-[10px] ml-auto bg-destructive/20 text-destructive border-destructive/30"
           >
-            {isLive ? "🔴 LIVE" : "PAPER"}
+            🔴 LIVE
           </Badge>
         </div>
 
