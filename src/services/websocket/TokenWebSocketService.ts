@@ -126,7 +126,7 @@ class TokenWebSocketService {
 
       const tokens = data.data as any[];
       return tokens
-        .filter((t: any) => t.address && t.address.length > 20) // Only valid Solana addresses
+        .filter((t: any) => t.address && t.name) // Allow all tokens with an address identifier
         .map((t: any, i: number) => {
           // Parse market_cap / volume_24h which may be strings like "$477M"
           const parseCurrencyString = (val: any): number => {
@@ -141,6 +141,9 @@ class TokenWebSocketService {
             return num * mult;
           };
 
+          // Determine if this is a valid Solana address (44 chars base58)
+          const isSolanaAddress = t.address.length >= 32 && t.address.length <= 44;
+
           return {
             id: t.address,
             name: t.name || `Token ${i + 1}`,
@@ -150,7 +153,7 @@ class TokenWebSocketService {
             volume24h: parseCurrencyString(t.volume_24h),
             change24h: t.price_change_24h || 0,
             logoUrl: t.logo || '/placeholder.svg',
-            tokenAddress: t.address,
+            tokenAddress: isSolanaAddress ? t.address : undefined, // Only set for real Solana tokens
             liquidity: 0,
             holders: 0,
             tags: ['Trending'],
