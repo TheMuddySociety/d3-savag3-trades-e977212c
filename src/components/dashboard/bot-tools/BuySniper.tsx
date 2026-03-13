@@ -33,30 +33,51 @@ export const BuySniper = ({ sim, isLive = false, killSignal = 0 }: Props) => {
   const [autoSell, setAutoSell] = useState(false);
   const [takeProfitPercent, setTakeProfitPercent] = useState("100");
   const [showConfirm, setShowConfirm] = useState(false);
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const sniperInterval = useRef<NodeJS.Timeout | null>(null);
 
   const executeLiveBuy = useCallback(async () => {
-    const lamports = Math.round(parseFloat(buyAmount) * 1e9);
-    const slippageBps = Math.round(parseFloat(maxSlippage) * 100);
-    const priority = parseFloat(priorityFee) >= 0.01 ? 'high' as const
-      : parseFloat(priorityFee) >= 0.005 ? 'medium' as const : 'low' as const;
+    setStatusMessage("🔄 Executing live buy via Jupiter...");
+    try {
+      const lamports = Math.round(parseFloat(buyAmount) * 1e9);
+      const slippageBps = Math.round(parseFloat(maxSlippage) * 100);
+      const priority = parseFloat(priorityFee) >= 0.01 ? 'high' as const
+        : parseFloat(priorityFee) >= 0.005 ? 'medium' as const : 'low' as const;
 
-    const txid = await JupiterTransactionService.swapTokens(
-      connection, wallet, SOL_MINT, tokenAddress, lamports, slippageBps, undefined, priority
-    );
-    return txid;
-  }, [connection, wallet, tokenAddress, buyAmount, maxSlippage, priorityFee]);
+      const txid = await JupiterTransactionService.swapTokens(
+        connection, wallet, SOL_MINT, tokenAddress, lamports, slippageBps, undefined, priority
+      );
+      return txid;
+    } catch (err: any) {
+      const msg = err.message || "Unknown error";
+      setStatusMessage(`❌ Buy failed: ${msg}`);
+      toast({ title: "Sniper Buy Failed", description: msg, variant: "destructive" });
+      return null;
+    }
+  }, [connection, wallet, tokenAddress, buyAmount, maxSlippage, priorityFee, toast]);
 
   const startSniping = useCallback(() => {
     if (sniperInterval.current) clearInterval(sniperInterval.current);
+    setStatusMessage("🎯 Sniper armed — scanning for entry...");
 
     const executeBuy = async () => {
       if (isLive) {
+        if (!wallet.publicKey) {
+          setStatusMessage("❌ Wallet disconnected");
+          setIsArmed(false);
+          return;
+        }
+        
+        setStatusMessage("⚡ Attempting live buy...");
         const txid = await executeLiveBuy();
         if (txid) {
           setIsArmed(false);
           if (sniperInterval.current) clearInterval(sniperInterval.current);
+          setStatusMessage(`✅ Buy executed! TX: ${txid.slice(0, 16)}...`);
           toast({ title: "🎯 Live Sniper Hit!", description: `TX: ${txid.slice(0, 12)}...` });
+        } else {
+          // Retry after delay
+          setStatusMessage("⏳ Retrying in a few seconds...");
         }
       } else {
         const result = await sim.simulateBuy(
@@ -65,6 +86,7 @@ export const BuySniper = ({ sim, isLive = false, killSignal = 0 }: Props) => {
         if (result) {
           setIsArmed(false);
           if (sniperInterval.current) clearInterval(sniperInterval.current);
+          setStatusMessage(`✅ Bought ${result.token_amount.toFixed(2)} tokens`);
           toast({ title: "🎯 Sniper Hit!", description: `Bought ${result.token_amount.toFixed(2)} ${tokenSymbol || 'tokens'} for ${buyAmount} SOL` });
         }
       }
@@ -72,7 +94,7 @@ export const BuySniper = ({ sim, isLive = false, killSignal = 0 }: Props) => {
 
     const delay = 2000 + Math.random() * 3000;
     sniperInterval.current = setTimeout(executeBuy, delay) as any;
-  }, [tokenAddress, tokenSymbol, buyAmount, sim, toast, isLive, executeLiveBuy]);
+  }, [tokenAddress, tokenSymbol, buyAmount, sim, toast, isLive, executeLiveBuy, wallet.publicKey]);
 
   useEffect(() => {
     return () => { if (sniperInterval.current) clearInterval(sniperInterval.current); };
@@ -83,6 +105,7 @@ export const BuySniper = ({ sim, isLive = false, killSignal = 0 }: Props) => {
     if (killSignal > 0) {
       setIsArmed(false);
       setShowConfirm(false);
+      setStatusMessage(null);
       if (sniperInterval.current) { clearInterval(sniperInterval.current); sniperInterval.current = null; }
     }
   }, [killSignal]);
@@ -90,7 +113,7 @@ export const BuySniper = ({ sim, isLive = false, killSignal = 0 }: Props) => {
   const proceedArm = () => {
     setIsArmed(true);
     startSniping();
-    toast({ title: "Sniper Armed 🎯", description: `${isLive ? "LIVE" : "Paper"} — Watching ${tokenAddress.slice(0, 8)}...` });
+    toast({ title: "Sniper Armed 🎯", description: `LIVE — Watching ${tokenAddress.slice(0, 8)}...` });
   };
 
   const handleArm = () => {
@@ -102,18 +125,15 @@ export const BuySniper = ({ sim, isLive = false, killSignal = 0 }: Props) => {
       toast({ title: "Invalid address", description: "Enter a valid Solana token mint address", variant: "destructive" });
       return;
     }
-    if (isLive && !wallet.publicKey) {
+    if (!wallet.publicKey) {
       toast({ title: "Wallet not connected", description: "Connect wallet for live trading", variant: "destructive" });
       return;
     }
     if (!isArmed) {
-      if (isLive) {
-        setShowConfirm(true);
-      } else {
-        proceedArm();
-      }
+      setShowConfirm(true);
     } else {
       setIsArmed(false);
+      setStatusMessage(null);
       if (sniperInterval.current) clearInterval(sniperInterval.current);
       toast({ title: "Sniper Disarmed", description: "Buy sniper deactivated" });
     }
@@ -136,8 +156,8 @@ export const BuySniper = ({ sim, isLive = false, killSignal = 0 }: Props) => {
           <span className="text-sm font-medium text-foreground">Buy Sniper</span>
         </div>
         {isArmed && (
-          <Badge className={`${isLive ? "bg-destructive/20 text-destructive border-destructive/30" : "bg-primary/20 text-primary border-primary/30"} animate-pulse`}>
-            {isLive ? "🔴 Armed (LIVE)" : "🎯 Armed"}
+          <Badge className="bg-destructive/20 text-destructive border-destructive/30 animate-pulse">
+            🔴 Armed (LIVE)
           </Badge>
         )}
       </div>
@@ -187,16 +207,21 @@ export const BuySniper = ({ sim, isLive = false, killSignal = 0 }: Props) => {
           )}
         </div>
 
-        {isLive && (
-          <div className="p-2 rounded-lg bg-destructive/10 border border-destructive/30">
-            <p className="text-[11px] text-destructive font-medium">⚠️ LIVE MODE — Real SOL will be spent. Transactions are irreversible.</p>
+        {/* Status Message */}
+        {statusMessage && (
+          <div className="p-2 rounded-lg bg-muted/20 border border-border">
+            <p className="text-[11px] text-foreground font-mono">{statusMessage}</p>
           </div>
         )}
+
+        <div className="p-2 rounded-lg bg-destructive/10 border border-destructive/30">
+          <p className="text-[11px] text-destructive font-medium">⚠️ LIVE MODE — Real SOL will be spent. Transactions are irreversible.</p>
+        </div>
 
         <Button
           onClick={handleArm}
           disabled={sim.isLoading}
-          className={`w-full ${isArmed ? 'bg-destructive hover:bg-destructive/90' : isLive ? 'bg-destructive hover:bg-destructive/90' : 'bg-primary hover:bg-primary/90'} text-primary-foreground`}
+          className={`w-full ${isArmed ? 'bg-destructive hover:bg-destructive/90' : 'bg-destructive hover:bg-destructive/90'} text-destructive-foreground`}
           size="sm"
         >
           {sim.isLoading ? (
@@ -204,7 +229,7 @@ export const BuySniper = ({ sim, isLive = false, killSignal = 0 }: Props) => {
           ) : isArmed ? (
             <><Crosshair className="h-4 w-4 mr-2" /> Disarm Sniper</>
           ) : (
-            <><Zap className="h-4 w-4 mr-2" /> Arm Sniper {isLive ? "(LIVE)" : "(Paper)"}</>
+            <><Zap className="h-4 w-4 mr-2" /> Arm Sniper (LIVE)</>
           )}
         </Button>
       </div>
