@@ -121,12 +121,10 @@ export const TradingModeProvider = ({ children }: { children: ReactNode }) => {
   }, [publicKey, signTransaction, toast]);
 
   const toggleMode = useCallback(() => {
-    if (isLive) {
-      setIsLive(false);
-      toast({ title: "📄 Paper Mode", description: "Switched back to paper trading" });
-    } else {
+    // Always live mode — paper mode removed
+    if (!isLive) {
       setIsLive(true);
-      toast({ title: "🔴 Live Mode", description: "Now executing real Solana transactions!" });
+      toast({ title: "🔴 Live Mode", description: "Executing real Solana transactions" });
     }
   }, [isLive, toast]);
 

@@ -63,30 +63,13 @@ export const BotAccess = () => {
           </Button>
         )}
 
-        {walletAddress && sim.wallet && (
+        {walletAddress && (
           <div className="flex items-center justify-between mt-1">
             <div className="flex items-center gap-1.5 text-xs">
               <Wallet className="h-3 w-3 text-muted-foreground" />
-              <span className="text-muted-foreground">{isLive ? "Wallet:" : "Sim Balance:"}</span>
-              {!isLive && (
-                <span className="font-mono text-foreground font-medium">
-                  {sim.wallet.sol_balance.toFixed(4)} SOL
-                </span>
-              )}
-              {isLive && (
-                <span className="font-mono text-foreground font-medium">Connected</span>
-              )}
+              <span className="text-muted-foreground">Wallet:</span>
+              <span className="font-mono text-foreground font-medium">Connected</span>
             </div>
-            {!isLive && (
-              <div className="flex gap-1">
-                <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => setShowHistory(!showHistory)} title="Trade History">
-                  <History className="h-3 w-3" />
-                </Button>
-                <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={sim.resetWallet} title="Reset to 10 SOL">
-                  <RotateCcw className="h-3 w-3" />
-                </Button>
-              </div>
-            )}
           </div>
         )}
       </CardHeader>
