@@ -382,7 +382,7 @@ async function fetchTokenTrades(address: string, apiKey: string, limit: number) 
     body: JSON.stringify({
       jsonrpc: '2.0', id: 1,
       method: 'getSignaturesForAddress',
-      params: [address, { limit: Math.min(limit, 20) }],
+      params: [address, { limit: Math.min(limit * 2, 40) }],
     }),
   });
 
@@ -401,13 +401,85 @@ async function fetchTokenTrades(address: string, apiKey: string, limit: number) 
   if (!parseResponse.ok) return [];
   const parsed = await parseResponse.json();
 
-  return (parsed || []).slice(0, limit).map((tx: any) => ({
-    txHash: tx.signature || '',
-    type: tx.type || 'UNKNOWN',
-    source: tx.source || '',
-    timestamp: tx.timestamp || 0,
-    description: tx.description || '',
-  }));
+  // Filter to SWAP transactions and format for the frontend
+  const trades: any[] = [];
+  for (const tx of (parsed || [])) {
+    if (tx.type !== 'SWAP' && tx.type !== 'TRANSFER') continue;
+    
+    // Extract swap details from tokenTransfers or nativeTransfers
+    const tokenTransfers = tx.tokenTransfers || [];
+    const nativeTransfers = tx.nativeTransfers || [];
+    
+    // Find the token transfer involving our address
+    const tokenTransfer = tokenTransfers.find((t: any) => t.mint === address);
+    if (!tokenTransfer && tx.type === 'SWAP') {
+      // Try to find any relevant swap info from events
+      const swapEvent = tx.events?.swap;
+      if (swapEvent) {
+        const isBuy = swapEvent.tokenOutputs?.some((o: any) => o.mint === address);
+        const solInput = swapEvent.nativeInput?.amount || 0;
+        const solOutput = swapEvent.nativeOutput?.amount || 0;
+        const tokenInput = swapEvent.tokenInputs?.find((t: any) => t.mint === address);
+        const tokenOutput = swapEvent.tokenOutputs?.find((t: any) => t.mint === address);
+        
+        const solAmount = isBuy ? solInput / 1e9 : solOutput / 1e9;
+        const tokenAmt = isBuy 
+          ? (tokenOutput?.rawTokenAmount?.tokenAmount || 0) / Math.pow(10, tokenOutput?.rawTokenAmount?.decimals || 0)
+          : (tokenInput?.rawTokenAmount?.tokenAmount || 0) / Math.pow(10, tokenInput?.rawTokenAmount?.decimals || 0);
+
+        trades.push({
+          txHash: tx.signature || '',
+          side: isBuy ? 'buy' : 'sell',
+          from: {
+            amount: isBuy ? solInput : (tokenInput?.rawTokenAmount?.tokenAmount || 0),
+            symbol: isBuy ? 'SOL' : (tokenInput?.mint?.slice(0, 6) || 'TOKEN'),
+            decimals: isBuy ? 9 : (tokenInput?.rawTokenAmount?.decimals || 0),
+            uiAmount: isBuy ? solAmount : tokenAmt,
+          },
+          to: {
+            amount: isBuy ? (tokenOutput?.rawTokenAmount?.tokenAmount || 0) : solOutput,
+            symbol: isBuy ? (tokenOutput?.mint?.slice(0, 6) || 'TOKEN') : 'SOL',
+            decimals: isBuy ? (tokenOutput?.rawTokenAmount?.decimals || 0) : 9,
+            uiAmount: isBuy ? tokenAmt : solAmount,
+          },
+          blockUnixTime: tx.timestamp || 0,
+          owner: tx.feePayer || '',
+        });
+        continue;
+      }
+    }
+    
+    if (tokenTransfer) {
+      const solTransfer = nativeTransfers.find((n: any) => n.amount > 0);
+      const solAmount = (solTransfer?.amount || 0) / 1e9;
+      const isBuy = tokenTransfer.toUserAccount === tx.feePayer;
+      const decimals = tokenTransfer.tokenStandard === 'Fungible' ? 9 : 0;
+      const tokenAmount = tokenTransfer.tokenAmount || 0;
+
+      trades.push({
+        txHash: tx.signature || '',
+        side: isBuy ? 'buy' : 'sell',
+        from: {
+          amount: isBuy ? (solTransfer?.amount || 0) : tokenAmount,
+          symbol: isBuy ? 'SOL' : address.slice(0, 6),
+          decimals: isBuy ? 9 : decimals,
+          uiAmount: isBuy ? solAmount : tokenAmount,
+        },
+        to: {
+          amount: isBuy ? tokenAmount : (solTransfer?.amount || 0),
+          symbol: isBuy ? address.slice(0, 6) : 'SOL',
+          decimals: isBuy ? decimals : 9,
+          uiAmount: isBuy ? tokenAmount : solAmount,
+        },
+        blockUnixTime: tx.timestamp || 0,
+        owner: tx.feePayer || '',
+      });
+    }
+    
+    if (trades.length >= limit) break;
+  }
+
+  return trades.slice(0, limit);
 }
 
 // ── Price History ───────────────────────────────────────────────────

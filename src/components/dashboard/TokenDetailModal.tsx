@@ -432,9 +432,13 @@ export function TokenDetailModal({ token, open, onOpenChange, onSetAlert }: Toke
                       />
                     </PieChart>
                   </ResponsiveContainer>
-                ) : (
+                ) : loading ? (
                   <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
                     <Loader2 className="h-5 w-5 animate-spin mr-2" /> Loading...
+                  </div>
+                ) : (
+                  <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
+                    No holder data available
                   </div>
                 )}
               </div>
@@ -480,9 +484,13 @@ export function TokenDetailModal({ token, open, onOpenChange, onSetAlert }: Toke
                       <span className="text-muted-foreground">{trade.time}</span>
                     </div>
                   </div>
-                )) : (
+                )) : loading ? (
                   <div className="h-20 flex items-center justify-center text-muted-foreground text-sm">
                     <Loader2 className="h-5 w-5 animate-spin mr-2" /> Loading trades...
+                  </div>
+                ) : (
+                  <div className="h-20 flex items-center justify-center text-muted-foreground text-sm">
+                    No recent trades found
                   </div>
                 )}
               </div>
