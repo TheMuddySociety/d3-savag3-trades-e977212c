@@ -13,7 +13,6 @@ const ADMIN_WALLETS = [
 
 const Landing = () => {
   const navigate = useNavigate();
-  const [connecting, setConnecting] = useState(false);
   const { publicKey, connected } = useWallet();
   
   useEffect(() => {

@@ -23,7 +23,6 @@ const TradingModeContext = createContext<TradingModeContextType>({
 export const useTradingMode = () => useContext(TradingModeContext);
 
 export const TradingModeProvider = ({ children }: { children: ReactNode }) => {
-  const { publicKey, sendTransaction } = useWallet();
   const { toast } = useToast();
   const [isLive, setIsLive] = useState(false);
   const [hasPaid] = useState(true); // Open access — no payment required
