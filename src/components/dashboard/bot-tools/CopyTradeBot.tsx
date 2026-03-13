@@ -113,7 +113,7 @@ export const CopyTradeBot = ({ sim, isLive = false, killSignal = 0 }: Props) => 
 
           setCopiedTrades(prev => [{
             timestamp: new Date().toLocaleTimeString(),
-            type: isBuy ? "buy" : "sell",
+            type: (isBuy ? "buy" : "sell") as "buy" | "sell",
             tokenMint,
             solAmount: sol,
             status: "success",
