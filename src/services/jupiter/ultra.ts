@@ -133,6 +133,19 @@ export class JupiterUltraService {
       const order = await this.getOrder(inputMint, outputMint, amount, taker, swapMode);
       if (!order) return null;
 
+      // Check for API-level errors (e.g. insufficient funds)
+      if ((order as any).errorCode || (order as any).error) {
+        const errMsg = (order as any).errorMessage || (order as any).error || 'Order error';
+        toast.error(errMsg);
+        return { status: 'Failed', error: errMsg, code: (order as any).errorCode || -1 } as UltraExecuteResponse;
+      }
+
+      // Ensure transaction data exists
+      if (!order.transaction) {
+        toast.error('No transaction returned from Jupiter');
+        return { status: 'Failed', error: 'Empty transaction', code: -1 } as UltraExecuteResponse;
+      }
+
       // 2. Deserialize and sign the transaction
       const transactionBuf = Buffer.from(order.transaction, 'base64');
       const transaction = VersionedTransaction.deserialize(transactionBuf);
