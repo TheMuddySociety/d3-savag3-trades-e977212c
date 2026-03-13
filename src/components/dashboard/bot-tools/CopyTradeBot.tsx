@@ -126,7 +126,7 @@ export const CopyTradeBot = ({ sim, isLive = false, killSignal = 0 }: Props) => 
             type: (isBuy ? "buy" : "sell") as "buy" | "sell",
             tokenMint,
             solAmount: sol,
-            status: "error",
+            status: "error" as const,
           }, ...prev].slice(0, 50));
         }
       }
