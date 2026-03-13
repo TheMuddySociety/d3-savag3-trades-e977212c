@@ -1,9 +1,7 @@
 
 import { VersionedTransaction } from '@solana/web3.js';
 import { toast } from 'sonner';
-import fetch from 'cross-fetch';
-
-const ULTRA_API_BASE = 'https://api.jup.ag/ultra/v1';
+import { supabase } from '@/integrations/supabase/client';
 
 export interface UltraOrderResponse {
   inputMint: string;
@@ -46,7 +44,7 @@ export interface UltraExecuteResponse {
 }
 
 /**
- * Service for Jupiter Ultra API (gasless swaps with best execution)
+ * Service for Jupiter Ultra API via edge function proxy (handles auth)
  */
 export class JupiterUltraService {
   /**
@@ -60,17 +58,15 @@ export class JupiterUltraService {
     swapMode: 'ExactIn' | 'ExactOut' = 'ExactIn'
   ): Promise<UltraOrderResponse | null> {
     try {
-      const url = `${ULTRA_API_BASE}/order?inputMint=${inputMint}&outputMint=${outputMint}&amount=${amount}&taker=${taker}&swapMode=${swapMode}`;
-      
-      console.log('Fetching Jupiter Ultra order:', url);
-      const response = await fetch(url);
-      
-      if (!response.ok) {
-        const errorBody = await response.text();
-        throw new Error(`Ultra order error: ${response.status} ${errorBody}`);
-      }
-      
-      const order: UltraOrderResponse = await response.json();
+      console.log('Fetching Jupiter Ultra order via proxy...');
+      const { data, error } = await supabase.functions.invoke('jupiter-ultra', {
+        body: { action: 'order', inputMint, outputMint, amount, taker, swapMode },
+      });
+
+      if (error) throw new Error(error.message);
+      if (!data?.success) throw new Error(data?.error || 'Order failed');
+
+      const order = data.data as UltraOrderResponse;
       console.log('Ultra order received:', {
         inAmount: order.inAmount,
         outAmount: order.outAmount,
@@ -82,7 +78,7 @@ export class JupiterUltraService {
       return order;
     } catch (error) {
       console.error('Error getting Ultra order:', error);
-      toast.error('Failed to get swap order');
+      toast.error(`Failed to get swap order: ${error instanceof Error ? error.message : 'Unknown'}`);
       return null;
     }
   }
@@ -95,20 +91,16 @@ export class JupiterUltraService {
     requestId: string
   ): Promise<UltraExecuteResponse | null> {
     try {
-      console.log('Executing Ultra swap, requestId:', requestId);
+      console.log('Executing Ultra swap via proxy, requestId:', requestId);
       
-      const response = await fetch(`${ULTRA_API_BASE}/execute`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ signedTransaction, requestId }),
+      const { data, error } = await supabase.functions.invoke('jupiter-ultra', {
+        body: { action: 'execute', signedTransaction, requestId },
       });
-      
-      if (!response.ok) {
-        const errorBody = await response.text();
-        throw new Error(`Ultra execute error: ${response.status} ${errorBody}`);
-      }
-      
-      const result: UltraExecuteResponse = await response.json();
+
+      if (error) throw new Error(error.message);
+      if (!data?.success) throw new Error(data?.error || 'Execute failed');
+
+      const result = data.data as UltraExecuteResponse;
       console.log('Ultra execute result:', result);
       
       return result;
@@ -137,7 +129,7 @@ export class JupiterUltraService {
 
       const taker = wallet.publicKey.toString();
 
-      // 1. Get order
+      // 1. Get order via proxy
       const order = await this.getOrder(inputMint, outputMint, amount, taker, swapMode);
       if (!order) return null;
 
@@ -149,7 +141,7 @@ export class JupiterUltraService {
       // 3. Serialize the signed transaction back to base64
       const signedTxBase64 = Buffer.from(signedTx.serialize()).toString('base64');
 
-      // 4. Execute via Ultra API
+      // 4. Execute via proxy
       const result = await this.execute(signedTxBase64, order.requestId);
       
       if (!result) return null;
