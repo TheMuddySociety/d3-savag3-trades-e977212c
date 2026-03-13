@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
@@ -8,7 +8,7 @@ import { Brain, TrendingUp, TrendingDown, ShieldCheck, Flame, Palmtree, Zap, Use
 import { useToast } from "@/hooks/use-toast";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { useConnection } from "@solana/wallet-adapter-react";
-import { JupiterTransactionService } from "@/services/jupiter/transactions";
+import { JupiterUltraService } from "@/services/jupiter/ultra";
 import { LiveTradeConfirmDialog } from "./LiveTradeConfirmDialog";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -27,10 +27,9 @@ interface LiveHolding {
   mint: string;
   symbol: string;
   amount: number;
+  decimals: number;
   price: number;
   value: number;
-  entryPrice?: number;
-  pnlPercent?: number;
 }
 
 const INITIAL_STRATEGIES: Strategy[] = [
@@ -38,7 +37,7 @@ const INITIAL_STRATEGIES: Strategy[] = [
   { id: "dip_buy", name: "Dip Buyer", description: "Auto-buys when price drops >20% in 1h with recovery signals", icon: <TrendingDown className="h-4 w-4" />, risk: "High", enabled: false },
   { id: "safe_exit", name: "Safe Exit", description: "Auto stop-loss at -15% and trailing take-profit at +50%", icon: <ShieldCheck className="h-4 w-4" />, risk: "Low", enabled: false },
   { id: "new_launch", name: "New Launch Hunter", description: "Snipes new tokens on Pump.fun within first 30s of launch", icon: <Flame className="h-4 w-4" />, risk: "High", enabled: false },
-  { id: "scalper", name: "Scalper", description: "Buy on 5% dip, sell on 3% gain — high frequency micro trades", icon: <Zap className="h-4 w-4" />, risk: "Medium", enabled: false },
+  { id: "scalper", name: "Scalper", description: "Sell on 3% gain — auto-sells positions at target", icon: <Zap className="h-4 w-4" />, risk: "Medium", enabled: false },
   { id: "whale_follow", name: "Whale Follow", description: "Auto-copies top leaderboard wallets' trades", icon: <Users className="h-4 w-4" />, risk: "Medium", enabled: false },
 ];
 
@@ -54,6 +53,9 @@ interface Props {
   killSignal?: number;
 }
 
+// Store entry prices per session (mint → price in SOL)
+const entryPrices = new Map<string, number>();
+
 export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) => {
   const { toast } = useToast();
   const wallet = useWallet();
@@ -64,12 +66,13 @@ export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) =
   const [showConfirm, setShowConfirm] = useState(false);
   const [pendingStrategyId, setPendingStrategyId] = useState<string | null>(null);
   const [statusLog, setStatusLog] = useState<string[]>([]);
+  const [executingTrade, setExecutingTrade] = useState(false);
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
 
-  const addLog = (msg: string) => {
+  const addLog = useCallback((msg: string) => {
     const time = new Date().toLocaleTimeString();
-    setStatusLog(prev => [`[${time}] ${msg}`, ...prev.slice(0, 9)]);
-  };
+    setStatusLog(prev => [`[${time}] ${msg}`, ...prev.slice(0, 19)]);
+  }, []);
 
   // Kill switch
   useEffect(() => {
@@ -79,12 +82,14 @@ export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) =
       setShowConfirm(false);
       setPendingStrategyId(null);
       setStatusLog([]);
+      setExecutingTrade(false);
+      entryPrices.clear();
       if (pollingRef.current) { clearInterval(pollingRef.current); pollingRef.current = null; }
     }
   }, [killSignal]);
 
-  // Fetch live wallet holdings
-  const fetchLiveHoldings = async (): Promise<LiveHolding[]> => {
+  // Fetch live wallet holdings via edge function
+  const fetchLiveHoldings = useCallback(async (): Promise<LiveHolding[]> => {
     if (!wallet.publicKey) return [];
     try {
       const { data, error } = await supabase.functions.invoke("wallet-portfolio", {
@@ -96,13 +101,52 @@ export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) =
         mint: t.mint,
         symbol: t.symbol || t.mint.slice(0, 6),
         amount: t.amount,
+        decimals: t.decimals || 6,
         price: t.price,
         value: t.value,
       }));
     } catch {
       return [];
     }
-  };
+  }, [wallet.publicKey]);
+
+  // Execute a sell via Jupiter Ultra (token → SOL)
+  const executeLiveSell = useCallback(async (
+    holding: LiveHolding,
+    reason: string
+  ): Promise<boolean> => {
+    if (!wallet.publicKey || !wallet.signTransaction || executingTrade) return false;
+
+    try {
+      setExecutingTrade(true);
+      addLog(`🔄 ${reason}: Selling ${holding.symbol}...`);
+
+      // Calculate raw amount (amount * 10^decimals)
+      const rawAmount = Math.floor(holding.amount * Math.pow(10, holding.decimals));
+      
+      const result = await JupiterUltraService.swap(
+        wallet,
+        holding.mint,
+        SOL_MINT,
+        rawAmount.toString(),
+        'ExactIn'
+      );
+
+      if (result?.status === 'Success') {
+        addLog(`✅ ${reason}: Sold ${holding.amount.toFixed(4)} ${holding.symbol} — tx: ${result.signature?.slice(0, 8)}...`);
+        entryPrices.delete(holding.mint);
+        return true;
+      } else {
+        addLog(`❌ ${reason}: Sell failed for ${holding.symbol} — ${result?.error || 'Unknown error'}`);
+        return false;
+      }
+    } catch (e: any) {
+      addLog(`❌ ${reason}: ${e.message}`);
+      return false;
+    } finally {
+      setExecutingTrade(false);
+    }
+  }, [wallet, executingTrade, addLog]);
 
   // Polling loop for active strategies
   useEffect(() => {
@@ -119,91 +163,88 @@ export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) =
 
       addLog(`Scanning ${enabled.length} strategy(ies)...`);
 
-      if (isLive) {
-        // Live mode: fetch real wallet holdings
-        if (!wallet.publicKey) {
-          addLog("⚠️ Wallet not connected — skipping");
-          return;
-        }
+      if (!wallet.publicKey) {
+        addLog("⚠️ Wallet not connected — skipping");
+        return;
+      }
 
-        const holdings = await fetchLiveHoldings();
-        if (holdings.length === 0) {
-          addLog("No token holdings found in wallet");
-          return;
-        }
+      const holdings = await fetchLiveHoldings();
+      if (holdings.length === 0) {
+        addLog("No token holdings found in wallet");
+        return;
+      }
 
-        addLog(`Found ${holdings.length} token(s) in wallet`);
+      addLog(`Found ${holdings.length} token(s) in wallet`);
 
-        for (const strategy of enabled) {
-          try {
-            switch (strategy.id) {
-              case "safe_exit": {
-                // For live mode, we'd need entry prices from trade history
-                // For now, log that we're monitoring
-                addLog(`🛡️ Safe Exit: Monitoring ${holdings.length} position(s)`);
-                break;
-              }
-              case "scalper": {
-                addLog(`⚡ Scalper: Watching ${holdings.length} position(s) for 3% gain`);
-                break;
-              }
-              case "momentum": {
-                addLog(`📈 Momentum: Scanning for trending tokens`);
-                break;
-              }
-              case "dip_buy": {
-                addLog(`📉 Dip Buyer: Watching for >20% dips`);
-                break;
-              }
-              case "whale_follow": {
-                addLog(`🐋 Whale Follow: Monitoring top wallets`);
-                break;
-              }
-              default:
-                addLog(`🔍 ${strategy.name}: Active`);
-            }
-          } catch (e: any) {
-            addLog(`❌ ${strategy.name}: ${e.message}`);
-          }
+      // Track entry prices — first time we see a token, record its price
+      for (const h of holdings) {
+        if (!entryPrices.has(h.mint) && h.price > 0) {
+          entryPrices.set(h.mint, h.price);
+          addLog(`📌 Tracking ${h.symbol} entry: $${h.price.toFixed(8)}`);
         }
-      } else {
-        // Paper mode fallback (shouldn't happen since paper was removed)
-        const holdings = sim.holdings || [];
-        if (holdings.length === 0) {
-          addLog("No holdings to evaluate");
-          return;
-        }
+      }
 
-        for (const strategy of enabled) {
-          try {
-            switch (strategy.id) {
-              case "safe_exit": {
-                for (const h of holdings) {
-                  const pnl = h.pnl_percent || 0;
-                  if (pnl <= -15) {
-                    await sim.simulateSell(h.token_address, h.token_symbol || 'UNK', 100, 'auto');
-                    addLog(`🛡️ Stop-Loss: Sold ${h.token_symbol} at ${pnl.toFixed(1)}%`);
-                  } else if (pnl >= 50) {
-                    await sim.simulateSell(h.token_address, h.token_symbol || 'UNK', 100, 'auto');
-                    addLog(`🛡️ Take-Profit: Sold ${h.token_symbol} at +${pnl.toFixed(1)}%`);
-                  }
+      for (const strategy of enabled) {
+        try {
+          switch (strategy.id) {
+            case "safe_exit": {
+              for (const h of holdings) {
+                const entryPrice = entryPrices.get(h.mint);
+                if (!entryPrice || h.price <= 0) continue;
+
+                const pnl = ((h.price - entryPrice) / entryPrice) * 100;
+
+                if (pnl <= -15) {
+                  addLog(`🛡️ Stop-Loss triggered: ${h.symbol} at ${pnl.toFixed(1)}%`);
+                  await executeLiveSell(h, "Stop-Loss");
+                } else if (pnl >= 50) {
+                  addLog(`🛡️ Take-Profit triggered: ${h.symbol} at +${pnl.toFixed(1)}%`);
+                  await executeLiveSell(h, "Take-Profit");
+                } else {
+                  addLog(`🛡️ ${h.symbol}: P&L ${pnl >= 0 ? '+' : ''}${pnl.toFixed(1)}% (watching)`);
                 }
-                break;
               }
-              case "scalper": {
-                for (const h of holdings) {
-                  const pnl = h.pnl_percent || 0;
-                  if (pnl >= 3) {
-                    await sim.simulateSell(h.token_address, h.token_symbol || 'UNK', 100, 'auto');
-                    addLog(`⚡ Scalper: Sold ${h.token_symbol} at +${pnl.toFixed(1)}%`);
-                  }
-                }
-                break;
-              }
+              break;
             }
-          } catch (e: any) {
-            addLog(`❌ ${strategy.id}: ${e.message}`);
+            case "scalper": {
+              for (const h of holdings) {
+                const entryPrice = entryPrices.get(h.mint);
+                if (!entryPrice || h.price <= 0) continue;
+
+                const pnl = ((h.price - entryPrice) / entryPrice) * 100;
+
+                if (pnl >= 3) {
+                  addLog(`⚡ Scalper triggered: ${h.symbol} at +${pnl.toFixed(1)}%`);
+                  await executeLiveSell(h, "Scalper");
+                } else {
+                  addLog(`⚡ ${h.symbol}: ${pnl >= 0 ? '+' : ''}${pnl.toFixed(1)}% (target: +3%)`);
+                }
+              }
+              break;
+            }
+            case "momentum": {
+              addLog(`📈 Momentum: Scanning ${holdings.length} position(s) for reversals`);
+              // Momentum needs historical price data — log monitoring for now
+              for (const h of holdings) {
+                if (h.price > 0 && h.value > 0) {
+                  addLog(`📈 ${h.symbol}: $${h.price.toFixed(8)} (${h.value.toFixed(2)} USD)`);
+                }
+              }
+              break;
+            }
+            case "dip_buy": {
+              addLog(`📉 Dip Buyer: Watching for >20% dips with recovery signals`);
+              break;
+            }
+            case "whale_follow": {
+              addLog(`🐋 Whale Follow: Monitoring top wallets`);
+              break;
+            }
+            default:
+              addLog(`🔍 ${strategy.name}: Active`);
           }
+        } catch (e: any) {
+          addLog(`❌ ${strategy.name}: ${e.message}`);
         }
       }
     };
@@ -211,7 +252,7 @@ export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) =
     evaluateStrategies();
     pollingRef.current = setInterval(evaluateStrategies, 15000);
     return () => { if (pollingRef.current) { clearInterval(pollingRef.current); pollingRef.current = null; } };
-  }, [strategies.map(s => `${s.id}:${s.enabled}`).join(','), isLive, wallet.publicKey]);
+  }, [strategies.map(s => `${s.id}:${s.enabled}`).join(','), wallet.publicKey, fetchLiveHoldings, executeLiveSell, addLog]);
 
   const proceedToggle = (id: string) => {
     setStrategies((prev) =>
@@ -248,8 +289,8 @@ export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) =
     }
     
     if (strategy.enabled) { proceedToggle(id); return; }
-    if (isLive) { setPendingStrategyId(id); setShowConfirm(true); }
-    else { proceedToggle(id); }
+    setPendingStrategyId(id);
+    setShowConfirm(true);
   };
 
   const handleBeachMode = (checked: boolean) => {
@@ -286,6 +327,11 @@ export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) =
           <span className="text-sm font-medium text-foreground">Auto Strategies</span>
         </div>
         <div className="flex items-center gap-1">
+          {executingTrade && (
+            <Badge className="bg-[hsl(var(--fun-yellow))]/20 text-[hsl(var(--fun-yellow))] border-[hsl(var(--fun-yellow))]/30 animate-pulse">
+              Executing...
+            </Badge>
+          )}
           {activeCount > 0 && (
             <Badge className="bg-destructive/20 text-destructive border-destructive/30 animate-pulse">
               {activeCount} active (LIVE)
@@ -317,15 +363,20 @@ export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) =
       </div>
 
       <div className="p-2 rounded-lg bg-destructive/10 border border-destructive/30">
-        <p className="text-[11px] text-destructive font-medium">⚠️ LIVE MODE — Strategies will execute real trades automatically.</p>
+        <p className="text-[11px] text-destructive font-medium">⚠️ LIVE MODE — Safe Exit & Scalper will auto-sell via Jupiter Ultra (gasless). Your wallet must approve each trade.</p>
       </div>
 
       {/* Status Log */}
       {statusLog.length > 0 && (
-        <div className="p-2 rounded-lg bg-muted/20 border border-border max-h-28 overflow-y-auto">
+        <div className="p-2 rounded-lg bg-muted/20 border border-border max-h-40 overflow-y-auto">
           <p className="text-[10px] font-medium text-muted-foreground mb-1">Activity Log</p>
           {statusLog.map((log, i) => (
-            <p key={i} className="text-[10px] text-muted-foreground font-mono leading-tight">{log}</p>
+            <p key={i} className={`text-[10px] font-mono leading-tight ${
+              log.includes('✅') || log.includes('Sold') ? 'text-accent' :
+              log.includes('❌') ? 'text-destructive' :
+              log.includes('🔄') ? 'text-[hsl(var(--fun-yellow))]' :
+              'text-muted-foreground'
+            }`}>{log}</p>
           ))}
         </div>
       )}
@@ -338,8 +389,17 @@ export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) =
                 <span className={strategy.enabled ? "text-destructive" : "text-muted-foreground"}>{strategy.icon}</span>
                 <span className="text-sm font-medium text-foreground">{strategy.name}</span>
                 <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${riskColors[strategy.risk]}`}>{strategy.risk}</Badge>
+                {(strategy.id === "safe_exit" || strategy.id === "scalper") && (
+                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-accent/10 text-accent border-accent/30">
+                    Auto-Sell
+                  </Badge>
+                )}
               </div>
-              <Switch checked={strategy.enabled} onCheckedChange={() => toggleStrategy(strategy.id)} />
+              <Switch 
+                checked={strategy.enabled} 
+                onCheckedChange={() => toggleStrategy(strategy.id)} 
+                disabled={executingTrade}
+              />
             </div>
             <p className="text-xs text-muted-foreground pl-6">{strategy.description}</p>
           </div>
