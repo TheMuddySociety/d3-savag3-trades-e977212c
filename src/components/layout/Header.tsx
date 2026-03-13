@@ -2,19 +2,79 @@ import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Shield, LogOut, Activity, Sparkles } from "lucide-react";
-import { useTheme } from "@/hooks/use-theme";
 import { useToast } from "@/components/ui/use-toast";
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import { useWallet } from '@solana/wallet-adapter-react';
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 import { useTradingMode } from '@/hooks/useTradingMode';
 
-const ADMIN_WALLETS = [
-  "Cra8LAvpQAk3hx4By5STHp4xrq7HSAnZLk4Jwzv1wUAH",
-  "BQefQgbpAqPjoGKLTmAA2haZh9pEURYNefPFwsTotgem"
-];
-
 export function Header() {
+  const { toast } = useToast();
+  const navigate = useNavigate();
+  const { publicKey, connected, disconnect } = useWallet();
+  const { hasFreePass, buyFreePass, isPaymentPending } = useTradingMode();
+
+  const handleDisconnect = () => {
+    disconnect();
+    localStorage.removeItem('walletConnected');
+    localStorage.removeItem('connectedWallet');
+    toast({
+      title: "Disconnected",
+      description: "Wallet disconnected successfully",
+    });
+    navigate('/');
+  };
+
+  return (
+    <div className="flex items-center gap-2">
+      {connected && hasFreePass && (
+        <Badge className="bg-accent/20 text-accent border-accent/30 text-[10px]">
+          <Sparkles className="h-3 w-3 mr-1" />
+          FEE-FREE ✨
+        </Badge>
+      )}
+
+      {connected && !hasFreePass && (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="text-[10px] h-7 text-accent hover:text-accent"
+          onClick={buyFreePass}
+          disabled={isPaymentPending}
+        >
+          <Sparkles className="h-3 w-3 mr-1" />
+          0.1 SOL = No Fees
+        </Button>
+      )}
+
+      {connected && publicKey && (
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 bg-secondary px-3 py-1.5 rounded-md">
+            <div className="w-1.5 h-1.5 rounded-full bg-chart-green animate-pulse" />
+            <span className="text-xs font-mono text-muted-foreground">
+              {publicKey.toString().slice(0, 4)}...{publicKey.toString().slice(-4)}
+            </span>
+          </div>
+          <Button 
+            onClick={handleDisconnect}
+            variant="ghost"
+            size="sm"
+            className="text-xs h-8 text-muted-foreground hover:text-foreground"
+          >
+            <LogOut className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+      )}
+      
+      {!connected && (
+        <WalletMultiButton className="!bg-primary !text-primary-foreground !rounded-md !text-xs !h-8 !px-4" />
+      )}
+    </div>
+  );
+}
+
+// Full header for Landing page
+export function LandingHeader() {
   const [isAdmin, setIsAdmin] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -22,11 +82,15 @@ export function Header() {
   const { publicKey, connected, disconnect } = useWallet();
   const { hasFreePass, buyFreePass, isPaymentPending } = useTradingMode();
 
+  const ADMIN_WALLETS = [
+    "Cra8LAvpQAk3hx4By5STHp4xrq7HSAnZLk4Jwzv1wUAH",
+    "BQefQgbpAqPjoGKLTmAA2haZh9pEURYNefPFwsTotgem"
+  ];
+
   useEffect(() => {
     if (connected && publicKey) {
-      const walletAddress = publicKey.toString();
-      setIsAdmin(ADMIN_WALLETS.includes(walletAddress));
-      localStorage.setItem('connectedWallet', walletAddress);
+      setIsAdmin(ADMIN_WALLETS.includes(publicKey.toString()));
+      localStorage.setItem('connectedWallet', publicKey.toString());
       localStorage.setItem('walletConnected', 'true');
     } else {
       setIsAdmin(false);
@@ -37,10 +101,7 @@ export function Header() {
     disconnect();
     localStorage.removeItem('walletConnected');
     localStorage.removeItem('connectedWallet');
-    toast({
-      title: "Disconnected",
-      description: "Wallet disconnected successfully",
-    });
+    toast({ title: "Disconnected", description: "Wallet disconnected" });
     navigate('/');
   };
 
