@@ -7,8 +7,7 @@ import { Switch } from "@/components/ui/switch";
 import { Crosshair, Zap, Shield } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useWallet } from "@solana/wallet-adapter-react";
-import { useConnection } from "@solana/wallet-adapter-react";
-import { JupiterTransactionService } from "@/services/jupiter/transactions";
+import { JupiterUltraService } from "@/services/jupiter/ultra";
 import { LiveTradeConfirmDialog } from "./LiveTradeConfirmDialog";
 import { isValidSolanaAddress } from "@/utils/validateSolanaAddress";
 
@@ -23,7 +22,6 @@ interface Props {
 export const BuySniper = ({ sim, isLive = false, killSignal = 0 }: Props) => {
   const { toast } = useToast();
   const wallet = useWallet();
-  const { connection } = useConnection();
   const [isArmed, setIsArmed] = useState(false);
   const [tokenAddress, setTokenAddress] = useState("");
   const [tokenSymbol, setTokenSymbol] = useState("");
@@ -34,50 +32,83 @@ export const BuySniper = ({ sim, isLive = false, killSignal = 0 }: Props) => {
   const [takeProfitPercent, setTakeProfitPercent] = useState("100");
   const [showConfirm, setShowConfirm] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
-  const sniperInterval = useRef<NodeJS.Timeout | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
+  const sniperInterval = useRef<ReturnType<typeof setInterval> | null>(null);
+  const isArmedRef = useRef(false);
 
-  const executeLiveBuy = useCallback(async () => {
-    setStatusMessage("🔄 Executing live buy via Jupiter...");
+  // Keep ref in sync
+  useEffect(() => { isArmedRef.current = isArmed; }, [isArmed]);
+
+  const executeLiveBuy = useCallback(async (): Promise<string | null> => {
+    if (!wallet.publicKey || !wallet.signTransaction) {
+      setStatusMessage("❌ Wallet not connected or can't sign");
+      return null;
+    }
+
+    setStatusMessage("🔄 Getting swap quote via Jupiter Ultra...");
     try {
       const lamports = Math.round(parseFloat(buyAmount) * 1e9);
-      const slippageBps = Math.round(parseFloat(maxSlippage) * 100);
-      const priority = parseFloat(priorityFee) >= 0.01 ? 'high' as const
-        : parseFloat(priorityFee) >= 0.005 ? 'medium' as const : 'low' as const;
 
-      const txid = await JupiterTransactionService.swapTokens(
-        connection, wallet, SOL_MINT, tokenAddress, lamports, slippageBps, undefined, priority
+      // Use Jupiter Ultra API (works from browser, no CORS issues)
+      const result = await JupiterUltraService.swap(
+        wallet,
+        SOL_MINT,
+        tokenAddress,
+        String(lamports),
+        'ExactIn'
       );
-      return txid;
+
+      if (result?.status === 'Success' && result.signature) {
+        return result.signature;
+      }
+
+      const errorMsg = result?.error || 'Swap returned no success';
+      setStatusMessage(`❌ ${errorMsg}`);
+      return null;
     } catch (err: any) {
       const msg = err.message || "Unknown error";
       setStatusMessage(`❌ Buy failed: ${msg}`);
-      toast({ title: "Sniper Buy Failed", description: msg, variant: "destructive" });
       return null;
     }
-  }, [connection, wallet, tokenAddress, buyAmount, maxSlippage, priorityFee, toast]);
+  }, [wallet, tokenAddress, buyAmount]);
 
   const startSniping = useCallback(() => {
     if (sniperInterval.current) clearInterval(sniperInterval.current);
     setStatusMessage("🎯 Sniper armed — scanning for entry...");
+    setRetryCount(0);
+
+    let attempts = 0;
+    const MAX_RETRIES = 5;
 
     const executeBuy = async () => {
+      if (!isArmedRef.current) return;
+
       if (isLive) {
         if (!wallet.publicKey) {
           setStatusMessage("❌ Wallet disconnected");
           setIsArmed(false);
+          if (sniperInterval.current) clearInterval(sniperInterval.current);
           return;
         }
-        
-        setStatusMessage("⚡ Attempting live buy...");
+
+        attempts++;
+        setRetryCount(attempts);
+        setStatusMessage(`⚡ Attempt ${attempts}/${MAX_RETRIES} — executing buy...`);
+
         const txid = await executeLiveBuy();
         if (txid) {
           setIsArmed(false);
-          if (sniperInterval.current) clearInterval(sniperInterval.current);
+          if (sniperInterval.current) { clearInterval(sniperInterval.current); sniperInterval.current = null; }
           setStatusMessage(`✅ Buy executed! TX: ${txid.slice(0, 16)}...`);
           toast({ title: "🎯 Live Sniper Hit!", description: `TX: ${txid.slice(0, 12)}...` });
-        } else {
-          // Retry after delay
-          setStatusMessage("⏳ Retrying in a few seconds...");
+          return;
+        }
+
+        if (attempts >= MAX_RETRIES) {
+          setIsArmed(false);
+          if (sniperInterval.current) { clearInterval(sniperInterval.current); sniperInterval.current = null; }
+          setStatusMessage(`❌ Failed after ${MAX_RETRIES} attempts. Check wallet balance & token address.`);
+          toast({ title: "Sniper Failed", description: `Could not execute after ${MAX_RETRIES} retries`, variant: "destructive" });
         }
       } else {
         const result = await sim.simulateBuy(
@@ -85,15 +116,21 @@ export const BuySniper = ({ sim, isLive = false, killSignal = 0 }: Props) => {
         );
         if (result) {
           setIsArmed(false);
-          if (sniperInterval.current) clearInterval(sniperInterval.current);
+          if (sniperInterval.current) { clearInterval(sniperInterval.current); sniperInterval.current = null; }
           setStatusMessage(`✅ Bought ${result.token_amount.toFixed(2)} tokens`);
           toast({ title: "🎯 Sniper Hit!", description: `Bought ${result.token_amount.toFixed(2)} ${tokenSymbol || 'tokens'} for ${buyAmount} SOL` });
         }
       }
     };
 
-    const delay = 2000 + Math.random() * 3000;
-    sniperInterval.current = setTimeout(executeBuy, delay) as any;
+    // First attempt after short delay, then retry every 5 seconds
+    const initialDelay = setTimeout(() => {
+      executeBuy();
+      sniperInterval.current = setInterval(executeBuy, 5000);
+    }, 1500);
+
+    // Store timeout ref for cleanup
+    sniperInterval.current = initialDelay as any;
   }, [tokenAddress, tokenSymbol, buyAmount, sim, toast, isLive, executeLiveBuy, wallet.publicKey]);
 
   useEffect(() => {
@@ -106,6 +143,7 @@ export const BuySniper = ({ sim, isLive = false, killSignal = 0 }: Props) => {
       setIsArmed(false);
       setShowConfirm(false);
       setStatusMessage(null);
+      setRetryCount(0);
       if (sniperInterval.current) { clearInterval(sniperInterval.current); sniperInterval.current = null; }
     }
   }, [killSignal]);
@@ -134,7 +172,8 @@ export const BuySniper = ({ sim, isLive = false, killSignal = 0 }: Props) => {
     } else {
       setIsArmed(false);
       setStatusMessage(null);
-      if (sniperInterval.current) clearInterval(sniperInterval.current);
+      setRetryCount(0);
+      if (sniperInterval.current) { clearInterval(sniperInterval.current); sniperInterval.current = null; }
       toast({ title: "Sniper Disarmed", description: "Buy sniper deactivated" });
     }
   };
@@ -157,7 +196,7 @@ export const BuySniper = ({ sim, isLive = false, killSignal = 0 }: Props) => {
         </div>
         {isArmed && (
           <Badge className="bg-destructive/20 text-destructive border-destructive/30 animate-pulse">
-            🔴 Armed (LIVE)
+            🔴 Armed {retryCount > 0 ? `(${retryCount}/5)` : "(LIVE)"}
           </Badge>
         )}
       </div>
@@ -209,7 +248,7 @@ export const BuySniper = ({ sim, isLive = false, killSignal = 0 }: Props) => {
 
         {/* Status Message */}
         {statusMessage && (
-          <div className="p-2 rounded-lg bg-muted/20 border border-border">
+          <div className={`p-2 rounded-lg border ${statusMessage.startsWith('✅') ? 'bg-accent/10 border-accent/30' : statusMessage.startsWith('❌') ? 'bg-destructive/10 border-destructive/30' : 'bg-muted/20 border-border'}`}>
             <p className="text-[11px] text-foreground font-mono">{statusMessage}</p>
           </div>
         )}
