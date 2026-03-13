@@ -32,8 +32,13 @@ export function BlockchainAnalytics() {
   const fetchTransactions = async () => {
     try {
       setIsRefreshing(true);
-      const txs = await SolanaService.getRecentMemeTransactions(15);
-      setTransactions(txs);
+      // Use a popular Solana memecoin (BONK) for real transaction data
+      const BONK_MINT = 'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263';
+      const { data, error } = await supabase.functions.invoke('token-prices', {
+        body: { action: 'token_trades', address: BONK_MINT, limit: 15 },
+      });
+      if (error) throw error;
+      setTransactions(data?.data || []);
     } catch (error) {
       console.error('Error fetching transactions:', error);
       toast.error('Failed to fetch blockchain data');

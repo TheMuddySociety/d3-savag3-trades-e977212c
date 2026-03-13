@@ -290,22 +290,65 @@ async function fetchTokenTrades(address: string, apiKey: string, limit: number) 
 
 async function fetchPriceHistory(address: string, _interval: string, _timeFrom?: number, _timeTo?: number, jupiterApiKey?: string) {
   try {
+    // Try Birdeye history first
+    const BIRDEYE_API_KEY = Deno.env.get('BIRDEYE_API_KEY');
+    if (BIRDEYE_API_KEY) {
+      const now = Math.floor(Date.now() / 1000);
+      const timeFrom = _timeFrom || now - 86400; // default 24h
+      const timeTo = _timeTo || now;
+      const birdeyeResp = await fetch(
+        `https://public-api.birdeye.so/defi/history_price?address=${address}&address_type=token&type=1H&time_from=${timeFrom}&time_to=${timeTo}`,
+        { headers: { 'X-API-KEY': BIRDEYE_API_KEY, 'x-chain': 'solana' } }
+      );
+      if (birdeyeResp.ok) {
+        const birdeyeData = await birdeyeResp.json();
+        const items = birdeyeData?.data?.items;
+        if (Array.isArray(items) && items.length > 0) {
+          return items.map((p: any) => ({ unixTime: p.unixTime, value: p.value }));
+        }
+      }
+    }
+
+    // Fallback: DexScreener pair OHLCV
+    try {
+      const dexResp = await fetch(`https://api.dexscreener.com/tokens/v1/solana/${address}`);
+      if (dexResp.ok) {
+        const pairs = await dexResp.json();
+        if (Array.isArray(pairs) && pairs.length > 0) {
+          const bestPair = pairs.reduce((best: any, p: any) =>
+            (p.liquidity?.usd || 0) > (best?.liquidity?.usd || 0) ? p : best, pairs[0]);
+          const currentPrice = parseFloat(bestPair.priceUsd) || 0;
+          if (currentPrice > 0 && bestPair.priceChange) {
+            // Build approximate history from price change data
+            const now = Math.floor(Date.now() / 1000);
+            const h24 = bestPair.priceChange?.h24 || 0;
+            const h6 = bestPair.priceChange?.h6 || 0;
+            const h1 = bestPair.priceChange?.h1 || 0;
+            const price24hAgo = currentPrice / (1 + h24 / 100);
+            const price6hAgo = currentPrice / (1 + h6 / 100);
+            const price1hAgo = currentPrice / (1 + h1 / 100);
+            return [
+              { unixTime: now - 86400, value: price24hAgo },
+              { unixTime: now - 43200, value: (price24hAgo + price6hAgo) / 2 },
+              { unixTime: now - 21600, value: price6hAgo },
+              { unixTime: now - 10800, value: (price6hAgo + price1hAgo) / 2 },
+              { unixTime: now - 3600, value: price1hAgo },
+              { unixTime: now, value: currentPrice },
+            ];
+          }
+        }
+      }
+    } catch { /* ignore DexScreener fallback error */ }
+
+    // Last resort: single current price point
     const headers: Record<string, string> = {};
     if (jupiterApiKey) headers['x-api-key'] = jupiterApiKey;
-    
     const priceResp = await fetch(`${JUPITER_PRICE_API}?ids=${address}`, { headers });
     const priceData = await priceResp.json();
     const currentPrice = priceData?.[address]?.usdPrice || 0;
-
     if (currentPrice === 0) return [];
-
     const now = Math.floor(Date.now() / 1000);
-    const points = [];
-    for (let i = 23; i >= 0; i--) {
-      const variance = 1 + (Math.sin(i * 0.5) * 0.03) + ((Math.random() - 0.5) * 0.02);
-      points.push({ unixTime: now - i * 3600, value: currentPrice * variance });
-    }
-    return points;
+    return [{ unixTime: now, value: currentPrice }];
   } catch { return []; }
 }
 
