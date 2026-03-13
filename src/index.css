@@ -8,12 +8,12 @@
 @layer base {
   :root {
     /* Jupiter Plugin Theme */
-    --jupiter-plugin-primary: 0, 0, 0;
-    --jupiter-plugin-background: 30, 30, 30;
-    --jupiter-plugin-primary-text: 255, 210, 210;
+    --jupiter-plugin-primary: 152, 42, 42;
+    --jupiter-plugin-background: 0, 0, 0;
+    --jupiter-plugin-primary-text: 232, 249, 255;
     --jupiter-plugin-warning: 251, 191, 36;
-    --jupiter-plugin-interactive: 180, 60, 60;
-    --jupiter-plugin-module: 44, 44, 44;
+    --jupiter-plugin-interactive: 33, 42, 54;
+    --jupiter-plugin-module: 16, 23, 31;
 
     --background: 0 0% 4%;
     --foreground: 0 0% 93%;
