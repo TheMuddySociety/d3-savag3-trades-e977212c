@@ -18,33 +18,21 @@ const Landing = () => {
   
   useEffect(() => {
     if (connected && publicKey) {
-      handleWalletConnected(publicKey.toString());
+      const walletAddress = publicKey.toString();
+      localStorage.setItem('connectedWallet', walletAddress);
+      localStorage.setItem('walletConnected', 'true');
+      if (ADMIN_WALLETS.includes(walletAddress)) {
+        toast.success("Admin access granted");
+        navigate('/admin');
+      } else {
+        toast.success("Wallet connected — Welcome");
+        navigate('/dashboard');
+      }
     }
   }, [connected, publicKey]);
-  
-  const handleWalletConnected = async (walletAddress: string) => {
-    setConnecting(true);
-    try {
-      localStorage.setItem('connectedWallet', walletAddress);
-      const hasAccess = Math.random() > 0.2;
-      
-      if (hasAccess) {
-        if (ADMIN_WALLETS.includes(walletAddress)) {
-          toast.success("Admin access granted");
-          navigate('/admin');
-        } else {
-          toast.success("Access granted — Welcome");
-          navigate('/dashboard');
-        }
-        localStorage.setItem('walletConnected', 'true');
-      } else {
-        toast.error("Access denied. NFT or token ownership required.");
-      }
-    } catch (error) {
-      toast.error("Connection failed");
-    } finally {
-      setConnecting(false);
-    }
+
+  const handleLaunchApp = () => {
+    navigate('/dashboard');
   };
 
   return (
