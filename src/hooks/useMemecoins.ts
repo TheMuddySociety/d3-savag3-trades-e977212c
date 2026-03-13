@@ -111,7 +111,7 @@ export const useMemecoins = () => {
 
   const refreshData = useCallback(() => {
     setIsRefreshing(true);
-    fetchMemecoins();
+    fetchMemecoins(false);
   }, [fetchMemecoins]);
 
   const handleSort = useCallback((field: string) => {

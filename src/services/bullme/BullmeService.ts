@@ -49,7 +49,7 @@ export class BullmeService {
   private static BASE_URL = 'https://api.bullme.one';
   private static cachedTokens: BullmeToken[] | null = null;
   private static lastFetchTime: number = 0;
-  private static CACHE_EXPIRY = 5 * 60 * 1000; // 5 minutes
+  private static CACHE_EXPIRY = 15 * 1000; // 15 seconds for near-real-time bonding curve prices
 
   /**
    * Fetch new token listings from the Bullme API
