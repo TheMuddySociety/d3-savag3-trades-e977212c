@@ -72,7 +72,7 @@ serve(async (req) => {
   }
 });
 
-// ── Jupiter Price API (free, no key needed) ─────────────────────────
+// ── Jupiter Price API + Birdeye fallback ────────────────────────────
 
 async function fetchJupiterPrices(addresses: string[], apiKey?: string) {
   if (!addresses || addresses.length === 0) return {};
@@ -84,19 +84,110 @@ async function fetchJupiterPrices(addresses: string[], apiKey?: string) {
   const response = await fetch(`${JUPITER_PRICE_API}?ids=${ids}`, { headers });
   
   if (!response.ok) {
-    throw new Error(`Jupiter price API failed [${response.status}]: ${await response.text()}`);
+    console.warn(`Jupiter price API failed [${response.status}], trying Birdeye fallback`);
+    return fetchBirdeyePrices(addresses);
   }
   
   const result = await response.json();
   const prices: Record<string, { value: number }> = {};
   
-  // V3 returns flat: { [mint]: { usdPrice, decimals, blockId, priceChange24h } }
   for (const [mint, info] of Object.entries(result)) {
     const priceData = info as { usdPrice?: number };
     if (priceData?.usdPrice) {
       prices[mint] = { value: priceData.usdPrice };
     }
   }
+  
+  // Find addresses that Jupiter didn't return prices for
+  const missing = addresses.filter(addr => !prices[addr]);
+  
+  if (missing.length > 0) {
+    console.log(`[token-prices] Jupiter missing ${missing.length} tokens, trying Birdeye fallback`);
+    const fallback = await fetchBirdeyePrices(missing);
+    for (const [addr, data] of Object.entries(fallback)) {
+      prices[addr] = data;
+    }
+  }
+  
+  return prices;
+}
+
+// ── Birdeye fallback for tokens not on Jupiter ──────────────────────
+
+async function fetchBirdeyePrices(addresses: string[]): Promise<Record<string, { value: number }>> {
+  const BIRDEYE_API_KEY = Deno.env.get('BIRDEYE_API_KEY');
+  if (!BIRDEYE_API_KEY || addresses.length === 0) return {};
+
+  const prices: Record<string, { value: number }> = {};
+
+  // Birdeye multi-price endpoint
+  try {
+    const listStr = addresses.join(',');
+    const resp = await fetch(
+      `https://public-api.birdeye.so/defi/multi_price?list_address=${listStr}`,
+      {
+        headers: {
+          'X-API-KEY': BIRDEYE_API_KEY,
+          'x-chain': 'solana',
+        },
+      }
+    );
+
+    if (!resp.ok) {
+      console.warn(`Birdeye multi_price failed [${resp.status}]`);
+      // Fall back to individual calls
+      return fetchBirdeyePricesIndividual(addresses, BIRDEYE_API_KEY);
+    }
+
+    const result = await resp.json();
+    const data = result?.data || {};
+
+    for (const addr of addresses) {
+      const info = data[addr];
+      if (info?.value) {
+        prices[addr] = { value: info.value };
+      }
+    }
+  } catch (e) {
+    console.error('Birdeye multi_price error:', e);
+  }
+
+  // For any still missing, try individual price endpoint
+  const stillMissing = addresses.filter(a => !prices[a]);
+  if (stillMissing.length > 0) {
+    const individual = await fetchBirdeyePricesIndividual(stillMissing, BIRDEYE_API_KEY);
+    for (const [addr, data] of Object.entries(individual)) {
+      prices[addr] = data;
+    }
+  }
+
+  return prices;
+}
+
+async function fetchBirdeyePricesIndividual(addresses: string[], apiKey: string): Promise<Record<string, { value: number }>> {
+  const prices: Record<string, { value: number }> = {};
+  
+  // Limit concurrent requests
+  const batch = addresses.slice(0, 10);
+  const results = await Promise.allSettled(
+    batch.map(async (addr) => {
+      const resp = await fetch(
+        `https://public-api.birdeye.so/defi/price?address=${addr}`,
+        {
+          headers: {
+            'X-API-KEY': apiKey,
+            'x-chain': 'solana',
+          },
+        }
+      );
+      if (!resp.ok) return null;
+      const result = await resp.json();
+      const price = result?.data?.value;
+      if (price) {
+        prices[addr] = { value: price };
+      }
+    })
+  );
   
   return prices;
 }
