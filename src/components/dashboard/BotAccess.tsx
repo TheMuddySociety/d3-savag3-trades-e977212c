@@ -44,31 +44,12 @@ export const BotAccess = () => {
           <CardTitle className="text-sm">Bot Trading Tools</CardTitle>
           <Badge
             variant="outline"
-            className={`text-[10px] ml-auto ${
-              isLive
-                ? "bg-destructive/20 text-destructive border-destructive/30"
-                : "bg-[hsl(var(--fun-yellow))]/20 text-[hsl(var(--fun-yellow))] border-[hsl(var(--fun-yellow))]/30"
-            }`}
+            className="text-[10px] ml-auto bg-destructive/20 text-destructive border-destructive/30"
           >
-            {isLive ? "🔴 LIVE" : "PAPER"}
+            🔴 LIVE
           </Badge>
         </div>
 
-        {walletAddress && (
-          <div className="flex items-center justify-between mt-2 p-2 rounded-lg bg-muted/20 border border-border">
-            <div className="flex items-center gap-2">
-              <Zap className={`h-3.5 w-3.5 ${isLive ? "text-destructive" : "text-muted-foreground"}`} />
-              <div>
-                <span className="text-xs font-medium text-foreground">Go Live</span>
-              </div>
-            </div>
-            <Switch
-              checked={isLive}
-              onCheckedChange={handleLiveToggle}
-              disabled={isPaymentPending || !walletAddress}
-            />
-          </div>
-        )}
 
         {walletAddress && (
           <Button
@@ -82,30 +63,13 @@ export const BotAccess = () => {
           </Button>
         )}
 
-        {walletAddress && sim.wallet && (
+        {walletAddress && (
           <div className="flex items-center justify-between mt-1">
             <div className="flex items-center gap-1.5 text-xs">
               <Wallet className="h-3 w-3 text-muted-foreground" />
-              <span className="text-muted-foreground">{isLive ? "Wallet:" : "Sim Balance:"}</span>
-              {!isLive && (
-                <span className="font-mono text-foreground font-medium">
-                  {sim.wallet.sol_balance.toFixed(4)} SOL
-                </span>
-              )}
-              {isLive && (
-                <span className="font-mono text-foreground font-medium">Connected</span>
-              )}
+              <span className="text-muted-foreground">Wallet:</span>
+              <span className="font-mono text-foreground font-medium">Connected</span>
             </div>
-            {!isLive && (
-              <div className="flex gap-1">
-                <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => setShowHistory(!showHistory)} title="Trade History">
-                  <History className="h-3 w-3" />
-                </Button>
-                <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={sim.resetWallet} title="Reset to 10 SOL">
-                  <RotateCcw className="h-3 w-3" />
-                </Button>
-              </div>
-            )}
           </div>
         )}
       </CardHeader>

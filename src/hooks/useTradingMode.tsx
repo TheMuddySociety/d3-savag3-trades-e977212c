@@ -36,7 +36,7 @@ export const useTradingMode = () => useContext(TradingModeContext);
 export const TradingModeProvider = ({ children }: { children: ReactNode }) => {
   const { toast } = useToast();
   const { publicKey, signTransaction, connected } = useWallet();
-  const [isLive, setIsLive] = useState(false);
+  const [isLive, setIsLive] = useState(true);
   const [hasPaid] = useState(true);
   const [hasFreePass, setHasFreePass] = useState(false);
   const [isPaymentPending, setIsPaymentPending] = useState(false);
@@ -121,12 +121,10 @@ export const TradingModeProvider = ({ children }: { children: ReactNode }) => {
   }, [publicKey, signTransaction, toast]);
 
   const toggleMode = useCallback(() => {
-    if (isLive) {
-      setIsLive(false);
-      toast({ title: "📄 Paper Mode", description: "Switched back to paper trading" });
-    } else {
+    // Always live mode — paper mode removed
+    if (!isLive) {
       setIsLive(true);
-      toast({ title: "🔴 Live Mode", description: "Now executing real Solana transactions!" });
+      toast({ title: "🔴 Live Mode", description: "Executing real Solana transactions" });
     }
   }, [isLive, toast]);
 
