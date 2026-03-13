@@ -5,9 +5,6 @@ import { Connection, PublicKey, SystemProgram, Transaction, LAMPORTS_PER_SOL } f
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
-const ACCESS_FEE_SOL = 0.04141;
-const TREASURY_WALLET = "GzGuoKXE8Unn7Vcg1DtomwNk5bkt4gETrFeGnHMEApnY";
-
 interface TradingModeContextType {
   isLive: boolean;
   hasPaid: boolean;
@@ -19,11 +16,11 @@ interface TradingModeContextType {
 
 const TradingModeContext = createContext<TradingModeContextType>({
   isLive: false,
-  hasPaid: false,
+  hasPaid: true,
   isPaymentPending: false,
   isCheckingPayment: false,
   toggleMode: () => {},
-  payAccessFee: async () => false,
+  payAccessFee: async () => true,
 });
 
 export const useTradingMode = () => useContext(TradingModeContext);
