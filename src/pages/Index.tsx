@@ -58,6 +58,7 @@ const Index = () => {
                 </div>
               </div>
               <PortfolioTracker />
+              <JupiterAIChat />
               <TopMemecoins />
               <Leaderboard />
               <AIToolsAgents />
