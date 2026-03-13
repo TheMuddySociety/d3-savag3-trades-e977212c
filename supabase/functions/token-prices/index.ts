@@ -188,29 +188,143 @@ async function fetchHeliusTokenInfo(addresses: string[], apiKey: string) {
   return await response.json();
 }
 
-// ── Trending via CoinGecko (free) ───────────────────────────────────
+// ── Trending Solana Memecoins via DexScreener ───────────────────────
 
 async function fetchTrendingTokens() {
   try {
-    const response = await fetch(`${COINGECKO_BASE}/search/trending`);
-    if (!response.ok) throw new Error(`CoinGecko trending failed [${response.status}]`);
-    const result = await response.json();
-    
-    const coins = result.coins || [];
-    return coins.slice(0, 20).map((item: any) => ({
-      address: item.item?.platforms?.solana || item.item?.id || '',
-      symbol: item.item?.symbol || '',
-      name: item.item?.name || '',
-      logo: item.item?.small || item.item?.thumb || '',
-      price: item.item?.data?.price || 0,
-      price_change_24h: item.item?.data?.price_change_percentage_24h?.usd || 0,
-      market_cap: item.item?.data?.market_cap || '',
-      volume_24h: item.item?.data?.total_volume || '',
-      rank: item.item?.market_cap_rank || 0,
-    }));
+    // Strategy: fetch top Solana pairs from DexScreener sorted by volume
+    // This covers ALL Solana memecoins across all DEXes (Raydium, Orca, Jupiter, etc.)
+    const [boostsResp, searchResp] = await Promise.all([
+      fetch('https://api.dexscreener.com/token-boosts/top/v1').catch(() => null),
+      fetch('https://api.dexscreener.com/latest/dex/search?q=solana%20meme&chain=solana').catch(() => null),
+    ]);
+
+    const tokenMap = new Map<string, any>();
+
+    // 1. DexScreener boosted tokens (top promoted across chains, filter to Solana)
+    if (boostsResp?.ok) {
+      const boosts = await boostsResp.json();
+      if (Array.isArray(boosts)) {
+        for (const b of boosts) {
+          if (b.chainId === 'solana' && b.tokenAddress) {
+            tokenMap.set(b.tokenAddress, {
+              address: b.tokenAddress,
+              symbol: '',
+              name: b.description || '',
+              logo: b.icon || '',
+              price: 0,
+              price_change_24h: 0,
+              market_cap: 0,
+              volume_24h: 0,
+              rank: 0,
+              source: 'boost',
+            });
+          }
+        }
+      }
+    }
+
+    // 2. DexScreener search for Solana meme pairs
+    if (searchResp?.ok) {
+      const searchData = await searchResp.json();
+      const pairs = searchData?.pairs || [];
+      for (const pair of pairs) {
+        if (pair.chainId !== 'solana') continue;
+        const addr = pair.baseToken?.address;
+        if (!addr || tokenMap.has(addr)) continue;
+        tokenMap.set(addr, {
+          address: addr,
+          symbol: pair.baseToken?.symbol || '',
+          name: pair.baseToken?.name || '',
+          logo: pair.info?.imageUrl || '',
+          price: parseFloat(pair.priceUsd) || 0,
+          price_change_24h: pair.priceChange?.h24 || 0,
+          market_cap: pair.marketCap || pair.fdv || 0,
+          volume_24h: pair.volume?.h24 || 0,
+          rank: 0,
+          liquidity: pair.liquidity?.usd || 0,
+          dexId: pair.dexId || '',
+          pairAge: pair.pairCreatedAt || null,
+        });
+      }
+    }
+
+    // 3. Enrich boosted tokens that lack price data by fetching their pairs
+    const boostAddrs = [...tokenMap.entries()]
+      .filter(([_, v]) => v.source === 'boost' && v.price === 0)
+      .map(([addr]) => addr)
+      .slice(0, 30);
+
+    if (boostAddrs.length > 0) {
+      const batches: string[][] = [];
+      for (let i = 0; i < boostAddrs.length; i += 30) {
+        batches.push(boostAddrs.slice(i, i + 30));
+      }
+      await Promise.allSettled(batches.map(async (batch) => {
+        try {
+          const resp = await fetch(`https://api.dexscreener.com/tokens/v1/solana/${batch.join(',')}`);
+          if (!resp.ok) return;
+          const pairs = await resp.json();
+          if (!Array.isArray(pairs)) return;
+          // Group by base token, pick highest liquidity pair
+          const bestByToken = new Map<string, any>();
+          for (const pair of pairs) {
+            const addr = pair.baseToken?.address;
+            if (!addr) continue;
+            const liq = pair.liquidity?.usd || 0;
+            const existing = bestByToken.get(addr);
+            if (!existing || liq > (existing.liquidity?.usd || 0)) {
+              bestByToken.set(addr, pair);
+            }
+          }
+          for (const [addr, pair] of bestByToken) {
+            const existing = tokenMap.get(addr);
+            if (existing) {
+              tokenMap.set(addr, {
+                ...existing,
+                symbol: pair.baseToken?.symbol || existing.symbol,
+                name: pair.baseToken?.name || existing.name,
+                logo: pair.info?.imageUrl || existing.logo,
+                price: parseFloat(pair.priceUsd) || 0,
+                price_change_24h: pair.priceChange?.h24 || 0,
+                market_cap: pair.marketCap || pair.fdv || 0,
+                volume_24h: pair.volume?.h24 || 0,
+                liquidity: pair.liquidity?.usd || 0,
+                dexId: pair.dexId || '',
+                source: 'boost',
+              });
+            }
+          }
+        } catch { /* ignore */ }
+      }));
+    }
+
+    // Sort by volume descending, return top 30
+    const results = [...tokenMap.values()]
+      .filter(t => t.address && t.name)
+      .sort((a, b) => (b.volume_24h || 0) - (a.volume_24h || 0))
+      .slice(0, 30);
+
+    return results;
   } catch (e) {
-    console.error('CoinGecko trending fallback error:', e);
-    return [];
+    console.error('Trending Solana tokens error:', e);
+    // Fallback to CoinGecko trending
+    try {
+      const response = await fetch(`${COINGECKO_BASE}/search/trending`);
+      if (!response.ok) return [];
+      const result = await response.json();
+      const coins = result.coins || [];
+      return coins.slice(0, 20).map((item: any) => ({
+        address: item.item?.platforms?.solana || item.item?.id || '',
+        symbol: item.item?.symbol || '',
+        name: item.item?.name || '',
+        logo: item.item?.small || item.item?.thumb || '',
+        price: item.item?.data?.price || 0,
+        price_change_24h: item.item?.data?.price_change_percentage_24h?.usd || 0,
+        market_cap: item.item?.data?.market_cap || '',
+        volume_24h: item.item?.data?.total_volume || '',
+      }));
+    } catch { return []; }
   }
 }
 

@@ -126,9 +126,8 @@ class TokenWebSocketService {
 
       const tokens = data.data as any[];
       return tokens
-        .filter((t: any) => t.address && t.name) // Allow all tokens with an address identifier
+        .filter((t: any) => t.address && t.name)
         .map((t: any, i: number) => {
-          // Parse market_cap / volume_24h which may be strings like "$477M"
           const parseCurrencyString = (val: any): number => {
             if (typeof val === 'number') return val;
             if (typeof val !== 'string') return 0;
@@ -141,8 +140,12 @@ class TokenWebSocketService {
             return num * mult;
           };
 
-          // Determine if this is a valid Solana address (44 chars base58)
           const isSolanaAddress = t.address.length >= 32 && t.address.length <= 44;
+
+          // Derive tags from source data
+          const tags: string[] = ['Solana'];
+          if (t.source === 'boost') tags.push('Promoted');
+          if (t.dexId) tags.push(t.dexId.charAt(0).toUpperCase() + t.dexId.slice(1));
 
           return {
             id: t.address,
@@ -153,11 +156,11 @@ class TokenWebSocketService {
             volume24h: parseCurrencyString(t.volume_24h),
             change24h: t.price_change_24h || 0,
             logoUrl: t.logo || '/placeholder.svg',
-            tokenAddress: isSolanaAddress ? t.address : undefined, // Only set for real Solana tokens
-            liquidity: 0,
+            tokenAddress: isSolanaAddress ? t.address : undefined,
+            liquidity: t.liquidity || 0,
             holders: 0,
-            tags: ['Trending'],
-            timestamp: Date.now(),
+            tags,
+            timestamp: t.pairAge ? new Date(t.pairAge).getTime() : Date.now(),
             bondingCurveProgress: undefined,
           };
         });
