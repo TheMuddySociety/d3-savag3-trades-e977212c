@@ -8,10 +8,55 @@ const corsHeaders = {
 
 const MCP_URL = "https://dev.jup.ag/mcp";
 
-async function searchJupiterDocs(query: string): Promise<string> {
+// Additional documentation sources fetched via their llms.txt / search endpoints
+const DOC_SOURCES = [
+  {
+    name: "Solana Cookbook",
+    searchUrl: "https://solana.com/docs/llms.txt",
+    type: "llms-txt" as const,
+  },
+  {
+    name: "Helius",
+    searchUrl: "https://docs.helius.dev/llms.txt",
+    type: "llms-txt" as const,
+  },
+  {
+    name: "Metaplex",
+    searchUrl: "https://developers.metaplex.com/llms.txt",
+    type: "llms-txt" as const,
+  },
+];
+
+async function fetchLlmsTxt(url: string, query: string): Promise<string> {
   try {
-    // Initialize MCP session
-    const initRes = await fetch(MCP_URL, {
+    const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
+    if (!res.ok) return "";
+    const text = await res.text();
+    // Extract relevant sections by finding lines matching query keywords
+    const keywords = query.toLowerCase().split(/\s+/).filter(w => w.length > 2);
+    const lines = text.split("\n");
+    const relevant: string[] = [];
+    for (let i = 0; i < lines.length; i++) {
+      const lower = lines[i].toLowerCase();
+      if (keywords.some(k => lower.includes(k))) {
+        // Grab surrounding context (up to 3 lines before/after)
+        const start = Math.max(0, i - 2);
+        const end = Math.min(lines.length, i + 3);
+        relevant.push(lines.slice(start, end).join("\n"));
+      }
+    }
+    // Deduplicate and limit
+    const unique = [...new Set(relevant)];
+    return unique.slice(0, 10).join("\n\n");
+  } catch (e) {
+    console.error(`Failed to fetch ${url}:`, e);
+    return "";
+  }
+}
+
+async function searchMCP(mcpUrl: string, query: string): Promise<string> {
+  try {
+    const initRes = await fetch(mcpUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -34,7 +79,6 @@ async function searchJupiterDocs(query: string): Promise<string> {
       return "";
     }
 
-    // Get session ID from response
     const sessionId = initRes.headers.get("mcp-session-id");
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
@@ -42,18 +86,14 @@ async function searchJupiterDocs(query: string): Promise<string> {
     };
     if (sessionId) headers["mcp-session-id"] = sessionId;
 
-    // Call searchDocs tool
-    const toolRes = await fetch(MCP_URL, {
+    const toolRes = await fetch(mcpUrl, {
       method: "POST",
       headers,
       body: JSON.stringify({
         jsonrpc: "2.0",
         id: 2,
         method: "tools/call",
-        params: {
-          name: "search",
-          arguments: { query },
-        },
+        params: { name: "search", arguments: { query } },
       }),
     });
 
@@ -63,9 +103,7 @@ async function searchJupiterDocs(query: string): Promise<string> {
     }
 
     const contentType = toolRes.headers.get("content-type") ?? "";
-
     if (contentType.includes("text/event-stream")) {
-      // Parse SSE response
       const text = await toolRes.text();
       const lines = text.split("\n");
       let result = "";
@@ -80,9 +118,7 @@ async function searchJupiterDocs(query: string): Promise<string> {
                 if (c.type === "text") result += c.text + "\n";
               }
             }
-          } catch {
-            // skip partial
-          }
+          } catch { /* skip partial */ }
         }
       }
       return result.trim();
@@ -102,6 +138,28 @@ async function searchJupiterDocs(query: string): Promise<string> {
   }
 }
 
+async function gatherContext(query: string): Promise<string> {
+  // Fetch all sources in parallel
+  const [jupiterContext, ...docContexts] = await Promise.all([
+    searchMCP(MCP_URL, query),
+    ...DOC_SOURCES.map(src => fetchLlmsTxt(src.searchUrl, query)),
+  ]);
+
+  const sections: string[] = [];
+
+  if (jupiterContext) {
+    sections.push(`### Jupiter Documentation\n${jupiterContext}`);
+  }
+
+  DOC_SOURCES.forEach((src, i) => {
+    if (docContexts[i]) {
+      sections.push(`### ${src.name} Documentation\n${docContexts[i]}`);
+    }
+  });
+
+  return sections.join("\n\n---\n\n");
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -112,29 +170,31 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
-    // Extract the latest user message for MCP context search
     const lastUserMsg = [...messages].reverse().find((m: { role: string }) => m.role === "user");
     const query = lastUserMsg?.content || "";
 
-    // Fetch Jupiter documentation context via MCP
-    let jupiterContext = "";
+    let docsContext = "";
     if (query) {
-      jupiterContext = await searchJupiterDocs(query);
+      docsContext = await gatherContext(query);
     }
 
-    const systemPrompt = `You are SAVAG3BOT AI — a Solana DeFi trading assistant powered by Jupiter Protocol knowledge.
+    const systemPrompt = `You are SAVAG3BOT AI — a Solana DeFi trading assistant with deep knowledge from Jupiter, Solana, Helius, and Metaplex documentation.
 
 You have deep expertise in:
 - Jupiter Ultra Swap API, DCA, Limit Orders, VA (Value Averaging)
-- Solana token analysis, safety checks (Shield API), and trading strategies
+- Solana core concepts: accounts, transactions, programs, PDAs, CPIs
+- Helius RPC, DAS API, webhooks, enhanced transactions
+- Metaplex NFT standards, Token Metadata, Bubblegum (compressed NFTs)
+- Token analysis, safety checks (Shield API), and trading strategies
 - Token swaps, liquidity, slippage, and MEV protection
-- Solana ecosystem tools: Helius, Birdeye, Metaplex, PumpFun
+- Solana ecosystem tools: Birdeye, PumpFun, Raydium
 
-${jupiterContext ? `## Jupiter Documentation Context\nUse this real-time documentation to answer accurately:\n\n${jupiterContext}\n\n---` : ""}
+${docsContext ? `## Documentation Context\nUse this real-time documentation to answer accurately:\n\n${docsContext}\n\n---` : ""}
 
 Guidelines:
 - Give concise, actionable answers with code examples when relevant
-- Reference Jupiter API endpoints and parameters accurately
+- Reference API endpoints and parameters accurately
+- Cite which documentation source your answer comes from when applicable
 - Warn about risks (slippage, rug pulls, low liquidity) when appropriate
 - Use markdown formatting for clarity
 - If you don't have specific docs context, say so and give your best knowledge
