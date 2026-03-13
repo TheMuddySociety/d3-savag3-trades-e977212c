@@ -124,9 +124,9 @@ function useTokenDetail(token: MemeToken | null, open: boolean) {
     const fetchAll = async () => {
       const address = token.tokenAddress;
       if (!address) {
-        setPriceData(generateMockPriceHistory(token));
-        setHolders(generateMockHolders());
-        setTrades(generateMockTrades(token));
+        setPriceData([]);
+        setHolders([]);
+        setTrades([]);
         setDataSource('mock');
         setLoading(false);
         return;
@@ -158,7 +158,7 @@ function useTokenDetail(token: MemeToken | null, open: boolean) {
         })));
         usedLive = true;
       } else {
-        setPriceData(generateMockPriceHistory(token));
+        setPriceData([]);
       }
 
       // Holders
@@ -171,7 +171,7 @@ function useTokenDetail(token: MemeToken | null, open: boolean) {
         })));
         usedLive = true;
       } else {
-        setHolders(generateMockHolders());
+        setHolders([]);
       }
 
       // Trades
@@ -200,7 +200,7 @@ function useTokenDetail(token: MemeToken | null, open: boolean) {
         }));
         usedLive = true;
       } else {
-        setTrades(generateMockTrades(token));
+        setTrades([]);
       }
 
       setDataSource(usedLive ? 'live' : 'mock');

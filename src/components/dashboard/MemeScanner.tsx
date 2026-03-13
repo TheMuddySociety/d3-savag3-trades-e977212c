@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -6,74 +5,86 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/components/ui/use-toast";
-import { Search, Check, X, AlertTriangle, Shield, ArrowUpRight } from "lucide-react";
+import { Search, Check, X, AlertTriangle, Shield, ArrowUpRight, Loader2 } from "lucide-react";
+import { supabase } from '@/integrations/supabase/client';
+
+interface ShieldResult {
+  name: string;
+  symbol: string;
+  safe: boolean;
+  holders: number;
+  liquidity: number;
+  pairAge: string;
+  flags: {
+    freezeAuthority: boolean;
+    mintAuthority: boolean;
+    lowLiquidity: boolean;
+    lowHolders: boolean;
+    warnings: string[];
+  };
+}
 
 export function MemeScanner() {
   const [tokenAddress, setTokenAddress] = useState('');
   const [isScanning, setIsScanning] = useState(false);
-  const [scanResult, setScanResult] = useState<null | {
-    safe: boolean;
-    name: string;
-    symbol: string;
-    age: string;
-    holders: number;
-    liquidity: string;
-    flags: {
-      honeypot: boolean;
-      rugpull: boolean;
-      mintable: boolean;
-      proxy: boolean;
-      hasBlacklist: boolean;
-      hasTaxes: boolean;
-    }
-  }>(null);
+  const [scanResult, setScanResult] = useState<ShieldResult | null>(null);
   const { toast } = useToast();
 
-  const handleScan = () => {
-    if (!tokenAddress.trim()) {
-      toast({
-        title: "Error",
-        description: "Please enter a token address",
-        variant: "destructive",
-      });
+  const handleScan = async () => {
+    const addr = tokenAddress.trim();
+    if (!addr) {
+      toast({ title: "Error", description: "Please enter a token address", variant: "destructive" });
       return;
     }
 
     setIsScanning(true);
     setScanResult(null);
 
-    // Simulate API call with a delay
-    setTimeout(() => {
-      // This is mock data - in a real app, you would call an API
-      const isSafe = Math.random() > 0.3;
-      
-      setScanResult({
-        safe: isSafe,
-        name: isSafe ? "Dogecoin" : "ScamToken",
-        symbol: isSafe ? "DOGE" : "SCAM",
-        age: isSafe ? "3 months" : "2 days",
-        holders: isSafe ? 12500 : 23,
-        liquidity: isSafe ? "$2.4M" : "$12K",
-        flags: {
-          honeypot: !isSafe && Math.random() > 0.5,
-          rugpull: !isSafe && Math.random() > 0.5,
-          mintable: Math.random() > 0.7,
-          proxy: Math.random() > 0.8,
-          hasBlacklist: !isSafe && Math.random() > 0.6,
-          hasTaxes: Math.random() > 0.5,
-        }
+    try {
+      const { data, error } = await supabase.functions.invoke('token-prices', {
+        body: { action: 'shield_check', address: addr },
       });
-      
-      setIsScanning(false);
-      
+
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.error || 'Shield check failed');
+
+      const result = data.data as ShieldResult;
+      setScanResult(result);
+
       toast({
-        title: isSafe ? "Token Looks Safe" : "Potential Risks Detected",
-        description: isSafe 
-          ? "This token passes basic safety checks"
+        title: result.safe ? "Token Looks Safe" : "Potential Risks Detected",
+        description: result.safe
+          ? "No major risk flags found on-chain"
           : "Be careful! This token has potential risks",
-        variant: isSafe ? "default" : "destructive",
+        variant: result.safe ? "default" : "destructive",
       });
-    }, 2000);
+    } catch (err) {
+      console.error('Shield check error:', err);
+      toast({
+        title: "Scan Failed",
+        description: "Could not analyze this token. Check the address and try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsScanning(false);
+    }
+  };
+
+  const formatLiquidity = (v: number) => {
+    if (v >= 1e6) return `$${(v / 1e6).toFixed(1)}M`;
+    if (v >= 1e3) return `$${(v / 1e3).toFixed(1)}K`;
+    return `$${v.toFixed(0)}`;
+  };
+
+  const getAge = (pairAge: string) => {
+    if (!pairAge) return 'Unknown';
+    const created = new Date(pairAge);
+    const diffMs = Date.now() - created.getTime();
+    const days = Math.floor(diffMs / 86400000);
+    if (days > 30) return `${Math.floor(days / 30)} months`;
+    if (days > 0) return `${days} days`;
+    const hours = Math.floor(diffMs / 3600000);
+    return `${hours} hours`;
   };
 
   return (
@@ -84,108 +95,106 @@ export function MemeScanner() {
           Meme Scanner
         </CardTitle>
         <CardDescription>
-          Check token contracts for potential scams and risks
+          On-chain safety analysis powered by Jupiter Shield
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex space-x-2">
           <Input
-            placeholder="Enter token address (0x...)"
+            placeholder="Enter Solana token address..."
             value={tokenAddress}
             onChange={(e) => setTokenAddress(e.target.value)}
-            className="bg-background/50"
+            className="bg-background/50 font-mono text-xs"
           />
-          <Button 
-            onClick={handleScan} 
+          <Button
+            onClick={handleScan}
             disabled={isScanning}
             className="bg-solana hover:bg-solana-dark text-primary-foreground"
           >
-            {isScanning ? "Scanning..." : "Scan"}
+            {isScanning ? <Loader2 className="h-4 w-4 animate-spin" /> : "Scan"}
           </Button>
         </div>
-        
+
         {scanResult && (
           <div className="mt-4 space-y-4 animate-scale-in">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-lg font-semibold">{scanResult.name}</h3>
-                <p className="text-sm text-muted-foreground">{scanResult.symbol}</p>
+                <h3 className="text-lg font-semibold">{scanResult.name || 'Unknown Token'}</h3>
+                <p className="text-sm text-muted-foreground">{scanResult.symbol || '—'}</p>
               </div>
-              <Badge 
+              <Badge
                 variant={scanResult.safe ? "default" : "destructive"}
                 className={`${scanResult.safe ? 'bg-green-500 hover:bg-green-600' : ''} flex items-center gap-1`}
               >
                 {scanResult.safe ? (
-                  <>
-                    <Check className="h-3 w-3" /> Safe
-                  </>
+                  <><Check className="h-3 w-3" /> Safe</>
                 ) : (
-                  <>
-                    <AlertTriangle className="h-3 w-3" /> Risky
-                  </>
+                  <><AlertTriangle className="h-3 w-3" /> Risky</>
                 )}
               </Badge>
             </div>
-            
+
             <Separator />
-            
+
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
                 <p className="text-muted-foreground">Token Age</p>
-                <p className="font-medium">{scanResult.age}</p>
+                <p className="font-medium">{getAge(scanResult.pairAge)}</p>
               </div>
               <div>
                 <p className="text-muted-foreground">Holders</p>
-                <p className="font-medium">{scanResult.holders.toLocaleString()}</p>
+                <p className="font-medium">{scanResult.holders > 0 ? scanResult.holders.toLocaleString() : 'Unknown'}</p>
               </div>
               <div>
                 <p className="text-muted-foreground">Liquidity</p>
-                <p className="font-medium">{scanResult.liquidity}</p>
+                <p className="font-medium">{formatLiquidity(scanResult.liquidity)}</p>
               </div>
               <div>
                 <p className="text-muted-foreground">Explorer</p>
-                <a href="#" className="font-medium text-solana flex items-center gap-1 hover:underline">
+                <a
+                  href={`https://solscan.io/token/${tokenAddress}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-medium text-solana flex items-center gap-1 hover:underline"
+                >
                   View <ArrowUpRight className="h-3 w-3" />
                 </a>
               </div>
             </div>
-            
+
             <Separator />
-            
+
             <div>
               <h4 className="text-sm font-medium mb-2">Risk Flags</h4>
               <div className="flex flex-wrap gap-2">
-                {scanResult.flags.honeypot && (
+                {scanResult.flags.freezeAuthority && (
                   <Badge variant="outline" className="border-red-500 text-red-500">
-                    <X className="h-3 w-3 mr-1" /> Honeypot Risk
+                    <X className="h-3 w-3 mr-1" /> Freeze Authority
                   </Badge>
                 )}
-                {scanResult.flags.rugpull && (
-                  <Badge variant="outline" className="border-red-500 text-red-500">
-                    <X className="h-3 w-3 mr-1" /> Rugpull Risk
-                  </Badge>
-                )}
-                {scanResult.flags.mintable && (
+                {scanResult.flags.mintAuthority && (
                   <Badge variant="outline" className="border-yellow-500 text-yellow-500">
-                    <AlertTriangle className="h-3 w-3 mr-1" /> Mintable
+                    <AlertTriangle className="h-3 w-3 mr-1" /> Mint Authority
                   </Badge>
                 )}
-                {scanResult.flags.proxy && (
+                {scanResult.flags.lowLiquidity && (
                   <Badge variant="outline" className="border-yellow-500 text-yellow-500">
-                    <AlertTriangle className="h-3 w-3 mr-1" /> Proxy Contract
+                    <AlertTriangle className="h-3 w-3 mr-1" /> Low Liquidity
                   </Badge>
                 )}
-                {scanResult.flags.hasBlacklist && (
+                {scanResult.flags.lowHolders && (
                   <Badge variant="outline" className="border-yellow-500 text-yellow-500">
-                    <AlertTriangle className="h-3 w-3 mr-1" /> Has Blacklist
+                    <AlertTriangle className="h-3 w-3 mr-1" /> Few Holders
                   </Badge>
                 )}
-                {scanResult.flags.hasTaxes && (
-                  <Badge variant="outline" className="border-yellow-500 text-yellow-500">
-                    <AlertTriangle className="h-3 w-3 mr-1" /> Has Taxes
+                {scanResult.flags.warnings?.map((w, i) => (
+                  <Badge key={i} variant="outline" className="border-red-500 text-red-500">
+                    <X className="h-3 w-3 mr-1" /> {w}
                   </Badge>
-                )}
-                {!Object.values(scanResult.flags).some(flag => flag) && (
+                ))}
+                {!scanResult.flags.freezeAuthority && !scanResult.flags.mintAuthority &&
+                  !scanResult.flags.lowLiquidity && !scanResult.flags.lowHolders &&
+                  (!scanResult.flags.warnings || scanResult.flags.warnings.length === 0) && (
                   <Badge variant="outline" className="border-green-500 text-green-500">
                     <Check className="h-3 w-3 mr-1" /> No Major Flags
                   </Badge>
@@ -196,7 +205,7 @@ export function MemeScanner() {
         )}
       </CardContent>
       <CardFooter className="text-xs text-center text-muted-foreground">
-        Always do your own research before investing. This tool provides basic analysis only.
+        Real on-chain analysis. Always DYOR before investing.
       </CardFooter>
     </Card>
   );

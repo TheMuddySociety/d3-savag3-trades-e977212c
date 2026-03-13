@@ -64,10 +64,7 @@ const Index = () => {
             
             {/* Sidebar */}
             <div className="lg:col-span-4 space-y-4">
-              <div className="grid grid-cols-2 lg:grid-cols-1 gap-4">
-                <MiniChart title="SOL/USD" currentValue={67.4} change={12.3} />
-                <MiniChart title="MEME INDEX" currentValue={234.8} change={-5.2} />
-              </div>
+              <MiniChart title="SOL/USD" />
               <PriceAlerts walletAddress={walletAddress} />
               <BotAccess />
               <LiveSignalFeed />

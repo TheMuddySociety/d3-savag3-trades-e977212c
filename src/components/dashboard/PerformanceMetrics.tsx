@@ -1,172 +1,114 @@
-
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { LineChart, PieChart, Activity, TrendingUp } from "lucide-react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { mockPerformanceData, mockPortfolioData } from "@/lib/mock-data";
+import { Activity, TrendingUp, TrendingDown, Loader2 } from "lucide-react";
+import { supabase } from '@/integrations/supabase/client';
+
+interface MarketStats {
+  totalVolume: number;
+  totalMarketCap: number;
+  marketCapChange24h: number;
+  solPrice: number;
+  solChange24h: number;
+  newTokens24h: number;
+  avgLiquidity: number;
+}
+
+function formatLargeNumber(n: number): string {
+  if (n >= 1e12) return `$${(n / 1e12).toFixed(1)}T`;
+  if (n >= 1e9) return `$${(n / 1e9).toFixed(1)}B`;
+  if (n >= 1e6) return `$${(n / 1e6).toFixed(1)}M`;
+  if (n >= 1e3) return `$${(n / 1e3).toFixed(1)}K`;
+  return `$${n.toFixed(0)}`;
+}
 
 export function PerformanceMetrics() {
+  const [stats, setStats] = useState<MarketStats | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke('token-prices', {
+          body: { action: 'market_stats' },
+        });
+        if (error) throw error;
+        if (data?.success) setStats(data.data);
+      } catch (err) {
+        console.error('Failed to fetch market stats:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchStats();
+    const interval = setInterval(fetchStats, 60000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const isPositive = (stats?.marketCapChange24h ?? 0) >= 0;
+
   return (
     <Card className="memecoin-card row-span-2">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-xl">
           <Activity className="h-5 w-5 text-solana" />
           Market Analysis
+          {loading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <Tabs defaultValue="performance" className="space-y-4">
-          <TabsList className="grid grid-cols-2 w-full">
-            <TabsTrigger value="performance" className="flex items-center gap-1">
-              <LineChart className="h-4 w-4" />
-              <span>Performance</span>
-            </TabsTrigger>
-            <TabsTrigger value="distribution" className="flex items-center gap-1">
-              <PieChart className="h-4 w-4" />
-              <span>Distribution</span>
-            </TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="performance" className="space-y-4">
-            <div className="h-[300px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart
-                  data={mockPerformanceData}
-                  margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
-                >
-                  <defs>
-                    <linearGradient id="colorUv" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#14F195" stopOpacity={0.8}/>
-                      <stop offset="95%" stopColor="#14F195" stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
-                  <XAxis 
-                    dataKey="name" 
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fontSize: 12 }}
-                  />
-                  <YAxis 
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fontSize: 12 }}
-                    tickFormatter={(value) => `$${value}k`}
-                  />
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#ccc" strokeOpacity={0.2} />
-                  <Tooltip 
-                    contentStyle={{ 
-                      backgroundColor: 'rgba(0, 0, 0, 0.75)', 
-                      border: 'none',
-                      borderRadius: '8px',
-                      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
-                    }}
-                    labelStyle={{ color: '#fff' }}
-                    itemStyle={{ color: '#14F195' }}
-                    formatter={(value) => [`$${value}k`, 'Volume']}
-                  />
-                  <Area 
-                    type="monotone" 
-                    dataKey="value" 
-                    stroke="#14F195" 
-                    fillOpacity={1} 
-                    fill="url(#colorUv)" 
-                    strokeWidth={2}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4">
-              <Card className="bg-background/50">
-                <CardContent className="p-4">
-                  <div className="text-sm text-muted-foreground">Total Memecoin Volume</div>
-                  <div className="text-2xl font-bold flex items-center gap-1">
-                    $2.7B
-                    <TrendingUp className="h-4 w-4 text-green-500" />
-                  </div>
-                  <div className="text-xs text-green-500">+32% from last month</div>
-                </CardContent>
-              </Card>
-              <Card className="bg-background/50">
-                <CardContent className="p-4">
-                  <div className="text-sm text-muted-foreground">New Tokens (30d)</div>
-                  <div className="text-2xl font-bold">1,256</div>
-                  <div className="text-xs text-green-500">+152 from previous period</div>
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
-          
-          <TabsContent value="distribution">
-            <div className="h-[300px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart
-                  data={mockPortfolioData}
-                  margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
-                >
-                  <defs>
-                    <linearGradient id="colorRoi" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#673AB7" stopOpacity={0.8}/>
-                      <stop offset="95%" stopColor="#673AB7" stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
-                  <XAxis 
-                    dataKey="name" 
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fontSize: 12 }}
-                  />
-                  <YAxis 
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fontSize: 12 }}
-                    tickFormatter={(value) => `${value}%`}
-                  />
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#ccc" strokeOpacity={0.2} />
-                  <Tooltip 
-                    contentStyle={{ 
-                      backgroundColor: 'rgba(0, 0, 0, 0.75)', 
-                      border: 'none',
-                      borderRadius: '8px',
-                      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
-                    }}
-                    labelStyle={{ color: '#fff' }}
-                    itemStyle={{ color: '#673AB7' }}
-                    formatter={(value) => [`${value}%`, 'ROI']}
-                  />
-                  <Area 
-                    type="monotone" 
-                    dataKey="value" 
-                    stroke="#673AB7" 
-                    fillOpacity={1} 
-                    fill="url(#colorRoi)" 
-                    strokeWidth={2}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4 mt-4">
-              <Card className="bg-background/50">
-                <CardContent className="p-4">
-                  <div className="text-sm text-muted-foreground">Avg. Memecoin ROI</div>
-                  <div className="text-2xl font-bold flex items-center gap-1">
-                    243%
-                    <TrendingUp className="h-4 w-4 text-green-500" />
-                  </div>
-                  <div className="text-xs text-green-500">Based on top 100 tokens</div>
-                </CardContent>
-              </Card>
-              <Card className="bg-background/50">
-                <CardContent className="p-4">
-                  <div className="text-sm text-muted-foreground">Success Rate</div>
-                  <div className="text-2xl font-bold">38.5%</div>
-                  <div className="text-xs text-muted-foreground">Tokens with positive ROI</div>
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
-        </Tabs>
+        <div className="grid grid-cols-2 gap-4">
+          <Card className="bg-background/50">
+            <CardContent className="p-4">
+              <div className="text-sm text-muted-foreground">24h Crypto Volume</div>
+              <div className="text-2xl font-bold flex items-center gap-1">
+                {stats ? formatLargeNumber(stats.totalVolume) : '—'}
+                {isPositive ? (
+                  <TrendingUp className="h-4 w-4 text-green-500" />
+                ) : (
+                  <TrendingDown className="h-4 w-4 text-red-500" />
+                )}
+              </div>
+              <div className={`text-xs ${isPositive ? 'text-green-500' : 'text-red-500'}`}>
+                {stats ? `${isPositive ? '+' : ''}${stats.marketCapChange24h.toFixed(1)}% market cap change` : ''}
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="bg-background/50">
+            <CardContent className="p-4">
+              <div className="text-sm text-muted-foreground">New Tokens (recent)</div>
+              <div className="text-2xl font-bold">
+                {stats ? stats.newTokens24h.toLocaleString() : '—'}
+              </div>
+              <div className="text-xs text-muted-foreground">From launchpads</div>
+            </CardContent>
+          </Card>
+          <Card className="bg-background/50">
+            <CardContent className="p-4">
+              <div className="text-sm text-muted-foreground">SOL Price</div>
+              <div className="text-2xl font-bold flex items-center gap-1">
+                {stats ? `$${stats.solPrice.toFixed(2)}` : '—'}
+                {(stats?.solChange24h ?? 0) >= 0 ? (
+                  <TrendingUp className="h-4 w-4 text-green-500" />
+                ) : (
+                  <TrendingDown className="h-4 w-4 text-red-500" />
+                )}
+              </div>
+              <div className={`text-xs ${(stats?.solChange24h ?? 0) >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                {stats ? `${(stats.solChange24h ?? 0) >= 0 ? '+' : ''}${(stats.solChange24h ?? 0).toFixed(1)}%` : ''}
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="bg-background/50">
+            <CardContent className="p-4">
+              <div className="text-sm text-muted-foreground">Avg. Liquidity</div>
+              <div className="text-2xl font-bold">
+                {stats ? formatLargeNumber(stats.avgLiquidity) : '—'}
+              </div>
+              <div className="text-xs text-muted-foreground">New token average</div>
+            </CardContent>
+          </Card>
+        </div>
       </CardContent>
     </Card>
   );

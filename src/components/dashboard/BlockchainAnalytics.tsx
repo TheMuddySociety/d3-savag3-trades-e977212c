@@ -1,11 +1,11 @@
-
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { BarChart3, Activity, AlertCircle, RefreshCw } from "lucide-react";
+import { BarChart3, Activity, AlertCircle, RefreshCw, Loader2 } from "lucide-react";
 import { SolanaService } from '@/services/SolanaService';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 interface Transaction {
@@ -16,17 +16,25 @@ interface Transaction {
   memo?: string;
 }
 
+interface MarketInsights {
+  newTokens24h: number;
+  avgLiquidity: number;
+  solPrice: number;
+  totalVolume: number;
+  marketCapChange24h: number;
+}
+
 export function BlockchainAnalytics() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [insights, setInsights] = useState<MarketInsights | null>(null);
 
   const fetchTransactions = async () => {
     try {
       setIsRefreshing(true);
       const txs = await SolanaService.getRecentMemeTransactions(15);
       setTransactions(txs);
-      console.log('Fetched transactions:', txs);
     } catch (error) {
       console.error('Error fetching transactions:', error);
       toast.error('Failed to fetch blockchain data');
@@ -36,16 +44,23 @@ export function BlockchainAnalytics() {
     }
   };
 
+  const fetchInsights = async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke('token-prices', {
+        body: { action: 'market_stats' },
+      });
+      if (error) throw error;
+      if (data?.success) setInsights(data.data);
+    } catch (err) {
+      console.error('Error fetching insights:', err);
+    }
+  };
+
   useEffect(() => {
-    // Initialize Solana connection
     SolanaService.initConnection();
-    
-    // Fetch initial data
     fetchTransactions();
-    
-    // Set up automatic refresh every 2 minutes
-    const intervalId = setInterval(fetchTransactions, 120000);
-    
+    fetchInsights();
+    const intervalId = setInterval(() => { fetchTransactions(); fetchInsights(); }, 120000);
     return () => clearInterval(intervalId);
   }, []);
 
@@ -54,12 +69,14 @@ export function BlockchainAnalytics() {
     return new Date(timestamp).toLocaleString();
   };
 
-  const shortenAddress = (address: string) => {
-    return `${address.slice(0, 4)}...${address.slice(-4)}`;
-  };
+  const shortenAddress = (address: string) => `${address.slice(0, 4)}...${address.slice(-4)}`;
 
-  const refreshData = () => {
-    fetchTransactions();
+  const formatLargeNumber = (n: number) => {
+    if (n >= 1e12) return `$${(n / 1e12).toFixed(1)}T`;
+    if (n >= 1e9) return `$${(n / 1e9).toFixed(1)}B`;
+    if (n >= 1e6) return `$${(n / 1e6).toFixed(1)}M`;
+    if (n >= 1e3) return `$${(n / 1e3).toFixed(1)}K`;
+    return `$${n.toFixed(0)}`;
   };
 
   return (
@@ -70,10 +87,10 @@ export function BlockchainAnalytics() {
             <BarChart3 className="h-5 w-5 text-solana" />
             Solana Memecoin Activity
           </div>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={refreshData}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => { fetchTransactions(); fetchInsights(); }}
             disabled={isRefreshing}
             className="h-8 gap-1"
           >
@@ -94,7 +111,7 @@ export function BlockchainAnalytics() {
               <span>Market Insights</span>
             </TabsTrigger>
           </TabsList>
-          
+
           <TabsContent value="transactions" className="space-y-4">
             <div className="max-h-[300px] overflow-y-auto rounded-md border">
               {isLoading ? (
@@ -131,41 +148,51 @@ export function BlockchainAnalytics() {
               )}
             </div>
           </TabsContent>
-          
+
           <TabsContent value="insights" className="space-y-4">
             <div className="p-4 bg-muted/30 rounded-md">
-              <h3 className="font-semibold mb-2">On-Chain Insights</h3>
-              <ul className="space-y-2 text-sm">
-                <li className="flex items-start gap-1">
-                  <span className="text-solana">•</span>
-                  <span>High transaction velocity detected on Raydium DEX, indicating potential new memecoin launches</span>
-                </li>
-                <li className="flex items-start gap-1">
-                  <span className="text-solana">•</span>
-                  <span>Unusual wallet activity detected with 3 wallets accumulating over 5% of circulating supply in $BONK</span>
-                </li>
-                <li className="flex items-start gap-1">
-                  <span className="text-solana">•</span>
-                  <span>Recent Jupiter swaps show increased interest in low-cap memecoins with $PEPE derivatives seeing 125% increase in volume</span>
-                </li>
-                <li className="flex items-start gap-1">
-                  <span className="text-solana">•</span>
-                  <span>SPL token creation rate is 237% higher than 30-day average, signaling potential market saturation</span>
-                </li>
-              </ul>
+              <h3 className="font-semibold mb-2">Live Market Insights</h3>
+              {insights ? (
+                <ul className="space-y-2 text-sm">
+                  <li className="flex items-start gap-1">
+                    <span className="text-solana">•</span>
+                    <span>Global crypto market cap changed {insights.marketCapChange24h >= 0 ? '+' : ''}{insights.marketCapChange24h.toFixed(1)}% in the last 24h</span>
+                  </li>
+                  <li className="flex items-start gap-1">
+                    <span className="text-solana">•</span>
+                    <span>SOL trading at ${insights.solPrice.toFixed(2)} with {formatLargeNumber(insights.totalVolume)} total volume</span>
+                  </li>
+                  <li className="flex items-start gap-1">
+                    <span className="text-solana">•</span>
+                    <span>{insights.newTokens24h} new tokens recently launched on Solana launchpads</span>
+                  </li>
+                  <li className="flex items-start gap-1">
+                    <span className="text-solana">•</span>
+                    <span>Average new token liquidity: {formatLargeNumber(insights.avgLiquidity)}</span>
+                  </li>
+                </ul>
+              ) : (
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" /> Loading insights...
+                </div>
+              )}
             </div>
-            
+
             <div className="grid grid-cols-2 gap-4">
               <Card className="bg-muted/10">
                 <CardContent className="p-4">
-                  <div className="text-xs text-muted-foreground mb-1">24h New Tokens</div>
-                  <div className="text-xl font-bold">127</div>
+                  <div className="text-xs text-muted-foreground mb-1">Recent New Tokens</div>
+                  <div className="text-xl font-bold">
+                    {insights ? insights.newTokens24h : <Skeleton className="h-6 w-12" />}
+                  </div>
                 </CardContent>
               </Card>
               <Card className="bg-muted/10">
                 <CardContent className="p-4">
                   <div className="text-xs text-muted-foreground mb-1">Avg. Initial Liquidity</div>
-                  <div className="text-xl font-bold">$23.4K</div>
+                  <div className="text-xl font-bold">
+                    {insights ? formatLargeNumber(insights.avgLiquidity) : <Skeleton className="h-6 w-16" />}
+                  </div>
                 </CardContent>
               </Card>
             </div>

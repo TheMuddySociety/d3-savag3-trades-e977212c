@@ -60,49 +60,8 @@ export const useMemecoins = () => {
         variant: "destructive"
       });
       
-      // Fallback to mock data if API fails
-      setMemecoins([
-        {
-          id: "coin1",
-          name: "CATTTT",
-          symbol: "CATTTT",
-          price: 0.001,
-          marketCap: 11600000,
-          volume24h: 2300000,
-          change24h: 7.8,
-          change1h: 0.7,
-          logoUrl: "https://picsum.photos/200",
-          tokenAddress: "So11111111111111111111111111111111111111112",
-          liquidity: 1000000,
-          holders: 2400,
-          age: "50m",
-          onChainHolders: 2400,
-          onChainLiquidity: 1000000,
-          tags: ["New", "Meme"],
-          timestamp: Date.now() - 50 * 60 * 1000,
-          status: "NEW"
-        },
-        {
-          id: "coin2",
-          name: "RMC",
-          symbol: "RMC",
-          price: 0.0001,
-          marketCap: 538500,
-          volume24h: 168400,
-          change24h: 13.7,
-          change1h: 5.1,
-          logoUrl: "https://picsum.photos/201",
-          tokenAddress: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
-          liquidity: 44400,
-          holders: 1000,
-          age: "4h",
-          onChainHolders: 1000,
-          onChainLiquidity: 44400,
-          tags: ["Listed", "Meme"],
-          timestamp: Date.now() - 4 * 60 * 60 * 1000,
-          status: "LISTED"
-        }
-      ]);
+      // No fallback mock data — show empty state
+      setMemecoins([]);
     } finally {
       setLoading(false);
       setIsRefreshing(false);
