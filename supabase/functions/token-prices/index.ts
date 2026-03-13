@@ -227,7 +227,7 @@ async function fetchTokenOverview(address: string, apiKey: string, jupiterApiKey
   const metaPromise = fetch(rpcUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'getAsset', params: { id: address } }),
+    body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'getAsset', params: { id: address, displayOptions: { showFungible: true } } }),
   }).then(r => r.json()).catch(() => ({ result: {} }));
 
   const [priceResult, metaResult] = await Promise.all([pricePromise, metaPromise]);
