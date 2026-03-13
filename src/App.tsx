@@ -7,7 +7,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "@/hooks/use-theme";
 import { TradingModeProvider } from "@/hooks/useTradingMode";
 import { JupiverseKitProvider } from "jupiverse-kit";
-import "jupiverse-kit/styles.css";
+import "jupiverse-kit/dist/styles.css";
 
 import Landing from "./pages/Landing";
 import Index from "./pages/Index";
