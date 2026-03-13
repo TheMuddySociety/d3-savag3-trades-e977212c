@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Loader2, Wifi, WifiOff, Bird, Rocket } from 'lucide-react';
 import { useRealtimeTokens } from '@/hooks/useRealtimeTokens';
 import { TrendingCarousel, FilterTabs, TokenTable, FilterType } from './pumpfun';
+import { FilterOptions } from './pumpfun/FilterTabs';
 import { MemeToken } from '@/types/memeToken';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -12,6 +13,62 @@ import { usePriceAlerts } from '@/hooks/usePriceAlerts';
 import { useWallet } from '@solana/wallet-adapter-react';
 
 type DataSource = 'birdeye' | 'launchpad';
+
+const formatValue = (value: number, type: 'currency' | 'percent' = 'currency'): string => {
+  if (type === 'percent') {
+    const prefix = value >= 0 ? '+' : '';
+    return `${prefix}${value.toFixed(2)}%`;
+  }
+  if (value >= 1e9) return `$${(value / 1e9).toFixed(2)}B`;
+  if (value >= 1e6) return `$${(value / 1e6).toFixed(2)}M`;
+  if (value >= 1e3) return `$${(value / 1e3).toFixed(2)}K`;
+  return `$${value.toFixed(2)}`;
+};
+
+function TokenGrid({ tokens, onTokenClick }: { tokens: MemeToken[]; onTokenClick: (t: MemeToken) => void }) {
+  return (
+    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 p-4">
+      {tokens.map((token) => (
+        <div
+          key={token.id}
+          className="rounded-xl border border-border bg-card/60 p-4 cursor-pointer hover:border-primary/50 hover:bg-card transition-all group"
+          onClick={() => onTokenClick(token)}
+        >
+          <div className="flex items-center gap-3 mb-3">
+            <div className="h-10 w-10 rounded-full overflow-hidden ring-2 ring-border group-hover:ring-primary/50 transition-all shrink-0">
+              <img
+                src={token.logoUrl}
+                alt={token.name}
+                className="h-full w-full object-cover"
+                onError={(e) => { e.currentTarget.src = '/placeholder.svg'; }}
+              />
+            </div>
+            <div className="min-w-0">
+              <div className="font-semibold text-foreground text-sm truncate">{token.name}</div>
+              <div className="text-xs text-muted-foreground">{token.symbol}</div>
+            </div>
+          </div>
+          <div className="space-y-1.5 text-xs">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">MCap</span>
+              <span className="font-mono text-foreground">{formatValue(token.marketCap)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Vol</span>
+              <span className="font-mono text-foreground">{formatValue(token.volume24h)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">24h</span>
+              <span className={cn("font-mono font-medium", token.change24h >= 0 ? "positive-change" : "negative-change")}>
+                {formatValue(token.change24h, 'percent')}
+              </span>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export function TopMemecoins() {
   const [activeFilter, setActiveFilter] = useState<FilterType>('movers');
@@ -26,6 +83,11 @@ export function TopMemecoins() {
   const [modalOpen, setModalOpen] = useState(false);
   const [alertToken, setAlertToken] = useState<MemeToken | null>(null);
   const [alertDialogOpen, setAlertDialogOpen] = useState(false);
+  const [filterOptions, setFilterOptions] = useState<FilterOptions>({
+    minMarketCap: null,
+    minVolume: null,
+    onlyPositive: false,
+  });
 
   const { publicKey } = useWallet();
   const walletAddress = publicKey?.toBase58() || null;
@@ -43,10 +105,8 @@ export function TopMemecoins() {
   
   const { tokens: launchpadTokens, loading: launchpadLoading, error: launchpadError, isConnected, lastUpdate } = useRealtimeTokens('pumpfun', 20);
 
-  // Fetch Birdeye trending tokens
   useEffect(() => {
     if (dataSource !== 'birdeye') return;
-
     let cancelled = false;
     const fetchBirdeye = async () => {
       setBirdeyeLoading(true);
@@ -81,33 +141,51 @@ export function TopMemecoins() {
   const filteredTokens = useMemo(() => {
     let filtered = [...tokens];
     
+    // Apply filter options
+    if (filterOptions.onlyPositive) {
+      filtered = filtered.filter(t => t.change24h > 0);
+    }
+    if (filterOptions.minMarketCap) {
+      filtered = filtered.filter(t => t.marketCap >= filterOptions.minMarketCap!);
+    }
+    if (filterOptions.minVolume) {
+      filtered = filtered.filter(t => t.volume24h >= filterOptions.minVolume!);
+    }
+    
+    // Apply active filter sorting
     switch (activeFilter) {
       case 'movers':
-        filtered = filtered.sort((a, b) => Math.abs(b.change24h) - Math.abs(a.change24h));
+        filtered.sort((a, b) => Math.abs(b.change24h) - Math.abs(a.change24h));
         break;
       case 'live':
-        filtered = filtered.sort((a, b) => b.timestamp - a.timestamp);
+        filtered.sort((a, b) => b.timestamp - a.timestamp);
         break;
       case 'new':
         filtered = filtered.filter(t => Date.now() - t.timestamp < 86400000);
+        filtered.sort((a, b) => b.timestamp - a.timestamp);
         break;
       case 'marketcap':
-        filtered = filtered.sort((a, b) => b.marketCap - a.marketCap);
+        filtered.sort((a, b) => b.marketCap - a.marketCap);
+        break;
+      case 'volume':
+        filtered.sort((a, b) => b.volume24h - a.volume24h);
+        break;
+      case 'gainers':
+        filtered.sort((a, b) => b.change24h - a.change24h);
+        break;
+      case 'oldest':
+        filtered.sort((a, b) => a.timestamp - b.timestamp);
         break;
     }
     
     return filtered;
-  }, [tokens, activeFilter]);
+  }, [tokens, activeFilter, filterOptions]);
 
   const sortedTokens = useMemo(() => {
     return [...filteredTokens].sort((a, b) => {
       let aVal = a[sortField as keyof MemeToken] as number || 0;
       let bVal = b[sortField as keyof MemeToken] as number || 0;
-      
-      if (sortDirection === 'asc') {
-        return aVal - bVal;
-      }
-      return bVal - aVal;
+      return sortDirection === 'asc' ? aVal - bVal : bVal - aVal;
     });
   }, [filteredTokens, sortField, sortDirection]);
 
@@ -201,18 +279,25 @@ export function TopMemecoins() {
         onFilterChange={setActiveFilter}
         viewMode={viewMode}
         onViewModeChange={setViewMode}
+        filterOptions={filterOptions}
+        onFilterOptionsChange={setFilterOptions}
       />
 
-      {/* Token Table */}
+      {/* Token Table or Grid */}
       <div className="rounded-2xl border border-border bg-card/30 backdrop-blur-sm overflow-hidden">
-        <TokenTable
-          tokens={sortedTokens}
-          onTokenClick={handleTokenClick}
-          sortField={sortField}
-          sortDirection={sortDirection}
-          onSort={handleSort}
-        />
+        {viewMode === 'list' ? (
+          <TokenTable
+            tokens={sortedTokens}
+            onTokenClick={handleTokenClick}
+            sortField={sortField}
+            sortDirection={sortDirection}
+            onSort={handleSort}
+          />
+        ) : (
+          <TokenGrid tokens={sortedTokens} onTokenClick={handleTokenClick} />
+        )}
       </div>
+
       <TokenDetailModal
         token={selectedToken}
         open={modalOpen}
