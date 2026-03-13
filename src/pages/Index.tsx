@@ -7,6 +7,7 @@ import { BotAccess } from "@/components/dashboard/BotAccess";
 import { MiniChart } from "@/components/dashboard/MiniChart";
 import { LiveSignalFeed } from "@/components/dashboard/LiveSignalFeed";
 import { AIToolsAgents } from "@/components/dashboard/AIToolsAgents";
+import { JupiterAIChat } from "@/components/dashboard/JupiterAIChat";
 import { PriceAlerts } from "@/components/dashboard/PriceAlerts";
 import { Leaderboard } from "@/components/dashboard/Leaderboard";
 import { PortfolioTracker } from "@/components/dashboard/PortfolioTracker";
