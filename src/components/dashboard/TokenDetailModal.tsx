@@ -17,6 +17,7 @@ import {
   ArrowRightLeft, ChevronDown, ChevronUp, Bell,
 } from 'lucide-react';
 import { MemeToken } from '@/types/memeToken';
+import { TokenSafetyCard } from './TokenSafetyCard';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 
