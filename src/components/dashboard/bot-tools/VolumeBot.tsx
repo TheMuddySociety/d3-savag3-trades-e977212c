@@ -4,10 +4,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Slider } from "@/components/ui/slider";
-import { Switch } from "@/components/ui/switch";
-import { BarChart3, Play, Pause, Wallet } from "lucide-react";
+import { BarChart3, Play, Pause } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useWallet } from "@solana/wallet-adapter-react";
+import { useConnection } from "@solana/wallet-adapter-react";
+import { JupiterTransactionService } from "@/services/jupiter/transactions";
 import { LiveTradeConfirmDialog } from "./LiveTradeConfirmDialog";
+import { isValidSolanaAddress } from "@/utils/validateSolanaAddress";
+
+const SOL_MINT = "So11111111111111111111111111111111111111112";
 
 interface Props {
   sim: any;
@@ -17,16 +22,18 @@ interface Props {
 
 export const VolumeBot = ({ sim, isLive = false, killSignal = 0 }: Props) => {
   const { toast } = useToast();
+  const wallet = useWallet();
+  const { connection } = useConnection();
   const [isRunning, setIsRunning] = useState(false);
   const [tokenAddress, setTokenAddress] = useState("");
   const [tokenSymbol, setTokenSymbol] = useState("");
   const [solPerTx, setSolPerTx] = useState("0.05");
   const [txPerMinute, setTxPerMinute] = useState([3]);
-  const [numWallets, setNumWallets] = useState([3]);
-  const [useBundling, setUseBundling] = useState(true);
   const [txCount, setTxCount] = useState(0);
   const [showConfirm, setShowConfirm] = useState(false);
   const volumeInterval = useRef<NodeJS.Timeout | null>(null);
+  const isExecutingRef = useRef(false);
+  const countRef = useRef(0);
 
   useEffect(() => {
     return () => { if (volumeInterval.current) clearInterval(volumeInterval.current); };
@@ -44,18 +51,36 @@ export const VolumeBot = ({ sim, isLive = false, killSignal = 0 }: Props) => {
   const proceedStart = () => {
     setIsRunning(true);
     setTxCount(0);
-    let count = 0;
+    countRef.current = 0;
     const intervalMs = (60000 / txPerMinute[0]);
 
     const executeVolumeTx = async () => {
-      const isBuy = count % 2 === 0;
-      if (isBuy) {
-        await sim.simulateBuy(tokenAddress, tokenSymbol || tokenAddress.slice(0, 6), parseFloat(solPerTx), 'volume');
-      } else {
-        await sim.simulateSell(tokenAddress, tokenSymbol || tokenAddress.slice(0, 6), 50, 'volume');
+      if (isExecutingRef.current) return;
+      isExecutingRef.current = true;
+
+      try {
+        const isBuy = countRef.current % 2 === 0;
+
+        if (isLive) {
+          const lamports = Math.round(parseFloat(solPerTx) * 1e9);
+          if (isBuy) {
+            await JupiterTransactionService.swapTokens(connection, wallet, SOL_MINT, tokenAddress, lamports, 300);
+          } else {
+            await JupiterTransactionService.swapTokens(connection, wallet, tokenAddress, SOL_MINT, lamports, 300);
+          }
+        } else {
+          if (isBuy) {
+            await sim.simulateBuy(tokenAddress, tokenSymbol || tokenAddress.slice(0, 6), parseFloat(solPerTx), 'volume');
+          } else {
+            await sim.simulateSell(tokenAddress, tokenSymbol || tokenAddress.slice(0, 6), 50, 'volume');
+          }
+        }
+
+        countRef.current++;
+        setTxCount(countRef.current);
+      } finally {
+        isExecutingRef.current = false;
       }
-      count++;
-      setTxCount(count);
     };
 
     executeVolumeTx();
@@ -66,6 +91,14 @@ export const VolumeBot = ({ sim, isLive = false, killSignal = 0 }: Props) => {
   const startVolumeBot = () => {
     if (!tokenAddress) {
       toast({ title: "Missing token", description: "Enter a token address", variant: "destructive" });
+      return;
+    }
+    if (!isValidSolanaAddress(tokenAddress)) {
+      toast({ title: "Invalid address", description: "Enter a valid Solana token mint address", variant: "destructive" });
+      return;
+    }
+    if (isLive && !wallet.publicKey) {
+      toast({ title: "Wallet not connected", description: "Connect wallet for live trading", variant: "destructive" });
       return;
     }
 
@@ -131,20 +164,6 @@ export const VolumeBot = ({ sim, isLive = false, killSignal = 0 }: Props) => {
             <span className="text-xs font-mono text-foreground">{txPerMinute[0]}</span>
           </div>
           <Slider value={txPerMinute} onValueChange={setTxPerMinute} min={1} max={10} step={1} disabled={isRunning} />
-        </div>
-        <div>
-          <div className="flex justify-between mb-1">
-            <Label className="text-xs text-muted-foreground">Simulated Wallets</Label>
-            <span className="text-xs font-mono text-foreground">{numWallets[0]}</span>
-          </div>
-          <Slider value={numWallets} onValueChange={setNumWallets} min={1} max={10} step={1} disabled={isRunning} />
-        </div>
-        <div className="flex items-center justify-between p-2 rounded-lg bg-muted/20 border border-border">
-          <div className="flex items-center gap-2">
-            <Wallet className="h-3 w-3 text-muted-foreground" />
-            <Label className="text-xs text-muted-foreground">Multi-wallet bundling</Label>
-          </div>
-          <Switch checked={useBundling} onCheckedChange={setUseBundling} disabled={isRunning} />
         </div>
 
         <div className="p-2 rounded-lg bg-muted/20 border border-border">

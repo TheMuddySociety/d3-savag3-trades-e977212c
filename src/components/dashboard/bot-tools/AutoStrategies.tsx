@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
@@ -42,6 +42,7 @@ export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) =
   const [maxBudget, setMaxBudget] = useState("1.0");
   const [showConfirm, setShowConfirm] = useState(false);
   const [pendingStrategyId, setPendingStrategyId] = useState<string | null>(null);
+  const pollingRef = useRef<NodeJS.Timeout | null>(null);
 
   // Kill switch listener
   useEffect(() => {
@@ -49,8 +50,73 @@ export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) =
       setStrategies(prev => prev.map(s => ({ ...s, enabled: false })));
       setShowConfirm(false);
       setPendingStrategyId(null);
+      if (pollingRef.current) { clearInterval(pollingRef.current); pollingRef.current = null; }
     }
   }, [killSignal]);
+
+  // Strategy execution polling loop
+  useEffect(() => {
+    const activeStrategies = strategies.filter(s => s.enabled);
+
+    if (activeStrategies.length === 0) {
+      if (pollingRef.current) { clearInterval(pollingRef.current); pollingRef.current = null; }
+      return;
+    }
+
+    // Only start polling if not already running
+    if (pollingRef.current) return;
+
+    const evaluateStrategies = async () => {
+      const enabled = strategies.filter(s => s.enabled);
+      if (enabled.length === 0) return;
+
+      for (const strategy of enabled) {
+        try {
+          // Fetch portfolio to evaluate conditions
+          const portfolio = sim.portfolio;
+          if (!portfolio) continue;
+
+          const budget = parseFloat(maxBudget);
+          const holdings = portfolio.holdings || [];
+
+          switch (strategy.id) {
+            case "safe_exit": {
+              // Check holdings for stop-loss (-15%) or take-profit (+50%)
+              for (const h of holdings) {
+                const pnl = h.pnl_percent || 0;
+                if (pnl <= -15) {
+                  await sim.simulateSell(h.token_address, h.token_symbol || 'UNK', 100, 'auto');
+                  toast({ title: "🛡️ Safe Exit: Stop-Loss", description: `Sold ${h.token_symbol} at ${pnl.toFixed(1)}% loss` });
+                } else if (pnl >= 50) {
+                  await sim.simulateSell(h.token_address, h.token_symbol || 'UNK', 100, 'auto');
+                  toast({ title: "🛡️ Safe Exit: Take-Profit", description: `Sold ${h.token_symbol} at +${pnl.toFixed(1)}%` });
+                }
+              }
+              break;
+            }
+            case "momentum":
+            case "dip_buy":
+            case "new_launch": {
+              // These strategies require external price feed monitoring
+              // Currently evaluated via portfolio data only — paper mode sim trades
+              // Real implementation would poll Birdeye/Helius for price changes
+              break;
+            }
+          }
+        } catch (e) {
+          console.error(`Strategy ${strategy.id} evaluation error:`, e);
+        }
+      }
+    };
+
+    // Poll every 15 seconds
+    evaluateStrategies();
+    pollingRef.current = setInterval(evaluateStrategies, 15000);
+
+    return () => {
+      if (pollingRef.current) { clearInterval(pollingRef.current); pollingRef.current = null; }
+    };
+  }, [strategies.map(s => `${s.id}:${s.enabled}`).join(',')]); // Re-run when enabled states change
 
   const proceedToggle = (id: string) => {
     setStrategies((prev) =>

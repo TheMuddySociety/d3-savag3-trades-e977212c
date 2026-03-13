@@ -11,6 +11,7 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import { useConnection } from "@solana/wallet-adapter-react";
 import { JupiterTransactionService } from "@/services/jupiter/transactions";
 import { LiveTradeConfirmDialog } from "./LiveTradeConfirmDialog";
+import { isValidSolanaAddress } from "@/utils/validateSolanaAddress";
 
 const SOL_MINT = "So11111111111111111111111111111111111111112";
 
@@ -41,6 +42,8 @@ export const DCABot = ({ sim, isLive = false, killSignal = 0 }: Props) => {
   const [useRandomDelay, setUseRandomDelay] = useState(true);
   const [showConfirm, setShowConfirm] = useState(false);
   const dcaInterval = useRef<NodeJS.Timeout | null>(null);
+  const countRef = useRef(0);
+  const isExecutingRef = useRef(false);
 
   useEffect(() => {
     return () => { if (dcaInterval.current) clearInterval(dcaInterval.current); };
@@ -55,29 +58,57 @@ export const DCABot = ({ sim, isLive = false, killSignal = 0 }: Props) => {
     }
   }, [killSignal]);
 
+  const stopDCA = () => {
+    setIsRunning(false);
+    if (dcaInterval.current) { clearInterval(dcaInterval.current); dcaInterval.current = null; }
+  };
+
   const proceedStartDCA = () => {
     setIsRunning(true);
     setOrdersExecuted(0);
-    let count = 0;
+    countRef.current = 0;
     const maxOrders = parseInt(totalOrders);
     const baseInterval = parseInt(interval);
 
     const executeDCAOrder = async () => {
-      if (count >= maxOrders) {
+      if (isExecutingRef.current) return;
+      if (countRef.current >= maxOrders) {
         stopDCA();
         toast({ title: "DCA Complete ✅", description: `Executed ${maxOrders} orders for ${tokenSymbol || 'token'}` });
         return;
       }
 
-      if (isLive) {
-        const lamports = Math.round(parseFloat(amountPerOrder) * 1e9);
-        const txid = await JupiterTransactionService.swapTokens(connection, wallet, SOL_MINT, tokenAddress, lamports, 300);
-        if (txid) { count++; setOrdersExecuted(count); }
-        else { stopDCA(); }
-      } else {
-        const result = await sim.simulateBuy(tokenAddress, tokenSymbol || tokenAddress.slice(0, 6), parseFloat(amountPerOrder), 'dca');
-        if (result) { count++; setOrdersExecuted(count); }
-        else { stopDCA(); }
+      isExecutingRef.current = true;
+
+      try {
+        if (isLive) {
+          const lamports = Math.round(parseFloat(amountPerOrder) * 1e9);
+          let txid = await JupiterTransactionService.swapTokens(connection, wallet, SOL_MINT, tokenAddress, lamports, 300);
+          
+          // Retry once on failure after 3 seconds
+          if (!txid) {
+            await new Promise(r => setTimeout(r, 3000));
+            txid = await JupiterTransactionService.swapTokens(connection, wallet, SOL_MINT, tokenAddress, lamports, 300);
+          }
+          
+          if (txid) {
+            countRef.current++;
+            setOrdersExecuted(countRef.current);
+          } else {
+            stopDCA();
+            toast({ title: "DCA Stopped", description: "Live trade failed after retry", variant: "destructive" });
+          }
+        } else {
+          const result = await sim.simulateBuy(tokenAddress, tokenSymbol || tokenAddress.slice(0, 6), parseFloat(amountPerOrder), 'dca');
+          if (result) {
+            countRef.current++;
+            setOrdersExecuted(countRef.current);
+          } else {
+            stopDCA();
+          }
+        }
+      } finally {
+        isExecutingRef.current = false;
       }
     };
 
@@ -93,6 +124,10 @@ export const DCABot = ({ sim, isLive = false, killSignal = 0 }: Props) => {
       toast({ title: "Missing token", description: "Enter a token address to DCA into", variant: "destructive" });
       return;
     }
+    if (!isValidSolanaAddress(tokenAddress)) {
+      toast({ title: "Invalid address", description: "Enter a valid Solana token mint address", variant: "destructive" });
+      return;
+    }
     if (isLive && !wallet.publicKey) {
       toast({ title: "Wallet not connected", description: "Connect wallet for live trading", variant: "destructive" });
       return;
@@ -102,11 +137,6 @@ export const DCABot = ({ sim, isLive = false, killSignal = 0 }: Props) => {
     } else {
       proceedStartDCA();
     }
-  };
-
-  const stopDCA = () => {
-    setIsRunning(false);
-    if (dcaInterval.current) { clearInterval(dcaInterval.current); dcaInterval.current = null; }
   };
 
   const handleToggle = () => {
