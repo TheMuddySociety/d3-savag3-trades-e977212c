@@ -1,12 +1,14 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Bot, Send, Sparkles, Loader2 } from "lucide-react";
+import { Bot, Send, Sparkles, Loader2, Trash2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { useWallet } from "@solana/wallet-adapter-react";
 
 type Message = { role: "user" | "assistant"; content: string };
 
@@ -23,7 +25,61 @@ export function JupiterAIChat() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [loadingHistory, setLoadingHistory] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const { publicKey } = useWallet();
+  const walletAddress = publicKey?.toBase58() || null;
+
+  // Load persisted messages on mount / wallet change
+  useEffect(() => {
+    if (!walletAddress) {
+      setMessages([]);
+      setLoadingHistory(false);
+      return;
+    }
+    setLoadingHistory(true);
+    supabase
+      .from("chat_messages")
+      .select("role, content")
+      .eq("wallet_address", walletAddress)
+      .order("created_at", { ascending: true })
+      .then(({ data, error }) => {
+        if (error) {
+          console.error("Failed to load chat history:", error);
+        } else if (data) {
+          setMessages(data.map((d) => ({ role: d.role as "user" | "assistant", content: d.content })));
+        }
+        setLoadingHistory(false);
+      });
+  }, [walletAddress]);
+
+  // Persist a single message
+  const persistMessage = useCallback(
+    async (role: string, content: string) => {
+      if (!walletAddress) return;
+      const { error } = await supabase.from("chat_messages").insert({
+        wallet_address: walletAddress,
+        role,
+        content,
+      });
+      if (error) console.error("Failed to persist message:", error);
+    },
+    [walletAddress]
+  );
+
+  // Clear chat history
+  const clearHistory = async () => {
+    if (!walletAddress) return;
+    const { error } = await supabase
+      .from("chat_messages")
+      .delete()
+      .eq("wallet_address", walletAddress);
+    if (error) {
+      toast.error("Failed to clear history");
+    } else {
+      setMessages([]);
+    }
+  };
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -39,6 +95,9 @@ export function JupiterAIChat() {
     setMessages(allMessages);
     setInput("");
     setIsLoading(true);
+
+    // Persist user message
+    await persistMessage("user", userMsg.content);
 
     let assistantSoFar = "";
 
@@ -105,6 +164,11 @@ export function JupiterAIChat() {
           }
         }
       }
+
+      // Persist completed assistant message
+      if (assistantSoFar) {
+        await persistMessage("assistant", assistantSoFar);
+      }
     } catch (e) {
       console.error("Chat error:", e);
       toast.error("Failed to get AI response");
@@ -116,23 +180,41 @@ export function JupiterAIChat() {
   return (
     <Card className="border-border/50 bg-card/80 backdrop-blur-sm">
       <CardHeader className="pb-3">
-        <CardTitle className="text-base flex items-center gap-2">
-          <Bot className="h-5 w-5 text-primary" />
-          Jupiter AI Assistant
-          <Badge variant="outline" className="text-xs border-primary/50 text-primary">
-            MCP
-          </Badge>
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Bot className="h-5 w-5 text-primary" />
+            Jupiter AI Assistant
+            <Badge variant="outline" className="text-xs border-primary/50 text-primary">
+              MCP
+            </Badge>
+          </CardTitle>
+          {messages.length > 0 && walletAddress && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+              onClick={clearHistory}
+              title="Clear chat history"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
+          )}
+        </div>
       </CardHeader>
       <CardContent className="pt-0 space-y-3">
-        {/* Messages area */}
         <ScrollArea className="h-[320px] pr-2" ref={scrollRef}>
           <div className="space-y-3">
-            {messages.length === 0 && (
+            {loadingHistory ? (
+              <div className="flex justify-center py-10">
+                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+              </div>
+            ) : messages.length === 0 ? (
               <div className="text-center py-6 space-y-3">
                 <Sparkles className="h-8 w-8 text-primary/50 mx-auto" />
                 <p className="text-xs text-muted-foreground">
-                  Ask anything about Jupiter, Solana DeFi, or trading strategies.
+                  {walletAddress
+                    ? "Ask anything about Jupiter, Solana DeFi, or trading strategies."
+                    : "Connect your wallet to save chat history across sessions."}
                 </p>
                 <div className="flex flex-wrap gap-1.5 justify-center">
                   {SUGGESTED_PROMPTS.map((prompt) => (
@@ -146,29 +228,30 @@ export function JupiterAIChat() {
                   ))}
                 </div>
               </div>
-            )}
-            {messages.map((msg, i) => (
-              <div
-                key={i}
-                className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-              >
+            ) : (
+              messages.map((msg, i) => (
                 <div
-                  className={`max-w-[85%] rounded-lg px-3 py-2 text-xs ${
-                    msg.role === "user"
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted/50 border border-border text-foreground"
-                  }`}
+                  key={i}
+                  className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
                 >
-                  {msg.role === "assistant" ? (
-                    <div className="prose prose-xs prose-invert max-w-none [&_p]:my-1 [&_pre]:my-1 [&_ul]:my-1 [&_ol]:my-1 [&_code]:text-[10px] [&_pre]:text-[10px]">
-                      <ReactMarkdown>{msg.content}</ReactMarkdown>
-                    </div>
-                  ) : (
-                    msg.content
-                  )}
+                  <div
+                    className={`max-w-[85%] rounded-lg px-3 py-2 text-xs ${
+                      msg.role === "user"
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-muted/50 border border-border text-foreground"
+                    }`}
+                  >
+                    {msg.role === "assistant" ? (
+                      <div className="prose prose-xs prose-invert max-w-none [&_p]:my-1 [&_pre]:my-1 [&_ul]:my-1 [&_ol]:my-1 [&_code]:text-[10px] [&_pre]:text-[10px]">
+                        <ReactMarkdown>{msg.content}</ReactMarkdown>
+                      </div>
+                    ) : (
+                      msg.content
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
             {isLoading && messages[messages.length - 1]?.role !== "assistant" && (
               <div className="flex justify-start">
                 <div className="bg-muted/50 border border-border rounded-lg px-3 py-2">
@@ -179,7 +262,6 @@ export function JupiterAIChat() {
           </div>
         </ScrollArea>
 
-        {/* Input */}
         <div className="flex gap-2">
           <Input
             value={input}
