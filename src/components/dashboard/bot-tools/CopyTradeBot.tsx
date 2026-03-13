@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Eye, Play, Square, Loader2 } from "lucide-react";
+import { Eye, Play, Square, Wifi, WifiOff } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { isValidSolanaAddress } from "@/utils/validateSolanaAddress";
 import { LiveTradeConfirmDialog } from "./LiveTradeConfirmDialog";
@@ -15,7 +15,6 @@ import { supabase } from "@/integrations/supabase/client";
 
 const SOL_MINT = "So11111111111111111111111111111111111111112";
 const RPC_URL = "https://api.mainnet-beta.solana.com";
-const POLL_INTERVAL = 10000;
 
 interface CopiedTrade {
   timestamp: string;
@@ -34,14 +33,16 @@ interface Props {
 export const CopyTradeBot = ({ sim, isLive = false, killSignal = 0 }: Props) => {
   const { toast } = useToast();
   const wallet = useWallet();
+  const walletAddress = wallet.publicKey?.toBase58() || "";
   const [targetWallet, setTargetWallet] = useState("");
   const [maxSolPerTrade, setMaxSolPerTrade] = useState("0.5");
   const [autoSell, setAutoSell] = useState(true);
   const [isActive, setIsActive] = useState(false);
+  const [isConnected, setIsConnected] = useState(false);
   const [copiedTrades, setCopiedTrades] = useState<CopiedTrade[]>([]);
   const [showConfirm, setShowConfirm] = useState(false);
-  const pollingRef = useRef<NodeJS.Timeout | null>(null);
-  const lastTxRef = useRef<string | null>(null);
+  const webhookIdRef = useRef<string | null>(null);
+  const channelRef = useRef<any>(null);
   const killedRef = useRef(false);
 
   useEffect(() => {
@@ -51,102 +52,190 @@ export const CopyTradeBot = ({ sim, isLive = false, killSignal = 0 }: Props) => 
     }
   }, [killSignal]);
 
-  const stopCopying = useCallback(() => {
-    setIsActive(false);
-    if (pollingRef.current) {
-      clearInterval(pollingRef.current);
-      pollingRef.current = null;
-    }
-  }, []);
+  // Process incoming realtime events
+  const processSwapEvent = useCallback(async (event: any) => {
+    if (killedRef.current) return;
 
-  const pollWhaleSwaps = useCallback(async () => {
-    if (killedRef.current) { stopCopying(); return; }
+    const { swap_type, token_mint, sol_amount, id } = event;
+    const sol = Math.min(parseFloat(maxSolPerTrade), sol_amount || parseFloat(maxSolPerTrade));
+    const isBuy = swap_type === "buy";
+
+    if (!token_mint || !isValidSolanaAddress(token_mint)) return;
+    if (!isBuy && !autoSell) return;
 
     try {
-      const { data, error } = await supabase.functions.invoke("copy-trade", {
-        body: {
-          target_wallet: targetWallet,
-          last_tx: lastTxRef.current,
-        },
-      });
-
-      if (error || !data?.success) return;
-
-      const swaps = data.data?.swaps || [];
-      if (swaps.length === 0) return;
-
-      lastTxRef.current = swaps[0]?.signature || lastTxRef.current;
-
-      for (const swap of swaps) {
-        if (killedRef.current) break;
-
-        const sol = Math.min(parseFloat(maxSolPerTrade), swap.solAmount || parseFloat(maxSolPerTrade));
-        const isBuy = swap.type === "buy";
-        const tokenMint = swap.tokenMint;
-
-        if (!tokenMint || !isValidSolanaAddress(tokenMint)) continue;
-
-        // Only process sells if autoSell is on
-        if (!isBuy && !autoSell) continue;
-
-        try {
-          if (isLive && wallet.publicKey && wallet.signTransaction) {
-            const connection = new Connection(RPC_URL);
-            if (isBuy) {
-              const lamports = Math.floor(sol * 1e9);
-              await JupiterTransactionService.swapTokens(connection, wallet, SOL_MINT, tokenMint, lamports, 300, undefined, "high");
-            } else {
-              // Sell — swap token back to SOL
-              const holding = sim.holdings?.find((h: any) => h.token_address === tokenMint);
-              if (holding) {
-                const lamports = Math.floor(holding.amount * 1e9);
-                await JupiterTransactionService.swapTokens(connection, wallet, tokenMint, SOL_MINT, lamports, 300, undefined, "high");
-              }
-            }
-          } else {
-            if (isBuy) {
-              await sim.simulateBuy(tokenMint, tokenMint.slice(0, 6), sol, "copy");
-            } else {
-              await sim.simulateSell(tokenMint, tokenMint.slice(0, 6), 100, "copy");
-            }
+      if (isLive && wallet.publicKey && wallet.signTransaction) {
+        const connection = new Connection(RPC_URL);
+        if (isBuy) {
+          const lamports = Math.floor(sol * 1e9);
+          await JupiterTransactionService.swapTokens(connection, wallet, SOL_MINT, token_mint, lamports, 300, undefined, "high");
+        } else {
+          const holding = sim.holdings?.find((h: any) => h.token_address === token_mint);
+          if (holding) {
+            const lamports = Math.floor(holding.amount * 1e9);
+            await JupiterTransactionService.swapTokens(connection, wallet, token_mint, SOL_MINT, lamports, 300, undefined, "high");
           }
-
-          setCopiedTrades(prev => [{
-            timestamp: new Date().toLocaleTimeString(),
-            type: (isBuy ? "buy" : "sell") as "buy" | "sell",
-            tokenMint,
-            solAmount: sol,
-            status: "success" as const,
-          }, ...prev].slice(0, 50));
-
-          toast({ title: `📋 Copied ${isBuy ? "Buy" : "Sell"}`, description: `${tokenMint.slice(0, 8)}... for ${sol} SOL` });
-        } catch (e: any) {
-          setCopiedTrades(prev => [{
-            timestamp: new Date().toLocaleTimeString(),
-            type: (isBuy ? "buy" : "sell") as "buy" | "sell",
-            tokenMint,
-            solAmount: sol,
-            status: "error" as const,
-          }, ...prev].slice(0, 50));
+        }
+      } else {
+        if (isBuy) {
+          await sim.simulateBuy(token_mint, token_mint.slice(0, 6), sol, "copy");
+        } else {
+          await sim.simulateSell(token_mint, token_mint.slice(0, 6), 100, "copy");
         }
       }
-    } catch (e) {
-      console.error("Copy trade poll error:", e);
-    }
-  }, [targetWallet, maxSolPerTrade, autoSell, isLive, wallet, sim, toast, stopCopying]);
 
-  const startCopying = useCallback(() => {
+      setCopiedTrades(prev => [{
+        timestamp: new Date().toLocaleTimeString(),
+        type: isBuy ? "buy" : "sell",
+        tokenMint: token_mint,
+        solAmount: sol,
+        status: "success" as const,
+      }, ...prev].slice(0, 50));
+
+      toast({ title: `📋 Copied ${isBuy ? "Buy" : "Sell"}`, description: `${token_mint.slice(0, 8)}... for ${sol} SOL` });
+    } catch (e: any) {
+      setCopiedTrades(prev => [{
+        timestamp: new Date().toLocaleTimeString(),
+        type: isBuy ? "buy" : "sell",
+        tokenMint: token_mint,
+        solAmount: sol,
+        status: "error" as const,
+      }, ...prev].slice(0, 50));
+    }
+
+    // Mark event as processed
+    await supabase
+      .from('copy_trade_events')
+      .update({ processed: true } as any)
+      .eq('id', id);
+  }, [maxSolPerTrade, autoSell, isLive, wallet, sim, toast]);
+
+  const startCopying = useCallback(async () => {
     if (!isValidSolanaAddress(targetWallet)) {
       toast({ title: "Invalid wallet address", variant: "destructive" });
       return;
     }
+    if (!walletAddress) {
+      toast({ title: "Connect wallet first", variant: "destructive" });
+      return;
+    }
+
     killedRef.current = false;
     setIsActive(true);
-    lastTxRef.current = null;
-    pollWhaleSwaps();
-    pollingRef.current = setInterval(pollWhaleSwaps, POLL_INTERVAL);
-    toast({ title: "👁️ Copy Trading Started", description: `Monitoring ${targetWallet.slice(0, 8)}...` });
-  }, [targetWallet, pollWhaleSwaps, toast]);
+
+    try {
+      // 1. Save/update config in DB
+      const { data: existing } = await supabase
+        .from('copy_trade_configs')
+        .select('id')
+        .eq('wallet_address', walletAddress)
+        .eq('target_wallet', targetWallet)
+        .maybeSingle();
+
+      if (existing) {
+        await supabase
+          .from('copy_trade_configs')
+          .update({
+            is_active: true,
+            max_sol_per_trade: parseFloat(maxSolPerTrade),
+            auto_sell: autoSell,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', existing.id);
+      } else {
+        await supabase
+          .from('copy_trade_configs')
+          .insert({
+            wallet_address: walletAddress,
+            target_wallet: targetWallet,
+            max_sol_per_trade: parseFloat(maxSolPerTrade),
+            auto_sell: autoSell,
+            is_active: true,
+          });
+      }
+
+      // 2. Register Helius webhook
+      const { data, error } = await supabase.functions.invoke("copy-trade", {
+        body: {
+          action: "register_webhook",
+          target_wallet: targetWallet,
+          webhook_id_existing: webhookIdRef.current,
+        },
+      });
+
+      if (error || !data?.success) {
+        console.error("Webhook registration failed:", error || data);
+        toast({ title: "Webhook setup failed — falling back to polling", variant: "destructive" });
+      } else {
+        webhookIdRef.current = data.data?.webhookId || null;
+      }
+
+      // 3. Subscribe to realtime events
+      const channel = supabase
+        .channel(`copy-trade-${walletAddress}`)
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'copy_trade_events',
+            filter: `wallet_address=eq.${walletAddress}`,
+          },
+          (payload) => {
+            if (payload.new && !killedRef.current) {
+              processSwapEvent(payload.new);
+            }
+          }
+        )
+        .subscribe((status) => {
+          setIsConnected(status === 'SUBSCRIBED');
+          console.log(`[CopyTrade] Realtime status: ${status}`);
+        });
+
+      channelRef.current = channel;
+
+      toast({
+        title: "🔌 WebSocket Connected",
+        description: `Real-time monitoring ${targetWallet.slice(0, 8)}... via Helius webhook`,
+      });
+    } catch (e) {
+      console.error("Start copy trading error:", e);
+      toast({ title: "Failed to start", variant: "destructive" });
+      setIsActive(false);
+    }
+  }, [targetWallet, walletAddress, maxSolPerTrade, autoSell, processSwapEvent, toast]);
+
+  const stopCopying = useCallback(async () => {
+    setIsActive(false);
+    setIsConnected(false);
+
+    // Unsubscribe from realtime
+    if (channelRef.current) {
+      supabase.removeChannel(channelRef.current);
+      channelRef.current = null;
+    }
+
+    // Delete Helius webhook
+    if (webhookIdRef.current) {
+      try {
+        await supabase.functions.invoke("copy-trade", {
+          body: { action: "delete_webhook", webhook_id: webhookIdRef.current },
+        });
+      } catch (e) {
+        console.error("Webhook cleanup error:", e);
+      }
+      webhookIdRef.current = null;
+    }
+
+    // Deactivate config
+    if (walletAddress && targetWallet) {
+      await supabase
+        .from('copy_trade_configs')
+        .update({ is_active: false, updated_at: new Date().toISOString() })
+        .eq('wallet_address', walletAddress)
+        .eq('target_wallet', targetWallet);
+    }
+  }, [walletAddress, targetWallet]);
 
   const handleStart = () => {
     if (isLive) {
@@ -158,7 +247,9 @@ export const CopyTradeBot = ({ sim, isLive = false, killSignal = 0 }: Props) => 
 
   useEffect(() => {
     return () => {
-      if (pollingRef.current) clearInterval(pollingRef.current);
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+      }
     };
   }, []);
 
@@ -175,13 +266,23 @@ export const CopyTradeBot = ({ sim, isLive = false, killSignal = 0 }: Props) => 
 
       <div className="flex items-center gap-2">
         <Eye className="h-4 w-4 text-[hsl(var(--fun-purple))]" />
-        <span className="text-sm font-medium text-foreground">Copy Trade (MEV Bot)</span>
+        <span className="text-sm font-medium text-foreground">Copy Trade (WebSocket)</span>
         {isActive && (
-          <Badge className={`text-[10px] ${isLive ? "bg-destructive/20 text-destructive" : "bg-primary/20 text-primary"}`}>
-            {isLive ? "LIVE" : "PAPER"} • Monitoring
+          <Badge className={`text-[10px] gap-1 ${isLive ? "bg-destructive/20 text-destructive" : "bg-primary/20 text-primary"}`}>
+            {isConnected ? <Wifi className="h-2.5 w-2.5" /> : <WifiOff className="h-2.5 w-2.5" />}
+            {isLive ? "LIVE" : "PAPER"} • {isConnected ? "Connected" : "Connecting..."}
           </Badge>
         )}
       </div>
+
+      {isActive && (
+        <div className={`flex items-center gap-2 p-2 rounded-lg border ${isConnected ? "bg-accent/10 border-accent/30" : "bg-muted/20 border-border"}`}>
+          <div className={`h-2 w-2 rounded-full ${isConnected ? "bg-accent animate-pulse" : "bg-muted-foreground"}`} />
+          <span className="text-[10px] text-muted-foreground">
+            {isConnected ? "Real-time WebSocket active — instant swap detection" : "Establishing connection..."}
+          </span>
+        </div>
+      )}
 
       <div>
         <Label className="text-xs text-muted-foreground">Whale Wallet Address</Label>
