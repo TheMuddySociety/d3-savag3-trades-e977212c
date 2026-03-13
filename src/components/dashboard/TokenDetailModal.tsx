@@ -171,7 +171,7 @@ function useTokenDetail(token: MemeToken | null, open: boolean) {
         })));
         usedLive = true;
       } else {
-        setHolders(generateMockHolders());
+        setHolders([]);
       }
 
       // Trades
