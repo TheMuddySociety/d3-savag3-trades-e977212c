@@ -227,7 +227,7 @@ async function fetchTokenOverview(address: string, apiKey: string, jupiterApiKey
   const metaPromise = fetch(rpcUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'getAsset', params: { id: address } }),
+    body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'getAsset', params: { id: address, displayOptions: { showFungible: true } } }),
   }).then(r => r.json()).catch(() => ({ result: {} }));
 
   const [priceResult, metaResult] = await Promise.all([pricePromise, metaPromise]);
@@ -236,14 +236,24 @@ async function fetchTokenOverview(address: string, apiKey: string, jupiterApiKey
   const asset = metaResult?.result || {};
   const content = asset?.content || {};
 
+  const tokenInfo = asset?.token_info || {};
+  const pricePerToken = tokenInfo?.price_info?.price_per_token || 0;
+  const decimals = tokenInfo?.decimals || 0;
+  const rawSupply = tokenInfo?.supply || 0;
+  const adjustedSupply = rawSupply / Math.pow(10, decimals);
+  const marketCap = pricePerToken * adjustedSupply;
+
   return {
     address,
     name: content?.metadata?.name || '',
     symbol: content?.metadata?.symbol || '',
     logo: content?.links?.image || content?.files?.[0]?.uri || '',
-    price: priceInfo?.usdPrice || 0,
-    decimals: asset?.token_info?.decimals || 0,
-    supply: asset?.token_info?.supply || 0,
+    price: pricePerToken || priceInfo?.usdPrice || 0,
+    decimals,
+    supply: rawSupply,
+    adjustedSupply,
+    marketCap,
+    priceCurrency: tokenInfo?.price_info?.currency || 'USDC',
   };
 }
 
@@ -482,7 +492,7 @@ async function fetchShieldCheck(address: string, jupiterApiKey?: string) {
       ? fetch(rpcUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'getAsset', params: { id: address } }),
+          body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'getAsset', params: { id: address, displayOptions: { showFungible: true } } }),
         }).then(r => r.ok ? r.json() : { result: {} }).catch(() => ({ result: {} }))
       : Promise.resolve({ result: {} });
 
