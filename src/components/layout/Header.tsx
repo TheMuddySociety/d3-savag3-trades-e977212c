@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
-import { Shield, LogOut, Activity } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Shield, LogOut, Activity, Sparkles } from "lucide-react";
 import { useTheme } from "@/hooks/use-theme";
 import { useToast } from "@/components/ui/use-toast";
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import { useWallet } from '@solana/wallet-adapter-react';
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
+import { useTradingMode } from '@/hooks/useTradingMode';
 
 const ADMIN_WALLETS = [
   "Cra8LAvpQAk3hx4By5STHp4xrq7HSAnZLk4Jwzv1wUAH",
@@ -18,6 +20,7 @@ export function Header() {
   const navigate = useNavigate();
   const location = useLocation();
   const { publicKey, connected, disconnect } = useWallet();
+  const { hasFreePass, buyFreePass, isPaymentPending } = useTradingMode();
 
   useEffect(() => {
     if (connected && publicKey) {
@@ -59,6 +62,26 @@ export function Header() {
         </div>
         
         <div className="flex items-center gap-2">
+          {connected && hasFreePass && (
+            <Badge className="bg-accent/20 text-accent border-accent/30 text-[10px]">
+              <Sparkles className="h-3 w-3 mr-1" />
+              FEE-FREE ✨
+            </Badge>
+          )}
+
+          {connected && !hasFreePass && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-[10px] h-7 text-accent hover:text-accent"
+              onClick={buyFreePass}
+              disabled={isPaymentPending}
+            >
+              <Sparkles className="h-3 w-3 mr-1" />
+              0.1 SOL = No Fees
+            </Button>
+          )}
+
           {connected && (
             <Link to="/dashboard">
               <Button

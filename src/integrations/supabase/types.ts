@@ -18,6 +18,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          payment_type: string
           sol_amount: number
           tx_signature: string
           wallet_address: string
@@ -25,6 +26,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          payment_type?: string
           sol_amount?: number
           tx_signature: string
           wallet_address: string
@@ -32,6 +34,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          payment_type?: string
           sol_amount?: number
           tx_signature?: string
           wallet_address?: string
@@ -58,6 +61,45 @@ export type Database = {
           created_at?: string
           id?: string
           role?: string
+          wallet_address?: string
+        }
+        Relationships: []
+      }
+      copy_trade_configs: {
+        Row: {
+          auto_sell: boolean
+          blacklisted_tokens: string[] | null
+          created_at: string
+          id: string
+          is_active: boolean
+          last_checked_tx: string | null
+          max_sol_per_trade: number
+          target_wallet: string
+          updated_at: string
+          wallet_address: string
+        }
+        Insert: {
+          auto_sell?: boolean
+          blacklisted_tokens?: string[] | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          last_checked_tx?: string | null
+          max_sol_per_trade?: number
+          target_wallet: string
+          updated_at?: string
+          wallet_address: string
+        }
+        Update: {
+          auto_sell?: boolean
+          blacklisted_tokens?: string[] | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          last_checked_tx?: string | null
+          max_sol_per_trade?: number
+          target_wallet?: string
+          updated_at?: string
           wallet_address?: string
         }
         Relationships: []
