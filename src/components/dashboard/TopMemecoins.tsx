@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Loader2, Wifi, WifiOff, Bird, Rocket } from 'lucide-react';
+import { Loader2, Wifi, WifiOff, TrendingUp, Rocket, Globe } from 'lucide-react';
 import { useRealtimeTokens } from '@/hooks/useRealtimeTokens';
 import { TrendingCarousel, FilterTabs, TokenTable, FilterType } from './pumpfun';
 import { FilterOptions } from './pumpfun/FilterTabs';
@@ -12,7 +12,7 @@ import { CreateAlertDialog } from './CreateAlertDialog';
 import { usePriceAlerts } from '@/hooks/usePriceAlerts';
 import { useWallet } from '@solana/wallet-adapter-react';
 
-type DataSource = 'birdeye' | 'launchpad';
+type DataSource = 'trending' | 'new_launches';
 
 const formatValue = (value: number, type: 'currency' | 'percent' = 'currency'): string => {
   if (type === 'percent') {
@@ -75,10 +75,10 @@ export function TopMemecoins() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
   const [sortField, setSortField] = useState<string>('volume24h');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
-  const [dataSource, setDataSource] = useState<DataSource>('birdeye');
-  const [birdeyeTokens, setBirdeyeTokens] = useState<MemeToken[]>([]);
-  const [birdeyeLoading, setBirdeyeLoading] = useState(false);
-  const [birdeyeError, setBirdeyeError] = useState<string | null>(null);
+  const [dataSource, setDataSource] = useState<DataSource>('trending');
+  const [trendingTokens, setTrendingTokens] = useState<MemeToken[]>([]);
+  const [trendingLoading, setTrendingLoading] = useState(false);
+  const [trendingError, setTrendingError] = useState<string | null>(null);
   const [selectedToken, setSelectedToken] = useState<MemeToken | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [alertToken, setAlertToken] = useState<MemeToken | null>(null);
@@ -103,31 +103,31 @@ export function TopMemecoins() {
     setModalOpen(true);
   };
   
-  const { tokens: launchpadTokens, loading: launchpadLoading, error: launchpadError, isConnected, lastUpdate } = useRealtimeTokens('pumpfun', 20);
+  const { tokens: launchTokens, loading: launchLoading, error: launchError, isConnected, lastUpdate } = useRealtimeTokens('all', 30);
 
   useEffect(() => {
-    if (dataSource !== 'birdeye') return;
+    if (dataSource !== 'trending') return;
     let cancelled = false;
-    const fetchBirdeye = async () => {
-      setBirdeyeLoading(true);
-      setBirdeyeError(null);
+    const fetchTrending = async () => {
+      setTrendingLoading(true);
+      setTrendingError(null);
       try {
         const tokens = await tokenWebSocketService.fetchTrendingTokens();
-        if (!cancelled) setBirdeyeTokens(tokens);
+        if (!cancelled) setTrendingTokens(tokens);
       } catch (err) {
-        if (!cancelled) setBirdeyeError(err instanceof Error ? err.message : 'Failed to fetch trending');
+        if (!cancelled) setTrendingError(err instanceof Error ? err.message : 'Failed to fetch trending');
       } finally {
-        if (!cancelled) setBirdeyeLoading(false);
+        if (!cancelled) setTrendingLoading(false);
       }
     };
-    fetchBirdeye();
-    const interval = setInterval(fetchBirdeye, 30000);
+    fetchTrending();
+    const interval = setInterval(fetchTrending, 30000);
     return () => { cancelled = true; clearInterval(interval); };
   }, [dataSource]);
 
-  const tokens = dataSource === 'birdeye' ? birdeyeTokens : launchpadTokens;
-  const loading = dataSource === 'birdeye' ? birdeyeLoading : launchpadLoading;
-  const error = dataSource === 'birdeye' ? birdeyeError : launchpadError;
+  const tokens = dataSource === 'trending' ? trendingTokens : launchTokens;
+  const loading = dataSource === 'trending' ? trendingLoading : launchLoading;
+  const error = dataSource === 'trending' ? trendingError : launchError;
 
   const handleSort = (field: string) => {
     if (sortField === field) {
@@ -141,7 +141,6 @@ export function TopMemecoins() {
   const filteredTokens = useMemo(() => {
     let filtered = [...tokens];
     
-    // Apply filter options
     if (filterOptions.onlyPositive) {
       filtered = filtered.filter(t => t.change24h > 0);
     }
@@ -152,7 +151,6 @@ export function TopMemecoins() {
       filtered = filtered.filter(t => t.volume24h >= filterOptions.minVolume!);
     }
     
-    // Apply active filter sorting
     switch (activeFilter) {
       case 'movers':
         filtered.sort((a, b) => Math.abs(b.change24h) - Math.abs(a.change24h));
@@ -194,7 +192,7 @@ export function TopMemecoins() {
       <div className="rounded-2xl border border-border bg-card/50 backdrop-blur-sm p-8">
         <div className="flex flex-col items-center justify-center gap-4">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-muted-foreground">Loading {dataSource === 'birdeye' ? 'trending' : 'launchpad'} tokens...</p>
+          <p className="text-muted-foreground">Loading Solana memecoins...</p>
         </div>
       </div>
     );
@@ -220,28 +218,28 @@ export function TopMemecoins() {
             variant="ghost"
             className={cn(
               "rounded-full gap-1.5 h-7 text-xs px-3 transition-all",
-              dataSource === 'birdeye'
+              dataSource === 'trending'
                 ? "bg-primary text-primary-foreground shadow-sm"
                 : "text-muted-foreground hover:text-foreground"
             )}
-            onClick={() => setDataSource('birdeye')}
+            onClick={() => setDataSource('trending')}
           >
-            <Bird className="h-3.5 w-3.5" />
-            Birdeye Trending
+            <TrendingUp className="h-3.5 w-3.5" />
+            Trending
           </Button>
           <Button
             size="sm"
             variant="ghost"
             className={cn(
               "rounded-full gap-1.5 h-7 text-xs px-3 transition-all",
-              dataSource === 'launchpad'
+              dataSource === 'new_launches'
                 ? "bg-primary text-primary-foreground shadow-sm"
                 : "text-muted-foreground hover:text-foreground"
             )}
-            onClick={() => setDataSource('launchpad')}
+            onClick={() => setDataSource('new_launches')}
           >
             <Rocket className="h-3.5 w-3.5" />
-            Launchpad
+            New Launches
           </Button>
         </div>
 

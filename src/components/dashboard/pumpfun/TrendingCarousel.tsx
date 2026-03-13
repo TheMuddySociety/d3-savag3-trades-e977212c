@@ -32,7 +32,7 @@ export function TrendingCarousel({ tokens, onTokenClick }: TrendingCarouselProps
   return (
     <div className="relative">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-bold text-foreground">Trending coins</h2>
+        <h2 className="text-xl font-bold text-foreground">Trending Solana Memecoins</h2>
         <div className="flex gap-2">
           <Button
             variant="ghost"
