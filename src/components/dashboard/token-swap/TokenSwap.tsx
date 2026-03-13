@@ -13,11 +13,16 @@ export function TokenSwap() {
         init({
           displayMode: "integrated",
           integratedTargetId: "target-container",
+          defaultExplorer: "Solscan",
           formProps: {
+            initialAmount: "100",
+            swapMode: "ExactInOrOut",
             fixedMint: "So11111111111111111111111111111111111111112",
+            referralAccount: "ETz1CboRkEJZDZcstd6bjHtjhRsydHQNHPEYMuhcYK2Z",
+            referralFee: 80,
           },
           branding: {
-            name: "D3 SAVAG3 Ai",
+            name: "SAVAG3 D3 Tradez",
             logoUri: "https://i.ibb.co/QvtDd1yY/image-6483441-4.jpg",
           },
         });
