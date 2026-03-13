@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Activity, TrendingUp, TrendingDown, AlertTriangle, Zap } from 'lucide-react';
 import { cn } from "@/lib/utils";
+import { supabase } from '@/integrations/supabase/client';
 
 interface Signal {
   id: string;
@@ -23,68 +24,75 @@ const SIGNAL_TYPES = {
   volume: { icon: Zap, color: 'text-blue-400', bg: 'bg-blue-400/20' }
 };
 
-const generateSignal = (): Signal => {
-  const types: Signal['type'][] = ['buy', 'sell', 'alert', 'volume'];
-  const tokens = ['PEPE', 'DOGE', 'SHIB', 'FLOKI', 'BONK', 'WIF', 'MEME', 'TRUMP'];
-  const type = types[Math.floor(Math.random() * types.length)];
-  const token = tokens[Math.floor(Math.random() * tokens.length)];
-  const strength: Signal['strength'] = ['low', 'medium', 'high'][Math.floor(Math.random() * 3)] as Signal['strength'];
-  
-  const messages = {
-    buy: [
-      `Strong buy signal detected`,
-      `Whale accumulation spotted`,
-      `Breaking resistance level`,
-      `High volume breakout`
-    ],
-    sell: [
-      `Profit taking detected`,
-      `Support level broken`,
-      `Large sell orders`,
-      `Bearish divergence`
-    ],
-    alert: [
-      `Unusual activity detected`,
-      `New whale wallet spotted`,
-      `Listing announcement rumor`,
-      `Social sentiment spike`
-    ],
-    volume: [
-      `Volume surge +200%`,
-      `Highest 24h volume`,
-      `DEX activity spike`,
-      `Trading bot detected`
-    ]
-  };
+function deriveSignalsFromTrending(trendingData: any[]): Signal[] {
+  return trendingData
+    .filter((t: any) => t.price > 0)
+    .slice(0, 10)
+    .map((t: any) => {
+      const change = t.price_change_24h || 0;
+      let type: Signal['type'] = 'alert';
+      let message = '';
+      let strength: Signal['strength'] = 'low';
 
-  return {
-    id: `signal-${Date.now()}-${Math.random()}`,
-    type,
-    token,
-    message: messages[type][Math.floor(Math.random() * messages[type].length)],
-    timestamp: Date.now(),
-    strength,
-    price: Math.random() * 0.01,
-    change: (Math.random() - 0.5) * 100
-  };
-};
+      if (change > 15) {
+        type = 'buy';
+        message = `Surging +${change.toFixed(1)}% — breakout detected`;
+        strength = 'high';
+      } else if (change > 5) {
+        type = 'buy';
+        message = `Trending up +${change.toFixed(1)}% in 24h`;
+        strength = 'medium';
+      } else if (change < -10) {
+        type = 'sell';
+        message = `Dropping ${change.toFixed(1)}% — sell pressure`;
+        strength = 'high';
+      } else if (change < -3) {
+        type = 'sell';
+        message = `Declining ${change.toFixed(1)}% in 24h`;
+        strength = 'medium';
+      } else {
+        type = 'volume';
+        message = `Active trading — ${change >= 0 ? '+' : ''}${change.toFixed(1)}% change`;
+        strength = 'low';
+      }
+
+      return {
+        id: `signal-${t.address || t.symbol}-${Date.now()}`,
+        type,
+        token: t.symbol?.toUpperCase() || 'UNKNOWN',
+        message,
+        timestamp: Date.now(),
+        strength,
+        price: t.price,
+        change,
+      };
+    });
+}
 
 export function LiveSignalFeed() {
   const [signals, setSignals] = useState<Signal[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchSignals = async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke('token-prices', {
+        body: { action: 'trending' },
+      });
+      if (error) throw error;
+      if (data?.success && Array.isArray(data.data)) {
+        const derived = deriveSignalsFromTrending(data.data);
+        setSignals(derived);
+      }
+    } catch (err) {
+      console.error('Failed to fetch signals:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    // Initialize with some signals
-    setSignals(Array.from({ length: 5 }, generateSignal));
-
-    // Add new signal every 3-8 seconds
-    const interval = setInterval(() => {
-      setSignals(prev => {
-        const newSignal = generateSignal();
-        const updated = [newSignal, ...prev].slice(0, 20); // Keep only latest 20
-        return updated;
-      });
-    }, Math.random() * 5000 + 3000);
-
+    fetchSignals();
+    const interval = setInterval(fetchSignals, 30000); // refresh every 30s
     return () => clearInterval(interval);
   }, []);
 
@@ -110,6 +118,9 @@ export function LiveSignalFeed() {
       <CardContent className="pt-0">
         <ScrollArea className="h-48">
           <div className="space-y-2">
+            {loading && signals.length === 0 && (
+              <div className="text-xs text-muted-foreground text-center py-4">Loading signals...</div>
+            )}
             {signals.map((signal, index) => {
               const signalConfig = SIGNAL_TYPES[signal.type];
               const Icon = signalConfig.icon;
@@ -142,9 +153,9 @@ export function LiveSignalFeed() {
                         {signal.message}
                       </p>
                       <div className="flex justify-between items-center mt-1">
-                        {signal.price && (
+                        {signal.price !== undefined && (
                           <span className="text-xs font-mono text-primary">
-                            ${signal.price.toFixed(6)}
+                            ${signal.price < 0.01 ? signal.price.toExponential(2) : signal.price.toFixed(4)}
                           </span>
                         )}
                         <span className="text-xs text-muted-foreground">

@@ -62,6 +62,20 @@ serve(async (req) => {
         if (!address) return err('address is required', 400);
         return ok(await fetchTokenHolders(address, HELIUS_API_KEY));
 
+      // ── New actions ──────────────────────────────────────────────
+      case 'sol_price':
+        return ok(await fetchSolPrice(JUPITER_API_KEY));
+
+      case 'market_stats':
+        return ok(await fetchMarketStats(JUPITER_API_KEY));
+
+      case 'shield_check':
+        if (!address) return err('address is required', 400);
+        return ok(await fetchShieldCheck(address, JUPITER_API_KEY));
+
+      case 'recent_launches':
+        return ok(await fetchRecentLaunches());
+
       default:
         return err('Invalid action', 400);
     }
@@ -72,7 +86,7 @@ serve(async (req) => {
   }
 });
 
-// ── Jupiter Price API + Birdeye fallback ────────────────────────────
+// ── Jupiter Price API + DexScreener fallback ────────────────────────
 
 async function fetchJupiterPrices(addresses: string[], apiKey?: string) {
   if (!addresses || addresses.length === 0) return {};
@@ -98,7 +112,6 @@ async function fetchJupiterPrices(addresses: string[], apiKey?: string) {
     }
   }
   
-  // Find addresses that Jupiter didn't return prices for
   const missing = addresses.filter(addr => !prices[addr]);
   
   if (missing.length > 0) {
@@ -112,13 +125,18 @@ async function fetchJupiterPrices(addresses: string[], apiKey?: string) {
   return prices;
 }
 
-// ── DexScreener fallback for tokens not on Jupiter ──────────────────
+// ── Birdeye fallback (placeholder, kept for compat) ─────────────────
+
+async function fetchBirdeyePrices(addresses: string[]): Promise<Record<string, { value: number }>> {
+  return fetchDexScreenerPrices(addresses);
+}
+
+// ── DexScreener fallback ────────────────────────────────────────────
 
 async function fetchDexScreenerPrices(addresses: string[]): Promise<Record<string, { value: number }>> {
   if (addresses.length === 0) return {};
   const prices: Record<string, { value: number }> = {};
 
-  // DexScreener supports up to 30 addresses per call
   const batches: string[][] = [];
   for (let i = 0; i < addresses.length; i += 30) {
     batches.push(addresses.slice(i, i + 30));
@@ -130,14 +148,10 @@ async function fetchDexScreenerPrices(addresses: string[]): Promise<Record<strin
         const resp = await fetch(
           `https://api.dexscreener.com/tokens/v1/solana/${batch.join(',')}`
         );
-        if (!resp.ok) {
-          console.warn(`DexScreener failed [${resp.status}]`);
-          return;
-        }
+        if (!resp.ok) { console.warn(`DexScreener failed [${resp.status}]`); return; }
         const pairs = await resp.json();
         if (!Array.isArray(pairs)) return;
 
-        // Group by baseToken address, take highest-liquidity pair
         const bestByToken = new Map<string, { price: number; liq: number }>();
         for (const pair of pairs) {
           const addr = pair.baseToken?.address;
@@ -152,13 +166,9 @@ async function fetchDexScreenerPrices(addresses: string[]): Promise<Record<strin
 
         for (const addr of batch) {
           const entry = bestByToken.get(addr);
-          if (entry) {
-            prices[addr] = { value: entry.price };
-          }
+          if (entry) prices[addr] = { value: entry.price };
         }
-      } catch (e) {
-        console.error('DexScreener batch error:', e);
-      }
+      } catch (e) { console.error('DexScreener batch error:', e); }
     })
   );
 
@@ -186,7 +196,6 @@ async function fetchTrendingTokens() {
     if (!response.ok) throw new Error(`CoinGecko trending failed [${response.status}]`);
     const result = await response.json();
     
-    // Map CoinGecko trending to a compatible format
     const coins = result.coins || [];
     return coins.slice(0, 20).map((item: any) => ({
       address: item.item?.platforms?.solana || item.item?.id || '',
@@ -212,25 +221,17 @@ async function fetchTokenOverview(address: string, apiKey: string, jupiterApiKey
   if (jupiterApiKey) headers['x-api-key'] = jupiterApiKey;
   
   const pricePromise = fetch(`${JUPITER_PRICE_API}?ids=${address}`, { headers })
-    .then(r => r.json())
-    .catch(() => ({}));
+    .then(r => r.json()).catch(() => ({}));
 
-  // Fetch metadata from Helius DAS
   const rpcUrl = `https://mainnet.helius-rpc.com/?api-key=${apiKey}`;
   const metaPromise = fetch(rpcUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      jsonrpc: '2.0',
-      id: 1,
-      method: 'getAsset',
-      params: { id: address },
-    }),
+    body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'getAsset', params: { id: address } }),
   }).then(r => r.json()).catch(() => ({ result: {} }));
 
   const [priceResult, metaResult] = await Promise.all([pricePromise, metaPromise]);
 
-  // V3 flat response: { [mint]: { usdPrice, ... } }
   const priceInfo = priceResult?.[address];
   const asset = metaResult?.result || {};
   const content = asset?.content || {};
@@ -246,18 +247,16 @@ async function fetchTokenOverview(address: string, apiKey: string, jupiterApiKey
   };
 }
 
-// ── Token Trades via Helius Enhanced Transactions ───────────────────
+// ── Token Trades via Helius ─────────────────────────────────────────
 
 async function fetchTokenTrades(address: string, apiKey: string, limit: number) {
   const rpcUrl = `https://mainnet.helius-rpc.com/?api-key=${apiKey}`;
   
-  // Get recent signatures for the token
   const sigResponse = await fetch(rpcUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      jsonrpc: '2.0',
-      id: 1,
+      jsonrpc: '2.0', id: 1,
       method: 'getSignaturesForAddress',
       params: [address, { limit: Math.min(limit, 20) }],
     }),
@@ -269,7 +268,6 @@ async function fetchTokenTrades(address: string, apiKey: string, limit: number) 
 
   if (signatures.length === 0) return [];
 
-  // Parse transactions via Helius
   const parseResponse = await fetch(`${HELIUS_BASE}/v0/transactions/?api-key=${apiKey}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -288,7 +286,7 @@ async function fetchTokenTrades(address: string, apiKey: string, limit: number) 
   }));
 }
 
-// ── Price History via CoinGecko (free, uses coingecko ID mapping) ───
+// ── Price History ───────────────────────────────────────────────────
 
 async function fetchPriceHistory(address: string, _interval: string, _timeFrom?: number, _timeTo?: number, jupiterApiKey?: string) {
   try {
@@ -301,40 +299,27 @@ async function fetchPriceHistory(address: string, _interval: string, _timeFrom?:
 
     if (currentPrice === 0) return [];
 
-    // Generate 24 data points simulating last 24h with slight variance
     const now = Math.floor(Date.now() / 1000);
     const points = [];
     for (let i = 23; i >= 0; i--) {
       const variance = 1 + (Math.sin(i * 0.5) * 0.03) + ((Math.random() - 0.5) * 0.02);
-      points.push({
-        unixTime: now - i * 3600,
-        value: currentPrice * variance,
-      });
+      points.push({ unixTime: now - i * 3600, value: currentPrice * variance });
     }
     return points;
-  } catch {
-    return [];
-  }
+  } catch { return []; }
 }
 
-// ── Token Holders via Helius RPC ────────────────────────────────────
+// ── Token Holders ───────────────────────────────────────────────────
 
 async function fetchTokenHolders(address: string, apiKey: string) {
   const rpcUrl = `https://mainnet.helius-rpc.com/?api-key=${apiKey}`;
   const rpcResponse = await fetch(rpcUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      jsonrpc: '2.0',
-      id: 1,
-      method: 'getTokenLargestAccounts',
-      params: [address],
-    }),
+    body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'getTokenLargestAccounts', params: [address] }),
   });
 
-  if (!rpcResponse.ok) {
-    throw new Error(`Helius RPC failed [${rpcResponse.status}]: ${await rpcResponse.text()}`);
-  }
+  if (!rpcResponse.ok) throw new Error(`Helius RPC failed [${rpcResponse.status}]: ${await rpcResponse.text()}`);
 
   const rpcResult = await rpcResponse.json();
   const accounts = rpcResult?.result?.value || [];
@@ -359,4 +344,206 @@ async function fetchTokenHolders(address: string, apiKey: string) {
       percentage: totalInTop > 0 ? ((acc.uiAmount || 0) / totalInTop) * 100 : 0,
     })),
   };
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// NEW ACTIONS
+// ══════════════════════════════════════════════════════════════════════
+
+// ── SOL Price (real-time from Jupiter) ──────────────────────────────
+
+async function fetchSolPrice(jupiterApiKey?: string) {
+  const SOL_MINT = 'So11111111111111111111111111111111111111112';
+  const headers: Record<string, string> = {};
+  if (jupiterApiKey) headers['x-api-key'] = jupiterApiKey;
+
+  const resp = await fetch(`${JUPITER_PRICE_API}?ids=${SOL_MINT}`, { headers });
+  if (!resp.ok) throw new Error(`Jupiter price failed [${resp.status}]`);
+  const data = await resp.json();
+  const solData = data?.[SOL_MINT];
+
+  return {
+    price: solData?.usdPrice || 0,
+    change24h: solData?.priceChange24h || 0,
+  };
+}
+
+// ── Market Stats (aggregate from CoinGecko global) ──────────────────
+
+async function fetchMarketStats(jupiterApiKey?: string) {
+  try {
+    // Get global crypto market stats
+    const globalResp = await fetch(`${COINGECKO_BASE}/global`);
+    const globalData = globalResp.ok ? await globalResp.json() : null;
+
+    // Get SOL price for reference
+    const solPrice = await fetchSolPrice(jupiterApiKey);
+
+    // Get recent Bullme new tokens count
+    let newTokenCount = 0;
+    let avgLiquidity = 0;
+    try {
+      const bullmeResp = await fetch('https://api.bullme.one/market/token/newTokens');
+      if (bullmeResp.ok) {
+        const bullmeData = await bullmeResp.json();
+        const tokens = bullmeData?.data || [];
+        newTokenCount = tokens.length;
+        if (tokens.length > 0) {
+          avgLiquidity = tokens.reduce((sum: number, t: any) => sum + (t.liquidity || 0), 0) / tokens.length;
+        }
+      }
+    } catch { /* ignore */ }
+
+    const marketData = globalData?.data || {};
+    const totalVolume = marketData?.total_volume?.usd || 0;
+    const totalMarketCap = marketData?.total_market_cap?.usd || 0;
+    const marketCapChange24h = marketData?.market_cap_change_percentage_24h_usd || 0;
+
+    return {
+      totalVolume,
+      totalMarketCap,
+      marketCapChange24h,
+      solPrice: solPrice.price,
+      solChange24h: solPrice.change24h,
+      newTokens24h: newTokenCount,
+      avgLiquidity: avgLiquidity * solPrice.price, // Convert SOL to USD
+    };
+  } catch (e) {
+    console.error('Market stats error:', e);
+    return {
+      totalVolume: 0, totalMarketCap: 0, marketCapChange24h: 0,
+      solPrice: 0, solChange24h: 0, newTokens24h: 0, avgLiquidity: 0,
+    };
+  }
+}
+
+// ── Shield Check (Jupiter Ultra Shield API) ─────────────────────────
+
+async function fetchShieldCheck(address: string, jupiterApiKey?: string) {
+  try {
+    const headers: Record<string, string> = {};
+    if (jupiterApiKey) headers['x-api-key'] = jupiterApiKey;
+
+    // Jupiter Shield API
+    const shieldResp = await fetch(`https://ultra-api.jup.ag/v1/shield?mints=${address}`, { headers });
+    let shieldData: any = null;
+    if (shieldResp.ok) {
+      shieldData = await shieldResp.json();
+    }
+
+    // Also get token metadata from Helius for more context
+    const HELIUS_API_KEY = Deno.env.get('HELIUS_API_KEY');
+    let metaData: any = null;
+    if (HELIUS_API_KEY) {
+      const rpcUrl = `https://mainnet.helius-rpc.com/?api-key=${HELIUS_API_KEY}`;
+      const metaResp = await fetch(rpcUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'getAsset', params: { id: address } }),
+      });
+      if (metaResp.ok) {
+        const metaResult = await metaResp.json();
+        metaData = metaResult?.result;
+      }
+    }
+
+    // Get holder info
+    let holderCount = 0;
+    if (HELIUS_API_KEY) {
+      try {
+        const rpcUrl = `https://mainnet.helius-rpc.com/?api-key=${HELIUS_API_KEY}`;
+        const holderResp = await fetch(rpcUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'getTokenLargestAccounts', params: [address] }),
+        });
+        if (holderResp.ok) {
+          const holderResult = await holderResp.json();
+          holderCount = holderResult?.result?.value?.length || 0;
+        }
+      } catch { /* ignore */ }
+    }
+
+    // Get price and liquidity from DexScreener
+    let liquidity = 0;
+    let pairAge = '';
+    try {
+      const dexResp = await fetch(`https://api.dexscreener.com/tokens/v1/solana/${address}`);
+      if (dexResp.ok) {
+        const pairs = await dexResp.json();
+        if (Array.isArray(pairs) && pairs.length > 0) {
+          // Get highest liquidity pair
+          const bestPair = pairs.reduce((best: any, p: any) =>
+            (p.liquidity?.usd || 0) > (best?.liquidity?.usd || 0) ? p : best, pairs[0]);
+          liquidity = bestPair?.liquidity?.usd || 0;
+          pairAge = bestPair?.pairCreatedAt ? new Date(bestPair.pairCreatedAt).toISOString() : '';
+        }
+      }
+    } catch { /* ignore */ }
+
+    const content = metaData?.content || {};
+    const tokenInfo = metaData?.token_info || {};
+    const authorities = metaData?.authorities || [];
+    
+    // Determine risk flags from on-chain data
+    const hasFreezeAuthority = authorities.some((a: any) => 
+      a.scopes?.includes('freeze') || a.scopes?.includes('full'));
+    const hasMintAuthority = authorities.some((a: any) => 
+      a.scopes?.includes('mint') || a.scopes?.includes('full'));
+
+    // Shield data analysis
+    const shieldMint = shieldData?.[address] || {};
+    const warnings = shieldMint?.warnings || [];
+    
+    return {
+      name: content?.metadata?.name || '',
+      symbol: content?.metadata?.symbol || '',
+      safe: warnings.length === 0 && !hasFreezeAuthority,
+      holders: holderCount,
+      liquidity,
+      pairAge,
+      decimals: tokenInfo?.decimals || 0,
+      supply: tokenInfo?.supply || 0,
+      flags: {
+        freezeAuthority: hasFreezeAuthority,
+        mintAuthority: hasMintAuthority,
+        lowLiquidity: liquidity < 5000,
+        lowHolders: holderCount < 50,
+        warnings,
+      },
+    };
+  } catch (e) {
+    console.error('Shield check error:', e);
+    throw new Error(`Shield check failed: ${e instanceof Error ? e.message : 'Unknown error'}`);
+  }
+}
+
+// ── Recent Launches (from Bullme API) ───────────────────────────────
+
+async function fetchRecentLaunches() {
+  try {
+    const resp = await fetch('https://api.bullme.one/market/token/newTokens');
+    if (!resp.ok) throw new Error(`Bullme API failed [${resp.status}]`);
+    const data = await resp.json();
+    const tokens = data?.data || [];
+
+    return tokens.slice(0, 10).map((t: any) => ({
+      address: t.address,
+      name: t.name,
+      symbol: t.symbol,
+      logo: t.logo,
+      timestamp: t.timestamp,
+      marketCap: t.marketCap,
+      liquidity: t.liquidity,
+      tradeCount: t.tradeCount24h || t.tradeCount,
+      bondingCurveProgress: t.bondingCurveProgress,
+      status: t.status,
+      twitter: t.twitter || null,
+      website: t.website || null,
+      description: t.description || '',
+    }));
+  } catch (e) {
+    console.error('Recent launches error:', e);
+    return [];
+  }
 }

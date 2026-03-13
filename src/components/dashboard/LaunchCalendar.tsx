@@ -1,98 +1,66 @@
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Calendar, Clock, Bell, BellOff } from "lucide-react";
-import { useToast } from "@/components/ui/use-toast";
-import { cn } from "@/lib/utils";
+import { Calendar, Clock, Loader2 } from "lucide-react";
+import { supabase } from '@/integrations/supabase/client';
 
-const UPCOMING_LAUNCHES = [
-  {
-    id: 1,
-    name: "DogeMoon",
-    date: "2023-09-18T14:00:00Z",
-    description: "The next big doge-themed token with innovative tokenomics",
-    tags: ["Meme", "Doge", "Fair Launch"]
-  },
-  {
-    id: 2,
-    name: "SafeFrog",
-    date: "2023-09-20T18:30:00Z",
-    description: "Amphibian-themed token with auto-staking rewards",
-    tags: ["Meme", "Rewards", "Staking"]
-  },
-  {
-    id: 3,
-    name: "MoonCat",
-    date: "2023-09-23T10:00:00Z",
-    description: "Feline-focused token with NFT integration",
-    tags: ["Meme", "NFT", "DAO"]
-  },
-  {
-    id: 4,
-    name: "RocketDoge",
-    date: "2023-09-25T16:00:00Z",
-    description: "Multi-chain doge token with interoperability features",
-    tags: ["Meme", "Multi-chain", "Airdrop"]
-  }
-];
+interface LaunchToken {
+  address: string;
+  name: string;
+  symbol: string;
+  logo: string;
+  timestamp: number;
+  marketCap: number;
+  liquidity: number;
+  tradeCount: number;
+  bondingCurveProgress: number;
+  status: string;
+  description: string;
+}
 
 export function LaunchCalendar() {
-  const [reminders, setReminders] = useState<number[]>([]);
-  const { toast } = useToast();
+  const [launches, setLaunches] = useState<LaunchToken[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric'
-    });
-  };
-
-  const formatTime = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
-  const toggleReminder = (id: number) => {
-    setReminders(prev => {
-      if (prev.includes(id)) {
-        toast({
-          title: "Reminder Removed",
-          description: "You will no longer receive notifications for this launch"
+  useEffect(() => {
+    const fetchLaunches = async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke('token-prices', {
+          body: { action: 'recent_launches' },
         });
-        return prev.filter(item => item !== id);
-      } else {
-        toast({
-          title: "Reminder Set",
-          description: "You will be notified before this token launches"
-        });
-        return [...prev, id];
+        if (error) throw error;
+        if (data?.success && Array.isArray(data.data)) {
+          setLaunches(data.data);
+        }
+      } catch (err) {
+        console.error('Failed to fetch launches:', err);
+      } finally {
+        setLoading(false);
       }
-    });
+    };
+    fetchLaunches();
+    const interval = setInterval(fetchLaunches, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const formatTime = (ts: number) => {
+    const d = new Date(ts);
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
-  const getTimeUntilLaunch = (dateString: string) => {
-    const launchDate = new Date(dateString);
-    const now = new Date();
-    
-    const diffMs = launchDate.getTime() - now.getTime();
-    if (diffMs <= 0) return "Launched";
-    
-    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-    const diffHours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-    
-    if (diffDays > 0) {
-      return `${diffDays}d ${diffHours}h`;
-    } else {
-      const diffMinutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-      return `${diffHours}h ${diffMinutes}m`;
-    }
+  const getAge = (ts: number) => {
+    const diffMs = Date.now() - ts;
+    const mins = Math.floor(diffMs / 60000);
+    if (mins < 60) return `${mins}m ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs}h ago`;
+    return `${Math.floor(hrs / 24)}d ago`;
+  };
+
+  const formatMcap = (v: number) => {
+    if (v >= 1e6) return `$${(v / 1e6).toFixed(1)}M`;
+    if (v >= 1e3) return `$${(v / 1e3).toFixed(1)}K`;
+    return `$${v.toFixed(0)}`;
   };
 
   return (
@@ -100,56 +68,49 @@ export function LaunchCalendar() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-xl">
           <Calendar className="h-5 w-5 text-solana" />
-          Upcoming Launches
+          Recent Launches
+          {loading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-3">
-          {UPCOMING_LAUNCHES.map((launch) => (
-            <div 
-              key={launch.id} 
+          {launches.length === 0 && !loading && (
+            <div className="text-sm text-muted-foreground text-center py-4">No recent launches found</div>
+          )}
+          {launches.map((launch) => (
+            <div
+              key={launch.address}
               className="p-3 rounded-lg bg-background/40 border border-border hover:border-solana/30 transition-colors"
             >
               <div className="flex justify-between items-start mb-2">
-                <div>
-                  <h3 className="font-semibold text-lg">{launch.name}</h3>
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Calendar className="h-3 w-3" />
-                    {formatDate(launch.date)}
-                    <Clock className="h-3 w-3 ml-2" />
-                    {formatTime(launch.date)}
+                <div className="flex items-center gap-2">
+                  <img
+                    src={launch.logo}
+                    alt={launch.name}
+                    className="h-6 w-6 rounded-full"
+                    onError={(e) => { e.currentTarget.src = '/placeholder.svg'; }}
+                  />
+                  <div>
+                    <h3 className="font-semibold text-sm">{launch.name}</h3>
+                    <span className="text-xs text-muted-foreground font-mono">{launch.symbol}</span>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Badge variant="outline" className="bg-solana/10 text-solana border-solana/20">
-                    {getTimeUntilLaunch(launch.date)}
+                  <Badge variant="outline" className="bg-solana/10 text-solana border-solana/20 text-xs">
+                    {getAge(launch.timestamp)}
                   </Badge>
-                  <Button 
-                    variant="ghost" 
-                    size="icon"
-                    className={cn(
-                      "rounded-full",
-                      reminders.includes(launch.id) && "text-solana"
-                    )}
-                    onClick={() => toggleReminder(launch.id)}
-                  >
-                    {reminders.includes(launch.id) ? (
-                      <Bell className="h-4 w-4" />
-                    ) : (
-                      <BellOff className="h-4 w-4" />
-                    )}
-                  </Button>
                 </div>
               </div>
-              <p className="text-sm text-muted-foreground mb-2">
-                {launch.description}
-              </p>
-              <div className="flex flex-wrap gap-1">
-                {launch.tags.map((tag) => (
-                  <Badge key={tag} variant="secondary" className="text-xs">
-                    {tag}
-                  </Badge>
-                ))}
+              <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                <div className="flex items-center gap-1">
+                  <Clock className="h-3 w-3" />
+                  {formatTime(launch.timestamp)}
+                </div>
+                <span>MCap: {formatMcap(launch.marketCap)}</span>
+                <span>Trades: {launch.tradeCount}</span>
+                {launch.bondingCurveProgress > 0 && (
+                  <span>Bonding: {launch.bondingCurveProgress.toFixed(0)}%</span>
+                )}
               </div>
             </div>
           ))}
