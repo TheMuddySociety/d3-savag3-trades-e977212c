@@ -116,7 +116,7 @@ export const CopyTradeBot = ({ sim, isLive = false, killSignal = 0 }: Props) => 
             type: (isBuy ? "buy" : "sell") as "buy" | "sell",
             tokenMint,
             solAmount: sol,
-            status: "success",
+            status: "success" as const,
           }, ...prev].slice(0, 50));
 
           toast({ title: `📋 Copied ${isBuy ? "Buy" : "Sell"}`, description: `${tokenMint.slice(0, 8)}... for ${sol} SOL` });
