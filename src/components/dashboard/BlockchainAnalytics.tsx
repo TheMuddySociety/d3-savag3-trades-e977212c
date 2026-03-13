@@ -4,16 +4,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BarChart3, Activity, AlertCircle, RefreshCw, Loader2 } from "lucide-react";
-import { SolanaService } from '@/services/SolanaService';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 interface Transaction {
-  signature: string;
-  slot: number;
-  timestamp?: string;
-  err: any;
-  memo?: string;
+  txHash: string;
+  type: string;
+  source: string;
+  timestamp: number;
+  description: string;
 }
 
 interface MarketInsights {
