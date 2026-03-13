@@ -2,3 +2,9 @@ project_id = "spdlcavcdqsfmwipeqkp"
 
 [functions.jupiter-ai]
 verify_jwt = false
+
+[functions.copy-trade]
+verify_jwt = false
+
+[functions.auto-trader]
+verify_jwt = false
