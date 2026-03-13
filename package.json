@@ -12,7 +12,7 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",
-    "@jup-ag/plugin": "^1.0.1",
+    "@jup-ag/plugin": "^1.0.13",
     "@jup-ag/wallet-adapter": "^0.2.3",
     "@metaplex-foundation/mpl-core": "^1.3.0",
     "@metaplex-foundation/mpl-core-candy-machine": "^0.3.0",
