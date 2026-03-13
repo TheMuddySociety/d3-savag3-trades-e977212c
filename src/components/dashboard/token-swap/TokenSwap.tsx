@@ -1,16 +1,17 @@
 import { useEffect } from 'react';
-import { useWallet } from '@solana/wallet-adapter-react';
 // @ts-ignore - CSS module lacks type declarations
 import "@jup-ag/plugin/css";
+import { loadJupiterPluginScript } from '@/utils/loadJupiterPlugin';
 
 export function TokenSwap() {
-  const walletProps = useWallet();
-
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      import("@jup-ag/plugin").then((mod) => {
-        const init = mod.init;
-        init({
+    let cancelled = false;
+
+    loadJupiterPluginScript()
+      .then(() => {
+        if (cancelled || typeof window === "undefined" || !window.Jupiter?.init) return;
+
+        window.Jupiter.init({
           displayMode: "integrated",
           integratedTargetId: "target-container",
           defaultExplorer: "Solscan",
@@ -26,8 +27,14 @@ export function TokenSwap() {
             logoUri: "https://i.ibb.co/QvtDd1yY/image-6483441-4.jpg",
           },
         });
+      })
+      .catch((error) => {
+        console.error("Failed to initialize Jupiter plugin:", error);
       });
-    }
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   return (
@@ -40,7 +47,7 @@ export function TokenSwap() {
           </div>
           <p className="text-xs text-muted-foreground mt-1">Best rates across DEXs ✨</p>
         </div>
-        <div 
+        <div
           id="target-container"
           className="min-h-[380px] w-full p-3"
         />
