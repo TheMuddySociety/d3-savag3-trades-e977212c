@@ -102,8 +102,8 @@ async function fetchJupiterPrices(addresses: string[], apiKey?: string) {
   const missing = addresses.filter(addr => !prices[addr]);
   
   if (missing.length > 0) {
-    console.log(`[token-prices] Jupiter missing ${missing.length} tokens, trying Birdeye fallback`);
-    const fallback = await fetchBirdeyePrices(missing);
+    console.log(`[token-prices] Jupiter missing ${missing.length} tokens, trying DexScreener fallback`);
+    const fallback = await fetchDexScreenerPrices(missing);
     for (const [addr, data] of Object.entries(fallback)) {
       prices[addr] = data;
     }
@@ -112,83 +112,56 @@ async function fetchJupiterPrices(addresses: string[], apiKey?: string) {
   return prices;
 }
 
-// ── Birdeye fallback for tokens not on Jupiter ──────────────────────
+// ── DexScreener fallback for tokens not on Jupiter ──────────────────
 
-async function fetchBirdeyePrices(addresses: string[]): Promise<Record<string, { value: number }>> {
-  const BIRDEYE_API_KEY = Deno.env.get('BIRDEYE_API_KEY');
-  if (!BIRDEYE_API_KEY || addresses.length === 0) return {};
-
+async function fetchDexScreenerPrices(addresses: string[]): Promise<Record<string, { value: number }>> {
+  if (addresses.length === 0) return {};
   const prices: Record<string, { value: number }> = {};
 
-  // Birdeye multi-price endpoint
-  try {
-    const listStr = addresses.join(',');
-    const resp = await fetch(
-      `https://public-api.birdeye.so/defi/multi_price?list_address=${listStr}`,
-      {
-        headers: {
-          'X-API-KEY': BIRDEYE_API_KEY,
-          'x-chain': 'solana',
-        },
-      }
-    );
-
-    if (!resp.ok) {
-      console.warn(`Birdeye multi_price failed [${resp.status}]`);
-      // Fall back to individual calls
-      return fetchBirdeyePricesIndividual(addresses, BIRDEYE_API_KEY);
-    }
-
-    const result = await resp.json();
-    const data = result?.data || {};
-
-    for (const addr of addresses) {
-      const info = data[addr];
-      if (info?.value) {
-        prices[addr] = { value: info.value };
-      }
-    }
-  } catch (e) {
-    console.error('Birdeye multi_price error:', e);
+  // DexScreener supports up to 30 addresses per call
+  const batches: string[][] = [];
+  for (let i = 0; i < addresses.length; i += 30) {
+    batches.push(addresses.slice(i, i + 30));
   }
 
-  // For any still missing, try individual price endpoint
-  const stillMissing = addresses.filter(a => !prices[a]);
-  if (stillMissing.length > 0) {
-    const individual = await fetchBirdeyePricesIndividual(stillMissing, BIRDEYE_API_KEY);
-    for (const [addr, data] of Object.entries(individual)) {
-      prices[addr] = data;
-    }
-  }
-
-  return prices;
-}
-
-async function fetchBirdeyePricesIndividual(addresses: string[], apiKey: string): Promise<Record<string, { value: number }>> {
-  const prices: Record<string, { value: number }> = {};
-  
-  // Limit concurrent requests
-  const batch = addresses.slice(0, 10);
-  const results = await Promise.allSettled(
-    batch.map(async (addr) => {
-      const resp = await fetch(
-        `https://public-api.birdeye.so/defi/price?address=${addr}`,
-        {
-          headers: {
-            'X-API-KEY': apiKey,
-            'x-chain': 'solana',
-          },
+  await Promise.allSettled(
+    batches.map(async (batch) => {
+      try {
+        const resp = await fetch(
+          `https://api.dexscreener.com/tokens/v1/solana/${batch.join(',')}`
+        );
+        if (!resp.ok) {
+          console.warn(`DexScreener failed [${resp.status}]`);
+          return;
         }
-      );
-      if (!resp.ok) return null;
-      const result = await resp.json();
-      const price = result?.data?.value;
-      if (price) {
-        prices[addr] = { value: price };
+        const pairs = await resp.json();
+        if (!Array.isArray(pairs)) return;
+
+        // Group by baseToken address, take highest-liquidity pair
+        const bestByToken = new Map<string, { price: number; liq: number }>();
+        for (const pair of pairs) {
+          const addr = pair.baseToken?.address;
+          const price = parseFloat(pair.priceUsd);
+          if (!addr || isNaN(price) || price <= 0) continue;
+          const liq = pair.liquidity?.usd || 0;
+          const existing = bestByToken.get(addr);
+          if (!existing || liq > existing.liq) {
+            bestByToken.set(addr, { price, liq });
+          }
+        }
+
+        for (const addr of batch) {
+          const entry = bestByToken.get(addr);
+          if (entry) {
+            prices[addr] = { value: entry.price };
+          }
+        }
+      } catch (e) {
+        console.error('DexScreener batch error:', e);
       }
     })
   );
-  
+
   return prices;
 }
 
