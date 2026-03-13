@@ -24,9 +24,9 @@ export const useMemecoins = () => {
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const fetchMemecoins = useCallback(async () => {
+  const fetchMemecoins = useCallback(async (silent = false) => {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       const bullmeTokens = await BullmeService.getNewTokens();
       
       // Transform Bullme tokens to our MemeToken format
