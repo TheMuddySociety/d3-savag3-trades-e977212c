@@ -424,6 +424,17 @@ async function getLeaderboard(supabase: any, limit: number) {
     ordersByWallet.set(o.wallet_address, list);
   });
 
+  // Fetch holdings for unrealized gains
+  const { data: allHoldings } = await supabase
+    .from('sim_holdings')
+    .select('wallet_address, total_invested');
+
+  const holdingsByWallet = new Map<string, number>();
+  (allHoldings || []).forEach((h: any) => {
+    const current = holdingsByWallet.get(h.wallet_address) || 0;
+    holdingsByWallet.set(h.wallet_address, current + (h.total_invested || 0));
+  });
+
   const leaderboard = wallets.map((w: any) => {
     const orders = ordersByWallet.get(w.wallet_address) || [];
     const totalTrades = orders.length;
@@ -432,11 +443,10 @@ async function getLeaderboard(supabase: any, limit: number) {
 
     const totalSolSpent = buys.reduce((sum: number, o: any) => sum + (o.sol_amount || 0), 0);
     const totalSolReceived = sells.reduce((sum: number, o: any) => sum + (o.sol_amount || 0), 0);
+    const unrealizedInvested = holdingsByWallet.get(w.wallet_address) || 0;
 
-    // Net P&L = current balance + sol received from sells - initial 10 SOL
-    const netPnlSol = (w.sol_balance || 0) + totalSolReceived - 10 - totalSolSpent + totalSolSpent; 
-    // Simplified: current balance - 10 (starting balance)
-    const simplePnl = (w.sol_balance || 0) - 10;
+    // P&L = current SOL balance + value still in holdings - initial 10 SOL
+    const totalPnl = (w.sol_balance || 0) + unrealizedInvested - 10;
 
     const avgPnlPercent = sells.length > 0
       ? sells.reduce((sum: number, o: any) => sum + (o.pnl_percent || 0), 0) / sells.length
@@ -452,8 +462,8 @@ async function getLeaderboard(supabase: any, limit: number) {
       wallet_address: w.wallet_address,
       display_address: `${w.wallet_address.slice(0, 4)}...${w.wallet_address.slice(-4)}`,
       sol_balance: w.sol_balance,
-      pnl_sol: simplePnl,
-      pnl_percent: 10 > 0 ? (simplePnl / 10) * 100 : 0,
+      pnl_sol: totalPnl,
+      pnl_percent: 10 > 0 ? (totalPnl / 10) * 100 : 0,
       avg_trade_pnl: avgPnlPercent,
       total_trades: totalTrades,
       win_rate: winRate,

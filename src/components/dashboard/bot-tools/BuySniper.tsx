@@ -10,6 +10,7 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import { useConnection } from "@solana/wallet-adapter-react";
 import { JupiterTransactionService } from "@/services/jupiter/transactions";
 import { LiveTradeConfirmDialog } from "./LiveTradeConfirmDialog";
+import { isValidSolanaAddress } from "@/utils/validateSolanaAddress";
 
 const SOL_MINT = "So11111111111111111111111111111111111111112";
 
@@ -95,6 +96,10 @@ export const BuySniper = ({ sim, isLive = false, killSignal = 0 }: Props) => {
   const handleArm = () => {
     if (!tokenAddress) {
       toast({ title: "Missing token", description: "Enter a token address to snipe", variant: "destructive" });
+      return;
+    }
+    if (!isValidSolanaAddress(tokenAddress)) {
+      toast({ title: "Invalid address", description: "Enter a valid Solana token mint address", variant: "destructive" });
       return;
     }
     if (isLive && !wallet.publicKey) {
