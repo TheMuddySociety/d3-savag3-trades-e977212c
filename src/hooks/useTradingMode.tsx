@@ -36,7 +36,7 @@ export const useTradingMode = () => useContext(TradingModeContext);
 export const TradingModeProvider = ({ children }: { children: ReactNode }) => {
   const { toast } = useToast();
   const { publicKey, signTransaction, connected } = useWallet();
-  const [isLive, setIsLive] = useState(false);
+  const [isLive, setIsLive] = useState(true);
   const [hasPaid] = useState(true);
   const [hasFreePass, setHasFreePass] = useState(false);
   const [isPaymentPending, setIsPaymentPending] = useState(false);
