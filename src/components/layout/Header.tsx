@@ -20,25 +20,15 @@ export function Header() {
   const { publicKey, connected, disconnect } = useWallet();
 
   useEffect(() => {
-    const checkConnection = async () => {
-      if (!connected || !publicKey) {
-        toast({
-          title: "Wallet not connected",
-          description: "Please connect your wallet from the landing page",
-          variant: "destructive"
-        });
-        navigate('/');
-        return;
-      }
-      
+    if (connected && publicKey) {
       const walletAddress = publicKey.toString();
       setIsAdmin(ADMIN_WALLETS.includes(walletAddress));
       localStorage.setItem('connectedWallet', walletAddress);
       localStorage.setItem('walletConnected', 'true');
-    };
-    
-    checkConnection();
-  }, [navigate, toast, connected, publicKey]);
+    } else {
+      setIsAdmin(false);
+    }
+  }, [connected, publicKey]);
 
   const handleDisconnect = () => {
     disconnect();

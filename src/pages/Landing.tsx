@@ -13,38 +13,25 @@ const ADMIN_WALLETS = [
 
 const Landing = () => {
   const navigate = useNavigate();
-  const [connecting, setConnecting] = useState(false);
   const { publicKey, connected } = useWallet();
   
   useEffect(() => {
     if (connected && publicKey) {
-      handleWalletConnected(publicKey.toString());
+      const walletAddress = publicKey.toString();
+      localStorage.setItem('connectedWallet', walletAddress);
+      localStorage.setItem('walletConnected', 'true');
+      if (ADMIN_WALLETS.includes(walletAddress)) {
+        toast.success("Admin access granted");
+        navigate('/admin');
+      } else {
+        toast.success("Wallet connected — Welcome");
+        navigate('/dashboard');
+      }
     }
   }, [connected, publicKey]);
-  
-  const handleWalletConnected = async (walletAddress: string) => {
-    setConnecting(true);
-    try {
-      localStorage.setItem('connectedWallet', walletAddress);
-      const hasAccess = Math.random() > 0.2;
-      
-      if (hasAccess) {
-        if (ADMIN_WALLETS.includes(walletAddress)) {
-          toast.success("Admin access granted");
-          navigate('/admin');
-        } else {
-          toast.success("Access granted — Welcome");
-          navigate('/dashboard');
-        }
-        localStorage.setItem('walletConnected', 'true');
-      } else {
-        toast.error("Access denied. NFT or token ownership required.");
-      }
-    } catch (error) {
-      toast.error("Connection failed");
-    } finally {
-      setConnecting(false);
-    }
+
+  const handleLaunchApp = () => {
+    navigate('/dashboard');
   };
 
   return (
@@ -89,7 +76,14 @@ const Landing = () => {
             </div>
 
             <div className="flex flex-col sm:flex-row gap-3">
-              <WalletMultiButton className="!bg-primary !text-primary-foreground !rounded-md !text-sm !h-11 !px-6 !font-medium" />
+              <button
+                onClick={handleLaunchApp}
+                className="inline-flex items-center justify-center gap-2 bg-primary text-primary-foreground rounded-md text-sm h-11 px-6 font-medium hover:bg-primary/90 transition-colors"
+              >
+                Launch App
+                <ArrowRight className="h-4 w-4" />
+              </button>
+              <WalletMultiButton className="!bg-secondary !text-foreground !rounded-md !text-sm !h-11 !px-6 !font-medium !border !border-border" />
             </div>
 
             {/* Feature pills */}
