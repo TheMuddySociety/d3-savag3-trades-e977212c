@@ -86,7 +86,7 @@ export const CopyTradeBot = ({ sim, isLive = false, killSignal = 0 }: Props) => 
 
       setCopiedTrades(prev => [{
         timestamp: new Date().toLocaleTimeString(),
-        type: isBuy ? "buy" : "sell",
+        type: (isBuy ? "buy" : "sell") as "buy" | "sell",
         tokenMint: token_mint,
         solAmount: sol,
         status: "success" as const,
@@ -96,7 +96,7 @@ export const CopyTradeBot = ({ sim, isLive = false, killSignal = 0 }: Props) => 
     } catch (e: any) {
       setCopiedTrades(prev => [{
         timestamp: new Date().toLocaleTimeString(),
-        type: isBuy ? "buy" : "sell",
+        type: (isBuy ? "buy" : "sell") as "buy" | "sell",
         tokenMint: token_mint,
         solAmount: sol,
         status: "error" as const,
