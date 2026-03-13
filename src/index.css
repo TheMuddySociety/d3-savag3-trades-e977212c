@@ -254,3 +254,17 @@
 .animate-slide-up { animation: slide-up 0.4s ease-out forwards; }
 .animate-scale-in { animation: scale-in 0.3s ease-out forwards; }
 .animate-globe-rotate { animation: globe-rotate 30s linear infinite; }
+
+/* Safe area for mobile bottom nav */
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Hide scrollbar but allow scroll */
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
