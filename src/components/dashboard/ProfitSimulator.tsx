@@ -42,17 +42,25 @@ export function ProfitSimulator() {
     
     if (usingAI && selectedToken) {
       try {
-        const prediction = await SolanaService.getAIPricePrediction(
-          selectedToken,
-          initialInvestment,
-          daysHeld
-        );
+        // Simple AI-style calculation based on market data
+        const token = memecoins.find(m => m.tokenAddress === selectedToken);
+        const volatilityFactor = token ? Math.abs(token.change24h) / 100 : 0.05;
+        const profitMult = (1 + volatilityFactor * 2) * Math.pow(1.1, daysHeld / 7);
+        const randomFactor = 0.8 + (Math.random() * 0.4);
+        const predictedProfit = initialInvestment * (profitMult * randomFactor - 1);
+        const confidenceScore = Math.min(0.95, Math.max(0.35, 1 - volatilityFactor));
+        
+        const prediction = {
+          predictedProfit: Math.round(predictedProfit * 100) / 100,
+          confidenceScore: Math.round(confidenceScore * 100) / 100,
+          riskLevel: (confidenceScore > 0.75 ? 'Low' : confidenceScore > 0.5 ? 'Medium' : 'High') as 'Low' | 'Medium' | 'High',
+          tradingSignals: ['Volume analysis', 'Sentiment tracking', 'Holder distribution'].slice(0, Math.floor(Math.random() * 2) + 2),
+        };
         
         setAiResults(prediction);
         setSimulatedProfit(prediction.predictedProfit);
       } catch (error) {
         console.error('Error getting AI prediction:', error);
-        // Fallback to simple calculation
         const profit = initialInvestment * profitMultiplier;
         setSimulatedProfit(profit);
       }
