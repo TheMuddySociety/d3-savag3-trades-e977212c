@@ -50,21 +50,6 @@ export const BotAccess = () => {
           </Badge>
         </div>
 
-        {walletAddress && (
-          <div className="flex items-center justify-between mt-2 p-2 rounded-lg bg-muted/20 border border-border">
-            <div className="flex items-center gap-2">
-              <Zap className={`h-3.5 w-3.5 ${isLive ? "text-destructive" : "text-muted-foreground"}`} />
-              <div>
-                <span className="text-xs font-medium text-foreground">Go Live</span>
-              </div>
-            </div>
-            <Switch
-              checked={isLive}
-              onCheckedChange={handleLiveToggle}
-              disabled={isPaymentPending || !walletAddress}
-            />
-          </div>
-        )}
 
         {walletAddress && (
           <Button
