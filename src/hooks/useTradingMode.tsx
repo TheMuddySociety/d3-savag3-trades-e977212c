@@ -1,9 +1,6 @@
 
-import { createContext, useContext, useState, useCallback, useEffect, ReactNode } from "react";
-import { useWallet } from "@solana/wallet-adapter-react";
-import { Connection, PublicKey, SystemProgram, Transaction, LAMPORTS_PER_SOL } from "@solana/web3.js";
+import { createContext, useContext, useState, useCallback, ReactNode } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
 
 interface TradingModeContextType {
   isLive: boolean;
