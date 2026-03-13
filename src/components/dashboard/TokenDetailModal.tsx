@@ -124,9 +124,9 @@ function useTokenDetail(token: MemeToken | null, open: boolean) {
     const fetchAll = async () => {
       const address = token.tokenAddress;
       if (!address) {
-        setPriceData(generateMockPriceHistory(token));
-        setHolders(generateMockHolders());
-        setTrades(generateMockTrades(token));
+        setPriceData([]);
+        setHolders([]);
+        setTrades([]);
         setDataSource('mock');
         setLoading(false);
         return;
