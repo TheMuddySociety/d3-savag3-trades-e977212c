@@ -17,6 +17,7 @@ import {
   ArrowRightLeft, ChevronDown, ChevronUp, Bell,
 } from 'lucide-react';
 import { MemeToken } from '@/types/memeToken';
+import { TokenSafetyCard } from './TokenSafetyCard';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -350,6 +351,10 @@ export function TokenDetailModal({ token, open, onOpenChange, onSetAlert }: Toke
         </DialogHeader>
 
         <div className="p-5 space-y-5">
+          {/* Safety Analysis */}
+          {token.tokenAddress && (
+            <TokenSafetyCard tokenAddress={token.tokenAddress} tokenName={token.name} />
+          )}
           {/* Stats Row */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {[

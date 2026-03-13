@@ -460,99 +460,166 @@ async function fetchMarketStats(jupiterApiKey?: string) {
   }
 }
 
-// ── Shield Check (Jupiter Ultra Shield API) ─────────────────────────
+// ── Shield Check (SAVAG3BOT Full Safety Analysis) ───────────────────
 
 async function fetchShieldCheck(address: string, jupiterApiKey?: string) {
   try {
+    const HELIUS_API_KEY = Deno.env.get('HELIUS_API_KEY');
     const headers: Record<string, string> = {};
     if (jupiterApiKey) headers['x-api-key'] = jupiterApiKey;
 
-    // Jupiter Shield API
-    const shieldResp = await fetch(`https://ultra-api.jup.ag/v1/shield?mints=${address}`, { headers });
-    let shieldData: any = null;
-    if (shieldResp.ok) {
-      shieldData = await shieldResp.json();
-    }
+    // 1. Jupiter Shield API
+    const shieldPromise = fetch(`https://ultra-api.jup.ag/v1/shield?mints=${address}`, { headers })
+      .then(r => r.ok ? r.json() : null).catch(() => null);
 
-    // Also get token metadata from Helius for more context
-    const HELIUS_API_KEY = Deno.env.get('HELIUS_API_KEY');
-    let metaData: any = null;
-    if (HELIUS_API_KEY) {
-      const rpcUrl = `https://mainnet.helius-rpc.com/?api-key=${HELIUS_API_KEY}`;
-      const metaResp = await fetch(rpcUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'getAsset', params: { id: address } }),
-      });
-      if (metaResp.ok) {
-        const metaResult = await metaResp.json();
-        metaData = metaResult?.result;
-      }
-    }
+    // 2. Jupiter Strict List check
+    const strictListPromise = fetch('https://token.jup.ag/strict')
+      .then(r => r.ok ? r.json() : []).catch(() => []);
 
-    // Get holder info
-    let holderCount = 0;
-    if (HELIUS_API_KEY) {
-      try {
-        const rpcUrl = `https://mainnet.helius-rpc.com/?api-key=${HELIUS_API_KEY}`;
-        const holderResp = await fetch(rpcUrl, {
+    // 3. Helius DAS getAsset (mint/freeze authority + metadata)
+    const rpcUrl = HELIUS_API_KEY ? `https://mainnet.helius-rpc.com/?api-key=${HELIUS_API_KEY}` : '';
+    const metaPromise = rpcUrl
+      ? fetch(rpcUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'getAsset', params: { id: address } }),
+        }).then(r => r.ok ? r.json() : { result: {} }).catch(() => ({ result: {} }))
+      : Promise.resolve({ result: {} });
+
+    // 4. Token largest accounts (holder concentration)
+    const holdersPromise = rpcUrl
+      ? fetch(rpcUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'getTokenLargestAccounts', params: [address] }),
-        });
-        if (holderResp.ok) {
-          const holderResult = await holderResp.json();
-          holderCount = holderResult?.result?.value?.length || 0;
-        }
-      } catch { /* ignore */ }
-    }
+        }).then(r => r.ok ? r.json() : { result: { value: [] } }).catch(() => ({ result: { value: [] } }))
+      : Promise.resolve({ result: { value: [] } });
 
-    // Get price and liquidity from DexScreener
+    // 5. DexScreener liquidity + pair age
+    const dexPromise = fetch(`https://api.dexscreener.com/tokens/v1/solana/${address}`)
+      .then(r => r.ok ? r.json() : []).catch(() => []);
+
+    // 6. Jupiter Quote check (risk warnings)
+    const SOL_MINT = 'So11111111111111111111111111111111111111112';
+    const quotePromise = fetch(`https://quote-api.jup.ag/v6/quote?inputMint=${SOL_MINT}&outputMint=${address}&amount=100000000&slippageBps=500`, { headers })
+      .then(r => r.ok ? r.json() : null).catch(() => null);
+
+    const [shieldData, strictList, metaResult, holdersResult, dexPairs, quoteData] = await Promise.all([
+      shieldPromise, strictListPromise, metaPromise, holdersPromise, dexPromise, quotePromise,
+    ]);
+
+    // ── Parse results ──────────────────────────────────────────────
+
+    // Shield API
+    const shieldMint = shieldData?.[address] || {};
+    const shieldWarnings: string[] = shieldMint?.warnings || [];
+
+    // Strict list
+    const isOnStrictList = Array.isArray(strictList) && strictList.some((t: any) => t.address === address);
+
+    // Metadata / authorities
+    const asset = metaResult?.result || {};
+    const content = asset?.content || {};
+    const tokenInfo = asset?.token_info || {};
+    const authorities = asset?.authorities || [];
+
+    const hasMintAuthority = authorities.some((a: any) =>
+      a.scopes?.includes('mint') || a.scopes?.includes('full'));
+    const hasFreezeAuthority = authorities.some((a: any) =>
+      a.scopes?.includes('freeze') || a.scopes?.includes('full'));
+
+    // Holder concentration
+    const accounts = holdersResult?.result?.value || [];
+    const totalSupplyInAccounts = accounts.reduce((sum: number, a: any) => sum + (a.uiAmount || 0), 0);
+    const top10Amount = accounts.slice(0, 10).reduce((sum: number, a: any) => sum + (a.uiAmount || 0), 0);
+    const top10Pct = totalSupplyInAccounts > 0 ? (top10Amount / totalSupplyInAccounts) * 100 : 0;
+    const holderCount = accounts.length;
+
+    // LP analysis — check if creator holds LP tokens
+    const topHolders = accounts.slice(0, 20).map((acc: any) => ({
+      address: acc.address,
+      amount: acc.uiAmount || 0,
+      percentage: totalSupplyInAccounts > 0 ? ((acc.uiAmount || 0) / totalSupplyInAccounts) * 100 : 0,
+    }));
+
+    // DexScreener
     let liquidity = 0;
     let pairAge = '';
-    try {
-      const dexResp = await fetch(`https://api.dexscreener.com/tokens/v1/solana/${address}`);
-      if (dexResp.ok) {
-        const pairs = await dexResp.json();
-        if (Array.isArray(pairs) && pairs.length > 0) {
-          // Get highest liquidity pair
-          const bestPair = pairs.reduce((best: any, p: any) =>
-            (p.liquidity?.usd || 0) > (best?.liquidity?.usd || 0) ? p : best, pairs[0]);
-          liquidity = bestPair?.liquidity?.usd || 0;
-          pairAge = bestPair?.pairCreatedAt ? new Date(bestPair.pairCreatedAt).toISOString() : '';
-        }
-      }
-    } catch { /* ignore */ }
+    let lpBurned = false;
+    if (Array.isArray(dexPairs) && dexPairs.length > 0) {
+      const bestPair = dexPairs.reduce((best: any, p: any) =>
+        (p.liquidity?.usd || 0) > (best?.liquidity?.usd || 0) ? p : best, dexPairs[0]);
+      liquidity = bestPair?.liquidity?.usd || 0;
+      pairAge = bestPair?.pairCreatedAt ? new Date(bestPair.pairCreatedAt).toISOString() : '';
+      // DexScreener labels include "LP Burned" if applicable
+      const labels = bestPair?.labels || [];
+      lpBurned = labels.some((l: string) => l.toLowerCase().includes('burn') || l.toLowerCase().includes('lock'));
+    }
 
-    const content = metaData?.content || {};
-    const tokenInfo = metaData?.token_info || {};
-    const authorities = metaData?.authorities || [];
-    
-    // Determine risk flags from on-chain data
-    const hasFreezeAuthority = authorities.some((a: any) => 
-      a.scopes?.includes('freeze') || a.scopes?.includes('full'));
-    const hasMintAuthority = authorities.some((a: any) => 
-      a.scopes?.includes('mint') || a.scopes?.includes('full'));
+    // Quote warnings
+    const quoteError = quoteData?.error || null;
+    const hasQuoteWarning = !!quoteError;
 
-    // Shield data analysis
-    const shieldMint = shieldData?.[address] || {};
-    const warnings = shieldMint?.warnings || [];
-    
+    // ── Risk scoring (SAVAG3BOT logic) ─────────────────────────────
+
+    let riskScore = 0; // 0 = safest, higher = riskier
+    const riskFactors: string[] = [];
+
+    if (hasMintAuthority) { riskScore += 30; riskFactors.push('Mint authority is active — dev can print tokens'); }
+    if (hasFreezeAuthority) { riskScore += 25; riskFactors.push('Freeze authority is active — dev can freeze your tokens'); }
+    if (!lpBurned && liquidity > 0) { riskScore += 15; riskFactors.push('LP tokens not burned/locked — rug pull possible'); }
+    if (top10Pct > 20) { riskScore += 15; riskFactors.push(`Top 10 holders own ${top10Pct.toFixed(1)}% of supply (>20%)`); }
+    if (liquidity < 5000) { riskScore += 10; riskFactors.push('Very low liquidity (<$5K)'); }
+    if (holderCount < 50) { riskScore += 10; riskFactors.push('Very few holders (<50)'); }
+    if (!isOnStrictList) { riskScore += 5; riskFactors.push('Not on Jupiter strict verified list'); }
+    if (hasQuoteWarning) { riskScore += 10; riskFactors.push(`Jupiter quote warning: ${quoteError}`); }
+    if (shieldWarnings.length > 0) { riskScore += 15; riskFactors.push(...shieldWarnings.map((w: string) => `Shield: ${w}`)); }
+
+    const safeFactors: string[] = [];
+    if (!hasMintAuthority) safeFactors.push('Mint authority revoked ✓');
+    if (!hasFreezeAuthority) safeFactors.push('Freeze authority revoked ✓');
+    if (lpBurned) safeFactors.push('LP burned/locked ✓');
+    if (isOnStrictList) safeFactors.push('Jupiter strict verified ✓');
+    if (top10Pct <= 20) safeFactors.push(`Top 10 holders own ${top10Pct.toFixed(1)}% (healthy) ✓`);
+    if (liquidity >= 50000) safeFactors.push(`Strong liquidity ($${(liquidity/1000).toFixed(0)}K) ✓`);
+
+    let riskLevel: 'LOW' | 'MEDIUM' | 'HIGH';
+    let recommendation: string;
+    if (riskScore <= 15) {
+      riskLevel = 'LOW';
+      recommendation = 'Safe for larger positions. Standard risk management applies.';
+    } else if (riskScore <= 45) {
+      riskLevel = 'MEDIUM';
+      recommendation = 'Use small position sizes. Check social sentiment before entering.';
+    } else {
+      riskLevel = 'HIGH';
+      recommendation = 'DO NOT TRADE unless you are prepared to lose 100%.';
+    }
+
     return {
       name: content?.metadata?.name || '',
       symbol: content?.metadata?.symbol || '',
-      safe: warnings.length === 0 && !hasFreezeAuthority,
+      riskLevel,
+      riskScore: Math.min(100, riskScore),
+      recommendation,
+      riskFactors,
+      safeFactors,
+      isOnStrictList,
       holders: holderCount,
+      top10HolderPct: +top10Pct.toFixed(1),
+      topHolders,
       liquidity,
+      lpBurned,
       pairAge,
       decimals: tokenInfo?.decimals || 0,
       supply: tokenInfo?.supply || 0,
       flags: {
-        freezeAuthority: hasFreezeAuthority,
         mintAuthority: hasMintAuthority,
+        freezeAuthority: hasFreezeAuthority,
         lowLiquidity: liquidity < 5000,
         lowHolders: holderCount < 50,
-        warnings,
+        jupiterWarning: hasQuoteWarning,
+        shieldWarnings,
       },
     };
   } catch (e) {
