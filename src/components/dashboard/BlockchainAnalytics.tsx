@@ -61,7 +61,6 @@ export function BlockchainAnalytics() {
   };
 
   useEffect(() => {
-    SolanaService.initConnection();
     fetchTransactions();
     fetchInsights();
     const intervalId = setInterval(() => { fetchTransactions(); fetchInsights(); }, 120000);
