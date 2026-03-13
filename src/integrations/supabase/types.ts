@@ -104,6 +104,45 @@ export type Database = {
         }
         Relationships: []
       }
+      copy_trade_events: {
+        Row: {
+          created_at: string
+          id: string
+          processed: boolean
+          signature: string
+          sol_amount: number
+          swap_type: string
+          target_wallet: string
+          timestamp: number | null
+          token_mint: string
+          wallet_address: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          processed?: boolean
+          signature: string
+          sol_amount?: number
+          swap_type: string
+          target_wallet: string
+          timestamp?: number | null
+          token_mint: string
+          wallet_address: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          processed?: boolean
+          signature?: string
+          sol_amount?: number
+          swap_type?: string
+          target_wallet?: string
+          timestamp?: number | null
+          token_mint?: string
+          wallet_address?: string
+        }
+        Relationships: []
+      }
       price_alerts: {
         Row: {
           created_at: string
