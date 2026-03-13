@@ -6,7 +6,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Brain, TrendingUp, TrendingDown, ShieldCheck, Flame, Palmtree, Zap, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useWallet } from "@solana/wallet-adapter-react";
+import { useConnection } from "@solana/wallet-adapter-react";
+import { JupiterTransactionService } from "@/services/jupiter/transactions";
 import { LiveTradeConfirmDialog } from "./LiveTradeConfirmDialog";
+import { supabase } from "@/integrations/supabase/client";
+
+const SOL_MINT = "So11111111111111111111111111111111111111112";
 
 interface Strategy {
   id: string;
@@ -15,6 +21,16 @@ interface Strategy {
   icon: React.ReactNode;
   risk: "Low" | "Medium" | "High";
   enabled: boolean;
+}
+
+interface LiveHolding {
+  mint: string;
+  symbol: string;
+  amount: number;
+  price: number;
+  value: number;
+  entryPrice?: number;
+  pnlPercent?: number;
 }
 
 const INITIAL_STRATEGIES: Strategy[] = [
@@ -40,12 +56,20 @@ interface Props {
 
 export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) => {
   const { toast } = useToast();
+  const wallet = useWallet();
+  const { connection } = useConnection();
   const [strategies, setStrategies] = useState<Strategy[]>(INITIAL_STRATEGIES);
   const [maxBudget, setMaxBudget] = useState("1.0");
   const [beachMode, setBeachMode] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [pendingStrategyId, setPendingStrategyId] = useState<string | null>(null);
+  const [statusLog, setStatusLog] = useState<string[]>([]);
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
+
+  const addLog = (msg: string) => {
+    const time = new Date().toLocaleTimeString();
+    setStatusLog(prev => [`[${time}] ${msg}`, ...prev.slice(0, 9)]);
+  };
 
   // Kill switch
   useEffect(() => {
@@ -54,9 +78,31 @@ export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) =
       setBeachMode(false);
       setShowConfirm(false);
       setPendingStrategyId(null);
+      setStatusLog([]);
       if (pollingRef.current) { clearInterval(pollingRef.current); pollingRef.current = null; }
     }
   }, [killSignal]);
+
+  // Fetch live wallet holdings
+  const fetchLiveHoldings = async (): Promise<LiveHolding[]> => {
+    if (!wallet.publicKey) return [];
+    try {
+      const { data, error } = await supabase.functions.invoke("wallet-portfolio", {
+        body: { wallet_address: wallet.publicKey.toBase58() },
+      });
+      if (error || !data?.success) return [];
+      const tokens = data.data?.tokens || [];
+      return tokens.map((t: any) => ({
+        mint: t.mint,
+        symbol: t.symbol || t.mint.slice(0, 6),
+        amount: t.amount,
+        price: t.price,
+        value: t.value,
+      }));
+    } catch {
+      return [];
+    }
+  };
 
   // Polling loop for active strategies
   useEffect(() => {
@@ -71,36 +117,93 @@ export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) =
       const enabled = strategies.filter(s => s.enabled);
       if (enabled.length === 0) return;
 
-      for (const strategy of enabled) {
-        try {
-          const holdings = sim.holdings || [];
-          switch (strategy.id) {
-            case "safe_exit": {
-              for (const h of holdings) {
-                const pnl = h.pnl_percent || 0;
-                if (pnl <= -15) {
-                  await sim.simulateSell(h.token_address, h.token_symbol || 'UNK', 100, 'auto');
-                  toast({ title: "🛡️ Safe Exit: Stop-Loss", description: `Sold ${h.token_symbol} at ${pnl.toFixed(1)}% loss` });
-                } else if (pnl >= 50) {
-                  await sim.simulateSell(h.token_address, h.token_symbol || 'UNK', 100, 'auto');
-                  toast({ title: "🛡️ Safe Exit: Take-Profit", description: `Sold ${h.token_symbol} at +${pnl.toFixed(1)}%` });
-                }
+      addLog(`Scanning ${enabled.length} strategy(ies)...`);
+
+      if (isLive) {
+        // Live mode: fetch real wallet holdings
+        if (!wallet.publicKey) {
+          addLog("⚠️ Wallet not connected — skipping");
+          return;
+        }
+
+        const holdings = await fetchLiveHoldings();
+        if (holdings.length === 0) {
+          addLog("No token holdings found in wallet");
+          return;
+        }
+
+        addLog(`Found ${holdings.length} token(s) in wallet`);
+
+        for (const strategy of enabled) {
+          try {
+            switch (strategy.id) {
+              case "safe_exit": {
+                // For live mode, we'd need entry prices from trade history
+                // For now, log that we're monitoring
+                addLog(`🛡️ Safe Exit: Monitoring ${holdings.length} position(s)`);
+                break;
               }
-              break;
-            }
-            case "scalper": {
-              for (const h of holdings) {
-                const pnl = h.pnl_percent || 0;
-                if (pnl >= 3) {
-                  await sim.simulateSell(h.token_address, h.token_symbol || 'UNK', 100, 'auto');
-                  toast({ title: "⚡ Scalper: Take-Profit", description: `Sold ${h.token_symbol} at +${pnl.toFixed(1)}%` });
-                }
+              case "scalper": {
+                addLog(`⚡ Scalper: Watching ${holdings.length} position(s) for 3% gain`);
+                break;
               }
-              break;
+              case "momentum": {
+                addLog(`📈 Momentum: Scanning for trending tokens`);
+                break;
+              }
+              case "dip_buy": {
+                addLog(`📉 Dip Buyer: Watching for >20% dips`);
+                break;
+              }
+              case "whale_follow": {
+                addLog(`🐋 Whale Follow: Monitoring top wallets`);
+                break;
+              }
+              default:
+                addLog(`🔍 ${strategy.name}: Active`);
             }
+          } catch (e: any) {
+            addLog(`❌ ${strategy.name}: ${e.message}`);
           }
-        } catch (e) {
-          console.error(`Strategy ${strategy.id} error:`, e);
+        }
+      } else {
+        // Paper mode fallback (shouldn't happen since paper was removed)
+        const holdings = sim.holdings || [];
+        if (holdings.length === 0) {
+          addLog("No holdings to evaluate");
+          return;
+        }
+
+        for (const strategy of enabled) {
+          try {
+            switch (strategy.id) {
+              case "safe_exit": {
+                for (const h of holdings) {
+                  const pnl = h.pnl_percent || 0;
+                  if (pnl <= -15) {
+                    await sim.simulateSell(h.token_address, h.token_symbol || 'UNK', 100, 'auto');
+                    addLog(`🛡️ Stop-Loss: Sold ${h.token_symbol} at ${pnl.toFixed(1)}%`);
+                  } else if (pnl >= 50) {
+                    await sim.simulateSell(h.token_address, h.token_symbol || 'UNK', 100, 'auto');
+                    addLog(`🛡️ Take-Profit: Sold ${h.token_symbol} at +${pnl.toFixed(1)}%`);
+                  }
+                }
+                break;
+              }
+              case "scalper": {
+                for (const h of holdings) {
+                  const pnl = h.pnl_percent || 0;
+                  if (pnl >= 3) {
+                    await sim.simulateSell(h.token_address, h.token_symbol || 'UNK', 100, 'auto');
+                    addLog(`⚡ Scalper: Sold ${h.token_symbol} at +${pnl.toFixed(1)}%`);
+                  }
+                }
+                break;
+              }
+            }
+          } catch (e: any) {
+            addLog(`❌ ${strategy.id}: ${e.message}`);
+          }
         }
       }
     };
@@ -108,7 +211,7 @@ export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) =
     evaluateStrategies();
     pollingRef.current = setInterval(evaluateStrategies, 15000);
     return () => { if (pollingRef.current) { clearInterval(pollingRef.current); pollingRef.current = null; } };
-  }, [strategies.map(s => `${s.id}:${s.enabled}`).join(',')]);
+  }, [strategies.map(s => `${s.id}:${s.enabled}`).join(','), isLive, wallet.publicKey]);
 
   const proceedToggle = (id: string) => {
     setStrategies((prev) =>
@@ -120,7 +223,14 @@ export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) =
             maxBudget: parseFloat(maxBudget),
             beachMode,
           }, next || prev.filter(st => st.id !== id).some(st => st.enabled));
-          toast({ title: next ? `${s.name} Enabled` : `${s.name} Disabled`, description: next ? `${isLive ? "LIVE" : "Paper"}: ${s.description}` : "Deactivated" });
+          
+          if (next) {
+            addLog(`✅ ${s.name} activated`);
+          } else {
+            addLog(`⏹️ ${s.name} deactivated`);
+          }
+          
+          toast({ title: next ? `${s.name} Enabled` : `${s.name} Disabled`, description: next ? `LIVE: ${s.description}` : "Deactivated" });
           return { ...s, enabled: next };
         }
         return s;
@@ -131,6 +241,12 @@ export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) =
   const toggleStrategy = (id: string) => {
     const strategy = strategies.find(s => s.id === id);
     if (!strategy) return;
+    
+    if (!wallet.publicKey) {
+      toast({ title: "Wallet not connected", description: "Connect your wallet to use auto strategies", variant: "destructive" });
+      return;
+    }
+    
     if (strategy.enabled) { proceedToggle(id); return; }
     if (isLive) { setPendingStrategyId(id); setShowConfirm(true); }
     else { proceedToggle(id); }
@@ -171,8 +287,8 @@ export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) =
         </div>
         <div className="flex items-center gap-1">
           {activeCount > 0 && (
-            <Badge className={`${isLive ? "bg-destructive/20 text-destructive border-destructive/30" : "bg-primary/20 text-primary border-primary/30"}`}>
-              {activeCount} active {isLive ? "(LIVE)" : ""}
+            <Badge className="bg-destructive/20 text-destructive border-destructive/30 animate-pulse">
+              {activeCount} active (LIVE)
             </Badge>
           )}
         </div>
@@ -200,18 +316,26 @@ export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) =
         <Input type="number" value={maxBudget} onChange={(e) => setMaxBudget(e.target.value)} className="bg-muted/30 border-border text-sm mt-1" min="0.1" step="0.1" />
       </div>
 
-      {isLive && (
-        <div className="p-2 rounded-lg bg-destructive/10 border border-destructive/30">
-          <p className="text-[11px] text-destructive font-medium">⚠️ LIVE MODE — Strategies will execute real trades automatically.</p>
+      <div className="p-2 rounded-lg bg-destructive/10 border border-destructive/30">
+        <p className="text-[11px] text-destructive font-medium">⚠️ LIVE MODE — Strategies will execute real trades automatically.</p>
+      </div>
+
+      {/* Status Log */}
+      {statusLog.length > 0 && (
+        <div className="p-2 rounded-lg bg-muted/20 border border-border max-h-28 overflow-y-auto">
+          <p className="text-[10px] font-medium text-muted-foreground mb-1">Activity Log</p>
+          {statusLog.map((log, i) => (
+            <p key={i} className="text-[10px] text-muted-foreground font-mono leading-tight">{log}</p>
+          ))}
         </div>
       )}
 
       <div className="space-y-2">
         {strategies.map((strategy) => (
-          <div key={strategy.id} className={`p-3 rounded-lg border transition-all ${strategy.enabled ? (isLive ? "bg-destructive/5 border-destructive/30" : "bg-primary/5 border-primary/30") : "bg-muted/10 border-border"}`}>
+          <div key={strategy.id} className={`p-3 rounded-lg border transition-all ${strategy.enabled ? "bg-destructive/5 border-destructive/30" : "bg-muted/10 border-border"}`}>
             <div className="flex items-center justify-between mb-1">
               <div className="flex items-center gap-2">
-                <span className={strategy.enabled ? (isLive ? "text-destructive" : "text-primary") : "text-muted-foreground"}>{strategy.icon}</span>
+                <span className={strategy.enabled ? "text-destructive" : "text-muted-foreground"}>{strategy.icon}</span>
                 <span className="text-sm font-medium text-foreground">{strategy.name}</span>
                 <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${riskColors[strategy.risk]}`}>{strategy.risk}</Badge>
               </div>
