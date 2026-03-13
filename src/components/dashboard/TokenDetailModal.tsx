@@ -200,7 +200,7 @@ function useTokenDetail(token: MemeToken | null, open: boolean) {
         }));
         usedLive = true;
       } else {
-        setTrades(generateMockTrades(token));
+        setTrades([]);
       }
 
       setDataSource(usedLive ? 'live' : 'mock');
