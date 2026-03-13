@@ -126,7 +126,7 @@ export const useMemecoins = () => {
     
     // Poll Bullme API every 15 seconds for bonding curve price updates
     const pollInterval = setInterval(() => {
-      fetchMemecoins();
+      fetchMemecoins(true); // silent refresh — no loading spinner
     }, 15000);
     
     return () => clearInterval(pollInterval);
