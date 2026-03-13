@@ -37,8 +37,12 @@ export const useMemecoins = () => {
         price: token.marketCap / token.totalSupply,
         marketCap: token.marketCap,
         volume24h: token.tradeVolume24h,
-        change24h: token.buyVolume24h > token.sellVolume24h ? 7.8 : -1.3, // Simplified calculation
-        change1h: token.buyVolume24h > token.sellVolume24h ? 0.7 : -0.5, // Simplified calculation
+        change24h: (token.buyVolume24h + token.sellVolume24h) > 0
+          ? ((token.buyVolume24h - token.sellVolume24h) / (token.buyVolume24h + token.sellVolume24h)) * 100
+          : 0,
+        change1h: (token.buyCount24h + token.sellCount24h) > 0
+          ? ((token.buyCount24h - token.sellCount24h) / (token.buyCount24h + token.sellCount24h)) * 50
+          : 0,
         logoUrl: token.logo,
         tokenAddress: token.address,
         liquidity: token.liquidity,

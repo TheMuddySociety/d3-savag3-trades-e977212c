@@ -124,23 +124,40 @@ class TokenWebSocketService {
         return [];
       }
 
-      const tokens: BirdeyeToken[] = data.data;
-      return tokens.map((t, i) => ({
-        id: t.address,
-        name: t.name || `Token ${i + 1}`,
-        symbol: t.symbol || 'UNK',
-        price: t.price || 0,
-        marketCap: t.marketcap || t.fdv || 0,
-        volume24h: t.volume24hUSD || 0,
-        change24h: t.price24hChangePercent || 0,
-        logoUrl: t.logoURI || '/placeholder.svg',
-        tokenAddress: t.address,
-        liquidity: t.liquidity || 0,
-        holders: 0,
-        tags: ['Trending'],
-        timestamp: Date.now(),
-        bondingCurveProgress: undefined,
-      }));
+      const tokens = data.data as any[];
+      return tokens
+        .filter((t: any) => t.address && t.address.length > 20) // Only valid Solana addresses
+        .map((t: any, i: number) => {
+          // Parse market_cap / volume_24h which may be strings like "$477M"
+          const parseCurrencyString = (val: any): number => {
+            if (typeof val === 'number') return val;
+            if (typeof val !== 'string') return 0;
+            const cleaned = val.replace(/[$,]/g, '');
+            const multipliers: Record<string, number> = { T: 1e12, B: 1e9, M: 1e6, K: 1e3 };
+            const match = cleaned.match(/^([\d.]+)\s*([TBMK])?$/i);
+            if (!match) return parseFloat(cleaned) || 0;
+            const num = parseFloat(match[1]);
+            const mult = match[2] ? multipliers[match[2].toUpperCase()] || 1 : 1;
+            return num * mult;
+          };
+
+          return {
+            id: t.address,
+            name: t.name || `Token ${i + 1}`,
+            symbol: t.symbol || 'UNK',
+            price: t.price || 0,
+            marketCap: parseCurrencyString(t.market_cap),
+            volume24h: parseCurrencyString(t.volume_24h),
+            change24h: t.price_change_24h || 0,
+            logoUrl: t.logo || '/placeholder.svg',
+            tokenAddress: t.address,
+            liquidity: 0,
+            holders: 0,
+            tags: ['Trending'],
+            timestamp: Date.now(),
+            bondingCurveProgress: undefined,
+          };
+        });
     } catch (err) {
       console.error('[TokenWS] Trending error:', err);
       return [];

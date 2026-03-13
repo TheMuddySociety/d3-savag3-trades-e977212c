@@ -4,16 +4,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BarChart3, Activity, AlertCircle, RefreshCw, Loader2 } from "lucide-react";
-import { SolanaService } from '@/services/SolanaService';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 interface Transaction {
-  signature: string;
-  slot: number;
-  timestamp?: string;
-  err: any;
-  memo?: string;
+  txHash: string;
+  type: string;
+  source: string;
+  timestamp: number;
+  description: string;
 }
 
 interface MarketInsights {
@@ -33,8 +32,13 @@ export function BlockchainAnalytics() {
   const fetchTransactions = async () => {
     try {
       setIsRefreshing(true);
-      const txs = await SolanaService.getRecentMemeTransactions(15);
-      setTransactions(txs);
+      // Use a popular Solana memecoin (BONK) for real transaction data
+      const BONK_MINT = 'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263';
+      const { data, error } = await supabase.functions.invoke('token-prices', {
+        body: { action: 'token_trades', address: BONK_MINT, limit: 15 },
+      });
+      if (error) throw error;
+      setTransactions(data?.data || []);
     } catch (error) {
       console.error('Error fetching transactions:', error);
       toast.error('Failed to fetch blockchain data');
@@ -57,7 +61,6 @@ export function BlockchainAnalytics() {
   };
 
   useEffect(() => {
-    SolanaService.initConnection();
     fetchTransactions();
     fetchInsights();
     const intervalId = setInterval(() => { fetchTransactions(); fetchInsights(); }, 120000);
@@ -129,18 +132,19 @@ export function BlockchainAnalytics() {
                 </div>
               ) : (
                 <div className="divide-y">
-                  {transactions.map((tx) => (
-                    <div key={tx.signature} className="p-3 hover:bg-muted/50 transition-colors">
+                  {transactions.map((tx, idx) => (
+                    <div key={tx.txHash || idx} className="p-3 hover:bg-muted/50 transition-colors">
                       <div className="flex justify-between mb-1">
                         <span className="font-mono text-xs text-muted-foreground">
-                          {shortenAddress(tx.signature)}
+                          {shortenAddress(tx.txHash)}
                         </span>
-                        <span className={`text-xs ${tx.err ? 'text-red-500' : 'text-green-500'}`}>
-                          {tx.err ? 'Failed' : 'Success'}
+                        <span className="text-xs text-primary">
+                          {tx.type}
                         </span>
                       </div>
-                      <div className="text-xs text-muted-foreground">
-                        {formatDate(tx.timestamp)}
+                      <div className="text-xs text-muted-foreground flex justify-between">
+                        <span>{tx.source}</span>
+                        <span>{tx.timestamp ? formatDate(String(tx.timestamp * 1000)) : 'Unknown'}</span>
                       </div>
                     </div>
                   ))}
