@@ -8,9 +8,10 @@ import { Slider } from "@/components/ui/slider";
 import { Sparkles, DollarSign, TrendingUp, Calculator, Brain, BarChart3, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useMemecoins } from "@/hooks/useMemecoins";
-import { SolanaService } from '@/services/SolanaService';
 import { Badge } from "@/components/ui/badge";
 import { formatNumber } from "@/utils/format";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 export function ProfitSimulator() {
   const [initialInvestment, setInitialInvestment] = useState(1000);
@@ -25,6 +26,7 @@ export function ProfitSimulator() {
     confidenceScore: number;
     riskLevel: 'Low' | 'Medium' | 'High';
     tradingSignals: string[];
+    reasoning?: string;
   } | null>(null);
   
   const { memecoins } = useMemecoins();
@@ -42,30 +44,46 @@ export function ProfitSimulator() {
     
     if (usingAI && selectedToken) {
       try {
-        // Simple AI-style calculation based on market data
         const token = memecoins.find(m => m.tokenAddress === selectedToken);
-        const volatilityFactor = token ? Math.abs(token.change24h) / 100 : 0.05;
-        const profitMult = (1 + volatilityFactor * 2) * Math.pow(1.1, daysHeld / 7);
-        const randomFactor = 0.8 + (Math.random() * 0.4);
-        const predictedProfit = initialInvestment * (profitMult * randomFactor - 1);
-        const confidenceScore = Math.min(0.95, Math.max(0.35, 1 - volatilityFactor));
-        
-        const prediction = {
-          predictedProfit: Math.round(predictedProfit * 100) / 100,
-          confidenceScore: Math.round(confidenceScore * 100) / 100,
-          riskLevel: (confidenceScore > 0.75 ? 'Low' : confidenceScore > 0.5 ? 'Medium' : 'High') as 'Low' | 'Medium' | 'High',
-          tradingSignals: ['Volume analysis', 'Sentiment tracking', 'Holder distribution'].slice(0, Math.floor(Math.random() * 2) + 2),
-        };
-        
-        setAiResults(prediction);
+        if (!token) throw new Error('Token not found');
+
+        const { data, error } = await supabase.functions.invoke('ai-profit-analysis', {
+          body: {
+            token: {
+              symbol: token.symbol,
+              name: token.name,
+              price: token.price,
+              change24h: token.change24h,
+              marketCap: token.marketCap,
+              volume24h: token.volume24h,
+              liquidity: token.liquidity,
+            },
+            investment: initialInvestment,
+            days: daysHeld,
+          },
+        });
+
+        if (error) throw error;
+        if (!data?.success || !data?.data) throw new Error(data?.error || 'AI analysis failed');
+
+        const prediction = data.data;
+        setAiResults({
+          predictedProfit: prediction.predictedProfit,
+          confidenceScore: prediction.confidenceScore,
+          riskLevel: prediction.riskLevel,
+          tradingSignals: prediction.tradingSignals,
+          reasoning: prediction.reasoning,
+        });
         setSimulatedProfit(prediction.predictedProfit);
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error getting AI prediction:', error);
+        toast.error(error?.message || 'AI analysis failed. Try again.');
+        // Fallback to simple calc
         const profit = initialInvestment * profitMultiplier;
         setSimulatedProfit(profit);
+        setAiResults(null);
       }
     } else {
-      // Simple profit calculation for demonstration
       const profit = initialInvestment * profitMultiplier;
       setSimulatedProfit(profit);
     }
