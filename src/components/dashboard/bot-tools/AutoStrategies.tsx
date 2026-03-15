@@ -4,12 +4,13 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Brain, TrendingUp, TrendingDown, ShieldCheck, Flame, Palmtree, Zap, Users } from "lucide-react";
+import { Brain, TrendingUp, TrendingDown, ShieldCheck, Flame, Palmtree, Zap, Users, Wallet } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { useConnection } from "@solana/wallet-adapter-react";
 import { JupiterUltraService } from "@/services/jupiter/ultra";
 import { LiveTradeConfirmDialog } from "./LiveTradeConfirmDialog";
+import { BudgetManager } from "./BudgetManager";
 import { supabase } from "@/integrations/supabase/client";
 
 const SOL_MINT = "So11111111111111111111111111111111111111112";
