@@ -1,7 +1,7 @@
 
 import { Button } from "@/components/ui/button";
 import { RefreshCw } from "lucide-react";
-import { UnifiedWalletButton } from 'jupiverse-kit';
+import { UnifiedWalletButton } from '@jup-ag/wallet-adapter';
 
 interface SwapButtonProps {
   connected: boolean;
