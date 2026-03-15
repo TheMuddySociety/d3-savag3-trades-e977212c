@@ -34,9 +34,11 @@ const App = () => {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider defaultTheme="dark">
         <PhantomProvider
-          appId="f3e1137b-609c-4f5e-91d7-c76a3e4f9f7d"
+          config={{
+            appId: "f3e1137b-609c-4f5e-91d7-c76a3e4f9f7d",
+            providers: ["phantom", "injected"],
+          }}
           theme={darkTheme}
-          deepLinkScheme="savag3bot"
         >
           <JupiverseKitProvider
             endpoint={RPC_PROXY}
