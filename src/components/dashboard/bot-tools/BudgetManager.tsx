@@ -403,6 +403,9 @@ export const BudgetManager = () => {
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* Withdrawal History */}
+      <WithdrawalHistory />
     </div>
   );
 };
