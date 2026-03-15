@@ -236,6 +236,34 @@ export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) =
     }
   }, []);
 
+  // Fetch brand new Pump.fun launches for sniping
+  const fetchNewLaunches = useCallback(async (): Promise<Array<{
+    mint: string; symbol: string; name: string; price: number;
+    marketCap: number; liquidity: number; ageSeconds: number;
+  }>> => {
+    try {
+      const { data, error } = await supabase.functions.invoke("pumpfun-api", {
+        body: { action: "new_launches", limit: 10 },
+      });
+      if (error) return [];
+      const tokens = data?.tokens || [];
+      const now = Date.now();
+      return tokens
+        .filter((t: any) => t.address && t.price > 0)
+        .map((t: any) => ({
+          mint: t.address,
+          symbol: t.symbol || t.address.slice(0, 6),
+          name: t.name || t.symbol || '',
+          price: t.price,
+          marketCap: t.marketCap || 0,
+          liquidity: t.liquidity || 0,
+          ageSeconds: t.pairCreatedAt ? Math.floor((now - t.pairCreatedAt) / 1000) : 999,
+        }));
+    } catch {
+      return [];
+    }
+  }, []);
+
   // Poll for pending trades from Beach Mode
   const executePendingTrades = useCallback(async () => {
     if (!wallet.publicKey || executingTrade) return;
