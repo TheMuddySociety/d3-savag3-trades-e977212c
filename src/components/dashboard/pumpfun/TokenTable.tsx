@@ -132,15 +132,15 @@ export function TokenTable({ tokens, onTokenClick, sortField, sortDirection, onS
             <SortHeader label="TXNs" field="holders" sortField={sortField} sortDirection={sortDirection} onSort={onSort} />
             <SortHeader label="24H Vol" field="volume24h" sortField={sortField} sortDirection={sortDirection} onSort={onSort} />
             <SortHeader label="Traders" field="holders" sortField={sortField} sortDirection={sortDirection} onSort={onSort} />
-            <SortHeader label="5M" field="change24h" sortField={sortField} sortDirection={sortDirection} onSort={onSort} />
-            <SortHeader label="1H" field="change24h" sortField={sortField} sortDirection={sortDirection} onSort={onSort} />
+            <SortHeader label="5M" field="change5m" sortField={sortField} sortDirection={sortDirection} onSort={onSort} />
+            <SortHeader label="1H" field="change1h" sortField={sortField} sortDirection={sortDirection} onSort={onSort} />
           </tr>
         </thead>
         <tbody className="divide-y divide-border">
           {tokens.map((token, index) => {
-            const change5m = (Math.random() - 0.5) * 50;
-            const change1h = token.change24h * 0.3;
-            const txns = Math.floor(token.holders * 0.8);
+            const change5m = token.change5m ?? 0;
+            const change1h = token.change1h ?? 0;
+            const txns = token.holders || 0;
             const ath = token.marketCap * (1 + Math.random() * 0.5);
             
             return (

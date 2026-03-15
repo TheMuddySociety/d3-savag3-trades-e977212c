@@ -8,6 +8,7 @@ export interface MemeToken {
   volume24h: number;
   change24h: number;
   change1h?: number;
+  change5m?: number;
   logoUrl: string;
   tokenAddress?: string;
   liquidity: number;
