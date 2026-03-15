@@ -70,8 +70,9 @@ const App = () => {
                 </BrowserRouter>
               </ErrorBoundary>
             </TooltipProvider>
-          </TradingModeProvider>
-        </JupiverseKitProvider>
+            </TradingModeProvider>
+          </JupiverseKitProvider>
+        </PhantomProvider>
       </ThemeProvider>
     </QueryClientProvider>
   );

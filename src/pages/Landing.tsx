@@ -80,6 +80,7 @@ const Landing = () => {
                 <ArrowRight className="h-4 w-4" />
               </button>
               <UnifiedWalletButton />
+              <PhantomQRConnect />
             </div>
 
             {/* Feature pills */}
