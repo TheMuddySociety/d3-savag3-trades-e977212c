@@ -236,6 +236,7 @@ const fmt = (v: number, type: 'usd' | 'compact' | 'pct' = 'usd') => {
 // ── Component ───────────────────────────────────────────────────────
 
 export function TokenDetailModal({ token, open, onOpenChange, onSetAlert }: TokenDetailModalProps) {
+  const navigate = useNavigate();
   const { priceData, holders, trades, loading, dataSource } = useTokenDetail(token, open);
 
   const [showSwap, setShowSwap] = useState(false);
