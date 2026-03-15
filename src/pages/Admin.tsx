@@ -108,6 +108,10 @@ const Admin = () => {
               <NFTCollectionTracker crossRefWallets={nftCrossRef} />
             </TabsContent>
 
+            <TabsContent value="referral">
+              <ReferralEarningsTracker />
+            </TabsContent>
+
             <TabsContent value="payments">
               <Card className="border-destructive/20 bg-card">
                 <CardHeader className="flex flex-row items-center justify-between">
