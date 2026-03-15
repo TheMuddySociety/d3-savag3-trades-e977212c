@@ -48,7 +48,7 @@ export function MobileHeader() {
               </Button>
             </>
           ) : (
-            <WalletMultiButton className="!bg-primary !text-primary-foreground !rounded-md !text-[10px] !h-7 !px-3" />
+            <UnifiedWalletButton />
           )}
         </div>
       </div>

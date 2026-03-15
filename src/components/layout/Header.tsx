@@ -188,7 +188,7 @@ export function LandingHeader() {
           )}
           
           {!connected && (
-            <WalletMultiButton className="!bg-primary !text-primary-foreground !rounded-md !text-xs !h-8 !px-4" />
+            <UnifiedWalletButton />
           )}
         </div>
       </div>

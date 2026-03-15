@@ -83,7 +83,7 @@ const Landing = () => {
                 Launch App
                 <ArrowRight className="h-4 w-4" />
               </button>
-              <WalletMultiButton className="!bg-secondary !text-foreground !rounded-md !text-sm !h-11 !px-6 !font-medium !border !border-border" />
+              <UnifiedWalletButton />
             </div>
 
             {/* Feature pills */}
