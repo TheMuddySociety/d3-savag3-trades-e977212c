@@ -132,8 +132,8 @@ export function TokenTable({ tokens, onTokenClick, sortField, sortDirection, onS
             <SortHeader label="TXNs" field="holders" sortField={sortField} sortDirection={sortDirection} onSort={onSort} />
             <SortHeader label="24H Vol" field="volume24h" sortField={sortField} sortDirection={sortDirection} onSort={onSort} />
             <SortHeader label="Traders" field="holders" sortField={sortField} sortDirection={sortDirection} onSort={onSort} />
-            <SortHeader label="5M" field="change24h" sortField={sortField} sortDirection={sortDirection} onSort={onSort} />
-            <SortHeader label="1H" field="change24h" sortField={sortField} sortDirection={sortDirection} onSort={onSort} />
+            <SortHeader label="5M" field="change5m" sortField={sortField} sortDirection={sortDirection} onSort={onSort} />
+            <SortHeader label="1H" field="change1h" sortField={sortField} sortDirection={sortDirection} onSort={onSort} />
           </tr>
         </thead>
         <tbody className="divide-y divide-border">
