@@ -1,7 +1,7 @@
 
 import { Button } from "@/components/ui/button";
 import { RefreshCw } from "lucide-react";
-import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
+import { UnifiedWalletButton } from 'jupiverse-kit';
 
 interface SwapButtonProps {
   connected: boolean;
