@@ -49,10 +49,10 @@ export function MobileHeader() {
               </Button>
             </>
           ) : (
-            <>
+            <div className="flex items-center gap-1.5">
               <UnifiedWalletButton />
-              
-            </>
+              <appkit-button size="sm" label="WC" />
+            </div>
           )}
         </div>
       </div>
