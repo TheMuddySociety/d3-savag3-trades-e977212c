@@ -226,3 +226,59 @@ function pairToToken(pair: any) {
     socials: pair.info?.socials || [],
   };
 }
+
+/**
+ * Fetch brand new Pump.Fun launches (created in the last 60 seconds)
+ * Uses DexScreener latest profiles + pair data to find ultra-new tokens
+ */
+async function fetchNewLaunches(limit: number) {
+  const now = Date.now();
+  const cutoff = now - 60_000; // Last 60 seconds
+
+  try {
+    // Fetch latest token profiles (newest tokens registering on DexScreener)
+    const profilesResp = await fetch('https://api.dexscreener.com/token-profiles/latest/v1');
+    if (!profilesResp.ok) {
+      console.error(`DexScreener profiles failed: ${profilesResp.status}`);
+      return [];
+    }
+
+    const profiles = await profilesResp.json();
+    
+    // Filter to Solana tokens only
+    const solanaProfiles = (profiles || []).filter(
+      (p: any) => p.chainId === 'solana' && p.tokenAddress
+    );
+
+    if (solanaProfiles.length === 0) return [];
+
+    // Get addresses and enrich with pair data
+    const addresses = solanaProfiles.map((p: any) => p.tokenAddress).slice(0, 30);
+    const enriched = await enrichWithPairData(addresses);
+
+    // Filter to tokens created within the cutoff window
+    // If no pairCreatedAt, treat as potentially new
+    const newLaunches = enriched.filter((t: any) => {
+      if (t.pairCreatedAt && t.pairCreatedAt > cutoff) return true;
+      // Include tokens with very low market cap as likely new
+      if (!t.pairCreatedAt && t.marketCap > 0 && t.marketCap < 50000) return true;
+      return false;
+    });
+
+    // Sort by creation time (newest first)
+    newLaunches.sort((a: any, b: any) => (b.pairCreatedAt || now) - (a.pairCreatedAt || now));
+
+    // If no ultra-new launches, fall back to latest tokens sorted by creation
+    if (newLaunches.length === 0) {
+      const latest = enriched
+        .filter((t: any) => t.pairCreatedAt && t.pairCreatedAt > now - 300_000) // Last 5 min
+        .sort((a: any, b: any) => (b.pairCreatedAt || 0) - (a.pairCreatedAt || 0));
+      return latest.slice(0, limit);
+    }
+
+    return newLaunches.slice(0, limit);
+  } catch (e) {
+    console.error('fetchNewLaunches error:', e);
+    return [];
+  }
+}

@@ -562,6 +562,55 @@ export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) =
               break;
             }
 
+            // ═══════════════════════════════════════
+            // NEW LAUNCH HUNTER: snipes new Pump.fun tokens
+            // ═══════════════════════════════════════
+            case "new_launch": {
+              const budget = parseFloat(maxBudgetRef.current) || 1.0;
+              addLog(`🔥 New Launch Hunter: Scanning for fresh Pump.fun launches (budget: ${budget} SOL)`);
+
+              try {
+                const launches = await fetchNewLaunches();
+                if (launches.length === 0) {
+                  addLog(`🔥 No new launches detected`);
+                  break;
+                }
+
+                // Filter: must be <30s old, have some liquidity, not already owned
+                const snipeCandidates = launches.filter(t => {
+                  const isFresh = t.ageSeconds <= 30;
+                  const hasLiquidity = t.liquidity > 100; // At least $100 liquidity
+                  const notOwned = !holdings.some(h => h.mint === t.mint);
+                  return isFresh && hasLiquidity && notOwned;
+                });
+
+                if (snipeCandidates.length === 0) {
+                  // Log what we found even if too old
+                  const newest = launches[0];
+                  addLog(`🔥 Newest: ${newest.symbol} (${newest.ageSeconds}s old, $${newest.liquidity.toFixed(0)} liq) — waiting for <30s`);
+                  break;
+                }
+
+                // Snipe the freshest token
+                const target = snipeCandidates[0];
+                addLog(`🔥🎯 SNIPING: ${target.symbol} (${target.name}) — ${target.ageSeconds}s old, $${target.liquidity.toFixed(0)} liq, ${budget} SOL`);
+                
+                const success = await executeLiveBuy(
+                  target.mint,
+                  target.symbol,
+                  budget,
+                  `🔥 Launch Snipe: ${target.symbol} (${target.ageSeconds}s old)`
+                );
+
+                if (success) {
+                  addLog(`🔥✅ Sniped ${target.symbol} for ${budget} SOL!`);
+                }
+              } catch (e: any) {
+                addLog(`🔥 Launch Hunter error: ${e.message}`);
+              }
+              break;
+            }
+
             case "whale_follow": {
               addLog(`🐋 Whale Follow: Monitoring top wallets`);
               break;
