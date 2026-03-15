@@ -6,6 +6,8 @@ const corsHeaders = {
 };
 
 const SOL_MINT = "So11111111111111111111111111111111111111112";
+const TOKEN_PROGRAM = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA";
+const TOKEN_2022_PROGRAM = "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -30,47 +32,79 @@ serve(async (req) => {
     }
 
     const rpcUrl = `https://mainnet.helius-rpc.com/?api-key=${heliusKey}`;
-    const heliusApi = `https://api.helius.xyz/v0`;
 
-    // 1. Get SOL balance and fungible tokens via Helius REST API in parallel
-    const [solBalanceRes, fungibleRes] = await Promise.all([
+    // 1. Fetch SOL balance + all token accounts (both Token and Token-2022 programs) in parallel
+    const [solBalanceRes, tokenAccountsRes, token2022AccountsRes] = await Promise.all([
       fetch(rpcUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "getBalance", params: [wallet_address] }),
       }),
-      // Helius enhanced balances API - returns fungible tokens with metadata
-      fetch(`${heliusApi}/addresses/${wallet_address}/balances?api-key=${heliusKey}`),
+      fetch(rpcUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          jsonrpc: "2.0", id: 2, method: "getTokenAccountsByOwner",
+          params: [wallet_address, { programId: TOKEN_PROGRAM }, { encoding: "jsonParsed" }],
+        }),
+      }),
+      fetch(rpcUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          jsonrpc: "2.0", id: 3, method: "getTokenAccountsByOwner",
+          params: [wallet_address, { programId: TOKEN_2022_PROGRAM }, { encoding: "jsonParsed" }],
+        }),
+      }),
     ]);
 
     const solBalanceData = await solBalanceRes.json();
     const solBalance = (solBalanceData.result?.value || 0) / 1e9;
 
-    let tokens: any[] = [];
-    let nativeBalance = 0;
+    // Parse token accounts from both programs
+    const parseTokenAccounts = (data: any) => {
+      const accounts = data.result?.value || [];
+      return accounts
+        .map((acc: any) => {
+          const info = acc.account?.data?.parsed?.info;
+          if (!info) return null;
+          const amount = parseFloat(info.tokenAmount?.uiAmountString || "0");
+          if (amount <= 0) return null;
+          return {
+            mint: info.mint,
+            amount,
+            decimals: info.tokenAmount?.decimals || 0,
+          };
+        })
+        .filter(Boolean);
+    };
 
-    if (fungibleRes.ok) {
-      const balancesData = await fungibleRes.json();
-      nativeBalance = (balancesData.nativeBalance || 0) / 1e9;
-      tokens = balancesData.tokens || [];
+    const tokenAccountsData = await tokenAccountsRes.json();
+    const token2022Data = await token2022AccountsRes.json();
+
+    const holdings = [
+      ...parseTokenAccounts(tokenAccountsData),
+      ...parseTokenAccounts(token2022Data),
+    ];
+
+    // Deduplicate by mint (in case of multiple accounts for same token)
+    const holdingMap = new Map<string, any>();
+    for (const h of holdings) {
+      const existing = holdingMap.get(h.mint);
+      if (existing) {
+        existing.amount += h.amount;
+      } else {
+        holdingMap.set(h.mint, { ...h });
+      }
     }
+    const uniqueHoldings = Array.from(holdingMap.values());
 
-    // Filter tokens with balance > 0
-    const holdings = tokens
-      .filter((t: any) => (t.amount || 0) > 0)
-      .map((t: any) => ({
-        mint: t.mint,
-        amount: t.amount / Math.pow(10, t.decimals || 0),
-        decimals: t.decimals || 0,
-        rawAmount: t.amount,
-      }));
-
-    // 2. Get prices for all tokens + SOL
+    // 2. Get metadata + prices
     let enrichedHoldings: any[] = [];
     let solPrice = 0;
 
-    if (holdings.length > 0) {
-      const mintAddresses = holdings.map((h: any) => h.mint);
+    if (uniqueHoldings.length > 0) {
+      const mintAddresses = uniqueHoldings.map((h: any) => h.mint);
 
       // Fetch metadata from DAS API and prices in parallel
       const metadataPromise = (async () => {
@@ -93,20 +127,16 @@ serve(async (req) => {
         return assetMap;
       })();
 
-      // Use Jupiter price API with proper user-agent
       const pricePromise = (async () => {
         const priceMap: Record<string, number> = {};
         const allMints = [SOL_MINT, ...mintAddresses];
 
-        // Try Jupiter first
+        // Jupiter price API
         for (let i = 0; i < allMints.length; i += 100) {
           const batch = allMints.slice(i, i + 100);
           try {
             const res = await fetch(`https://api.jup.ag/price/v2?ids=${batch.join(",")}`, {
-              headers: {
-                "Accept": "application/json",
-                "User-Agent": "SAVAG3BOT/1.0",
-              },
+              headers: { "Accept": "application/json", "User-Agent": "SAVAG3BOT/1.0" },
             });
             if (res.ok) {
               const data = await res.json();
@@ -159,7 +189,7 @@ serve(async (req) => {
 
       solPrice = priceMap[SOL_MINT] || 0;
 
-      enrichedHoldings = holdings.map((h: any) => {
+      enrichedHoldings = uniqueHoldings.map((h: any) => {
         const asset = assetMap.get(h.mint);
         const price = priceMap[h.mint] || 0;
         return {
@@ -186,15 +216,14 @@ serve(async (req) => {
       } catch { /* skip */ }
     }
 
-    const effectiveSolBalance = nativeBalance || solBalance;
     const totalTokenValueUsd = enrichedHoldings.reduce((s: number, h: any) => s + h.value, 0);
-    const solValueUsd = effectiveSolBalance * solPrice;
+    const solValueUsd = solBalance * solPrice;
 
     return new Response(
       JSON.stringify({
         success: true,
         data: {
-          solBalance: effectiveSolBalance,
+          solBalance,
           solPrice,
           solValueUsd,
           tokens: enrichedHoldings,

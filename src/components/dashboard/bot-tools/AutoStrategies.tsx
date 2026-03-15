@@ -149,17 +149,21 @@ export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) =
     }
   }, [wallet, executingTrade, addLog]);
 
+  // Stable key for active strategies
+  const activeStrategyKey = strategies.filter(s => s.enabled).map(s => s.id).join(',');
+  const strategiesRef = useRef(strategies);
+  strategiesRef.current = strategies;
+
   // Polling loop for active strategies
   useEffect(() => {
-    const activeStrategies = strategies.filter(s => s.enabled);
-    if (activeStrategies.length === 0) {
+    if (!activeStrategyKey) {
       if (pollingRef.current) { clearInterval(pollingRef.current); pollingRef.current = null; }
       return;
     }
-    if (pollingRef.current) return;
+    if (pollingRef.current) { clearInterval(pollingRef.current); pollingRef.current = null; }
 
     const evaluateStrategies = async () => {
-      const enabled = strategies.filter(s => s.enabled);
+      const enabled = strategiesRef.current.filter(s => s.enabled);
       if (enabled.length === 0) return;
 
       addLog(`Scanning ${enabled.length} strategy(ies)...`);
@@ -225,7 +229,6 @@ export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) =
             }
             case "momentum": {
               addLog(`📈 Momentum: Scanning ${holdings.length} position(s) for reversals`);
-              // Momentum needs historical price data — log monitoring for now
               for (const h of holdings) {
                 if (h.price > 0 && h.value > 0) {
                   addLog(`📈 ${h.symbol}: $${h.price.toFixed(8)} (${h.value.toFixed(2)} USD)`);
@@ -253,31 +256,35 @@ export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) =
     evaluateStrategies();
     pollingRef.current = setInterval(evaluateStrategies, 15000);
     return () => { if (pollingRef.current) { clearInterval(pollingRef.current); pollingRef.current = null; } };
-  }, [strategies.map(s => `${s.id}:${s.enabled}`).join(','), wallet.publicKey, fetchLiveHoldings, executeLiveSell, addLog]);
+  }, [activeStrategyKey, wallet.publicKey, fetchLiveHoldings, executeLiveSell, addLog]);
 
   const proceedToggle = (id: string) => {
-    setStrategies((prev) =>
-      prev.map((s) => {
-        if (s.id === id) {
-          const next = !s.enabled;
-          sim.saveBotConfig('auto', {
-            strategies: prev.map(st => st.id === id ? { ...st, enabled: next } : st).filter(st => st.enabled).map(st => st.id),
-            maxBudget: parseFloat(maxBudget),
-            beachMode,
-          }, next || prev.filter(st => st.id !== id).some(st => st.enabled));
-          
-          if (next) {
-            addLog(`✅ ${s.name} activated`);
+    setStrategies((prev) => {
+      const updated = prev.map((s) => s.id === id ? { ...s, enabled: !s.enabled } : s);
+      const target = updated.find(s => s.id === id);
+      const activeIds = updated.filter(s => s.enabled).map(s => s.id);
+
+      sim.saveBotConfig('auto', {
+        strategies: activeIds,
+        maxBudget: parseFloat(maxBudget),
+        beachMode,
+      }, activeIds.length > 0);
+
+      // Defer toast/log out of the setState callback to avoid render-phase conflicts
+      setTimeout(() => {
+        if (target) {
+          if (target.enabled) {
+            addLog(`✅ ${target.name} activated`);
+            toast({ title: `${target.name} Enabled`, description: `LIVE: ${target.description}` });
           } else {
-            addLog(`⏹️ ${s.name} deactivated`);
+            addLog(`⏹️ ${target.name} deactivated`);
+            toast({ title: `${target.name} Disabled`, description: "Deactivated" });
           }
-          
-          toast({ title: next ? `${s.name} Enabled` : `${s.name} Disabled`, description: next ? `LIVE: ${s.description}` : "Deactivated" });
-          return { ...s, enabled: next };
         }
-        return s;
-      })
-    );
+      }, 0);
+
+      return updated;
+    });
   };
 
   const toggleStrategy = (id: string) => {
