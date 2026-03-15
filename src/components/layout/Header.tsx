@@ -84,8 +84,10 @@ export function LandingHeader() {
   const { hasFreePass, buyFreePass, isPaymentPending } = useTradingMode();
   const walletAddress = publicKey?.toBase58() || null;
   const { isAdmin } = useAdminCheck(walletAddress);
+  const { signOut } = useWalletAuth();
 
-  const handleDisconnect = () => {
+  const handleDisconnect = async () => {
+    await signOut();
     disconnect();
     toast({ title: "Disconnected", description: "Wallet disconnected" });
     navigate('/');
