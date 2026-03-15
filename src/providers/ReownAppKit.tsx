@@ -9,7 +9,7 @@ const solanaAdapter = new SolanaAdapter();
 
 createAppKit({
   projectId,
-  networks: [solana as AppKitNetwork, solanaDevnet as AppKitNetwork],
+  networks: [solana, solanaDevnet] as any,
   adapters: [solanaAdapter],
   metadata: {
     name: 'SAVAG3BOT',
