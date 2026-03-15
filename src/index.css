@@ -273,8 +273,8 @@
 
 /* Modal backdrop */
 dialog[role="dialog"] {
-  background-color: rgba(0, 0, 0, 0.6) !important;
-  backdrop-filter: blur(8px) !important;
+  background-color: rgba(0, 0, 0, 0.7) !important;
+  backdrop-filter: blur(12px) !important;
 }
 
 /* Modal container panel */
@@ -282,8 +282,25 @@ dialog[role="dialog"] > div {
   background: hsl(0 0% 6%) !important;
   border: 1px solid hsl(0 0% 14%) !important;
   border-radius: 0.5rem !important;
-  box-shadow: 0 0 40px rgba(152, 42, 42, 0.15), 0 25px 50px rgba(0, 0, 0, 0.5) !important;
+  box-shadow: 0 0 60px rgba(152, 42, 42, 0.2), 0 25px 50px rgba(0, 0, 0, 0.6) !important;
   font-family: 'Inter', system-ui, sans-serif !important;
+}
+
+/* Modal header with logo */
+dialog[role="dialog"] > div > div:first-child,
+dialog[role="dialog"] [class*="header"],
+dialog[role="dialog"] [class*="Header"] {
+  background: linear-gradient(180deg, hsl(0 0% 8%) 0%, hsl(0 0% 6%) 100%) !important;
+  border-bottom: 1px solid hsl(0 0% 14%) !important;
+  padding: 1rem !important;
+}
+
+/* Logo image in modal */
+dialog[role="dialog"] img[alt*="SAVAG3BOT"],
+dialog[role="dialog"] img[alt*="logo"],
+dialog[role="dialog"] img[src*="savag3bot"] {
+  border-radius: 8px !important;
+  box-shadow: 0 0 20px hsl(var(--primary) / 0.3) !important;
 }
 
 /* Wallet list items */
@@ -315,6 +332,17 @@ dialog[role="dialog"] span,
 dialog[role="dialog"] p,
 dialog[role="dialog"] div {
   font-family: 'Inter', system-ui, sans-serif !important;
+}
+
+/* Modal title styling */
+dialog[role="dialog"] h1,
+dialog[role="dialog"] h2,
+dialog[role="dialog"] h3,
+dialog[role="dialog"] [class*="title"],
+dialog[role="dialog"] [class*="Title"] {
+  color: hsl(0 0% 93%) !important;
+  font-weight: 600 !important;
+  letter-spacing: -0.025em !important;
 }
 
 /* UnifiedWalletButton trigger styling */
