@@ -114,6 +114,10 @@ export const BotAccess = () => {
                 <Brain className="h-3 w-3" />
                 <span className="hidden sm:inline">Auto</span>
               </TabsTrigger>
+              <TabsTrigger value="trades" className="text-[10px] gap-0.5 data-[state=active]:bg-accent/20 px-1">
+                <List className="h-3 w-3" />
+                <span className="hidden sm:inline">Trades</span>
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="sniper" className="mt-0">
