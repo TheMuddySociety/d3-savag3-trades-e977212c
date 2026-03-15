@@ -109,23 +109,35 @@ export function TopMemecoins() {
   const { tokens: launchTokens, loading: launchLoading, error: launchError, isConnected, lastUpdate } = useRealtimeTokens('all', 30);
 
   useEffect(() => {
-    if (dataSource !== 'trending') return;
-    let cancelled = false;
-    const fetchTrending = async () => {
-      setTrendingLoading(true);
-      setTrendingError(null);
-      try {
-        const tokens = await tokenWebSocketService.fetchTrendingTokens();
-        if (!cancelled) setTrendingTokens(tokens);
-      } catch (err) {
-        if (!cancelled) setTrendingError(err instanceof Error ? err.message : 'Failed to fetch trending');
-      } finally {
-        if (!cancelled) setTrendingLoading(false);
-      }
-    };
-    fetchTrending();
-    const interval = setInterval(fetchTrending, 30000);
-    return () => { cancelled = true; clearInterval(interval); };
+    if (dataSource === 'trending') {
+      let cancelled = false;
+      const fetchTrending = async () => {
+        setTrendingLoading(true);
+        try {
+          const tokens = await tokenWebSocketService.fetchTrendingTokens();
+          if (!cancelled) setTrendingTokens(tokens);
+        } catch {} finally {
+          if (!cancelled) setTrendingLoading(false);
+        }
+      };
+      fetchTrending();
+      const interval = setInterval(fetchTrending, 30000);
+      return () => { cancelled = true; clearInterval(interval); };
+    } else if (dataSource === 'moonshot') {
+      let cancelled = false;
+      const fetchMoonshot = async () => {
+        setMoonshotLoading(true);
+        try {
+          const tokens = await LaunchpadService.getTokensByLaunchpad('moonshot', 30);
+          if (!cancelled) setMoonshotTokens(tokens);
+        } catch {} finally {
+          if (!cancelled) setMoonshotLoading(false);
+        }
+      };
+      fetchMoonshot();
+      const interval = setInterval(fetchMoonshot, 30000);
+      return () => { cancelled = true; clearInterval(interval); };
+    }
   }, [dataSource]);
 
   const tokens = dataSource === 'trending' ? trendingTokens : launchTokens;
