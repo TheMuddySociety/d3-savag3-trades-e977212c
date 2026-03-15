@@ -239,6 +239,8 @@ async function fetchTrendingTokens() {
           logo: pair.info?.imageUrl || '',
           price: parseFloat(pair.priceUsd) || 0,
           price_change_24h: pair.priceChange?.h24 || 0,
+          price_change_1h: pair.priceChange?.h1 || 0,
+          price_change_5m: pair.priceChange?.m5 || 0,
           market_cap: pair.marketCap || pair.fdv || 0,
           volume_24h: pair.volume?.h24 || 0,
           rank: 0,
