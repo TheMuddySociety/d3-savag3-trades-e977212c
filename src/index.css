@@ -268,3 +268,84 @@
 .hide-scrollbar::-webkit-scrollbar {
   display: none;
 }
+
+/* ===== Jupiter Unified Wallet Modal Overrides ===== */
+
+/* Modal backdrop */
+dialog[role="dialog"] {
+  background-color: rgba(0, 0, 0, 0.6) !important;
+  backdrop-filter: blur(8px) !important;
+}
+
+/* Modal container panel */
+dialog[role="dialog"] > div {
+  background: hsl(0 0% 6%) !important;
+  border: 1px solid hsl(0 0% 14%) !important;
+  border-radius: 0.5rem !important;
+  box-shadow: 0 0 40px rgba(152, 42, 42, 0.15), 0 25px 50px rgba(0, 0, 0, 0.5) !important;
+  font-family: 'Inter', system-ui, sans-serif !important;
+}
+
+/* Wallet list items */
+dialog[role="dialog"] button {
+  font-family: 'Inter', system-ui, sans-serif !important;
+  border-radius: 0.375rem !important;
+  transition: all 0.15s ease !important;
+}
+
+dialog[role="dialog"] button:hover {
+  background: hsl(0 72% 51% / 0.08) !important;
+  border-color: hsl(0 72% 51% / 0.3) !important;
+}
+
+/* Connect wallet button accent */
+dialog[role="dialog"] button[class*="connect"],
+dialog[role="dialog"] button[class*="Connect"] {
+  background: hsl(0 72% 51%) !important;
+  color: white !important;
+}
+
+dialog[role="dialog"] button[class*="connect"]:hover,
+dialog[role="dialog"] button[class*="Connect"]:hover {
+  background: hsl(0 72% 45%) !important;
+}
+
+/* Headings and text inside modal */
+dialog[role="dialog"] span,
+dialog[role="dialog"] p,
+dialog[role="dialog"] div {
+  font-family: 'Inter', system-ui, sans-serif !important;
+}
+
+/* UnifiedWalletButton trigger styling */
+.unified-wallet-adapter-button {
+  background: hsl(0 0% 12%) !important;
+  border: 1px solid hsl(0 0% 14%) !important;
+  border-radius: 0.5rem !important;
+  color: hsl(0 0% 93%) !important;
+  font-family: 'Inter', system-ui, sans-serif !important;
+  font-size: 0.8125rem !important;
+  font-weight: 500 !important;
+  height: 2.25rem !important;
+  padding: 0 0.875rem !important;
+  transition: all 0.15s ease !important;
+}
+
+.unified-wallet-adapter-button:hover {
+  background: hsl(0 72% 51% / 0.1) !important;
+  border-color: hsl(0 72% 51% / 0.3) !important;
+}
+
+/* Scrollbar inside modal */
+dialog[role="dialog"] ::-webkit-scrollbar {
+  width: 4px;
+}
+
+dialog[role="dialog"] ::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+dialog[role="dialog"] ::-webkit-scrollbar-thumb {
+  background: hsl(0 0% 20%);
+  border-radius: 2px;
+}
