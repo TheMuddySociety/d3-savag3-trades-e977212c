@@ -140,9 +140,9 @@ export function TopMemecoins() {
     }
   }, [dataSource]);
 
-  const tokens = dataSource === 'trending' ? trendingTokens : launchTokens;
-  const loading = dataSource === 'trending' ? trendingLoading : launchLoading;
-  const error = dataSource === 'trending' ? trendingError : launchError;
+  const tokens = dataSource === 'trending' ? trendingTokens : dataSource === 'moonshot' ? moonshotTokens : launchTokens;
+  const loading = dataSource === 'trending' ? trendingLoading : dataSource === 'moonshot' ? moonshotLoading : launchLoading;
+  const error = dataSource === 'moonshot' ? null : launchError;
 
   const handleSort = (field: string) => {
     if (sortField === field) {
