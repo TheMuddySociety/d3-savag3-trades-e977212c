@@ -125,7 +125,7 @@ export function FilterTabs({
               size="sm"
               className={cn(
                 "rounded-full gap-2 border",
-                (filterOptions.onlyPositive || filterOptions.minMarketCap || filterOptions.minVolume)
+                (filterOptions.onlyPositive || filterOptions.minMarketCap || filterOptions.minVolume || filterOptions.bondingCurveRange !== 'any')
                   ? "bg-card border-primary text-primary"
                   : "bg-card/50 border-border hover:bg-card"
               )}
