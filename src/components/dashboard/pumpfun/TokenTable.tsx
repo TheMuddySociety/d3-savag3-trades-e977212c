@@ -205,7 +205,7 @@ export function TokenTable({ tokens, onTokenClick, sortField, sortDirection, onS
                   </div>
                 </td>
                 <td className="px-3 py-4">
-                  <MiniChart positive={token.change24h >= 0} />
+                  <DirectionIndicator change={token.change24h} />
                 </td>
                 <td className="px-3 py-4">
                   <span className={cn(
