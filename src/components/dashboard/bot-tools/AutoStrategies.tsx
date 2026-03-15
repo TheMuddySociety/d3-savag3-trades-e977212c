@@ -800,7 +800,7 @@ export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) =
                     Auto-Sell
                   </Badge>
                 )}
-                {strategy.id === "dip_buy" && (
+                {(strategy.id === "dip_buy" || strategy.id === "new_launch") && (
                   <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-primary/10 text-primary border-primary/30">
                     Auto-Buy
                   </Badge>
