@@ -155,6 +155,8 @@ class TokenWebSocketService {
             marketCap: parseCurrencyString(t.market_cap),
             volume24h: parseCurrencyString(t.volume_24h),
             change24h: t.price_change_24h || 0,
+            change1h: t.price_change_1h || 0,
+            change5m: t.price_change_5m || 0,
             logoUrl: t.logo || '/placeholder.svg',
             tokenAddress: isSolanaAddress ? t.address : undefined,
             liquidity: t.liquidity || 0,
