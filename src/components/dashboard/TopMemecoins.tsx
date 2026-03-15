@@ -277,6 +277,20 @@ export function TopMemecoins() {
             variant="ghost"
             className={cn(
               "rounded-full gap-1.5 h-7 text-xs px-3 transition-all",
+              dataSource === 'graduated'
+                ? "bg-primary text-primary-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+            )}
+            onClick={() => setDataSource('graduated')}
+          >
+            <GraduationCap className="h-3.5 w-3.5" />
+            Graduated
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            className={cn(
+              "rounded-full gap-1.5 h-7 text-xs px-3 transition-all",
               dataSource === 'moonshot'
                 ? "bg-primary text-primary-foreground shadow-sm"
                 : "text-muted-foreground hover:text-foreground"
