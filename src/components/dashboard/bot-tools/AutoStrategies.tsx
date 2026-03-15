@@ -236,6 +236,34 @@ export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) =
     }
   }, []);
 
+  // Fetch brand new Pump.fun launches for sniping
+  const fetchNewLaunches = useCallback(async (): Promise<Array<{
+    mint: string; symbol: string; name: string; price: number;
+    marketCap: number; liquidity: number; ageSeconds: number;
+  }>> => {
+    try {
+      const { data, error } = await supabase.functions.invoke("pumpfun-api", {
+        body: { action: "new_launches", limit: 10 },
+      });
+      if (error) return [];
+      const tokens = data?.tokens || [];
+      const now = Date.now();
+      return tokens
+        .filter((t: any) => t.address && t.price > 0)
+        .map((t: any) => ({
+          mint: t.address,
+          symbol: t.symbol || t.address.slice(0, 6),
+          name: t.name || t.symbol || '',
+          price: t.price,
+          marketCap: t.marketCap || 0,
+          liquidity: t.liquidity || 0,
+          ageSeconds: t.pairCreatedAt ? Math.floor((now - t.pairCreatedAt) / 1000) : 999,
+        }));
+    } catch {
+      return [];
+    }
+  }, []);
+
   // Poll for pending trades from Beach Mode
   const executePendingTrades = useCallback(async () => {
     if (!wallet.publicKey || executingTrade) return;
@@ -367,7 +395,7 @@ export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) =
       }
 
       const holdings = await fetchLiveHoldings();
-      if (holdings.length === 0 && !enabled.some(s => s.id === 'dip_buy')) {
+      if (holdings.length === 0 && !enabled.some(s => s.id === 'dip_buy' || s.id === 'new_launch')) {
         addLog("No token holdings found in wallet");
         return;
       }
@@ -534,6 +562,55 @@ export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) =
               break;
             }
 
+            // ═══════════════════════════════════════
+            // NEW LAUNCH HUNTER: snipes new Pump.fun tokens
+            // ═══════════════════════════════════════
+            case "new_launch": {
+              const budget = parseFloat(maxBudgetRef.current) || 1.0;
+              addLog(`🔥 New Launch Hunter: Scanning for fresh Pump.fun launches (budget: ${budget} SOL)`);
+
+              try {
+                const launches = await fetchNewLaunches();
+                if (launches.length === 0) {
+                  addLog(`🔥 No new launches detected`);
+                  break;
+                }
+
+                // Filter: must be <30s old, have some liquidity, not already owned
+                const snipeCandidates = launches.filter(t => {
+                  const isFresh = t.ageSeconds <= 30;
+                  const hasLiquidity = t.liquidity > 100; // At least $100 liquidity
+                  const notOwned = !holdings.some(h => h.mint === t.mint);
+                  return isFresh && hasLiquidity && notOwned;
+                });
+
+                if (snipeCandidates.length === 0) {
+                  // Log what we found even if too old
+                  const newest = launches[0];
+                  addLog(`🔥 Newest: ${newest.symbol} (${newest.ageSeconds}s old, $${newest.liquidity.toFixed(0)} liq) — waiting for <30s`);
+                  break;
+                }
+
+                // Snipe the freshest token
+                const target = snipeCandidates[0];
+                addLog(`🔥🎯 SNIPING: ${target.symbol} (${target.name}) — ${target.ageSeconds}s old, $${target.liquidity.toFixed(0)} liq, ${budget} SOL`);
+                
+                const success = await executeLiveBuy(
+                  target.mint,
+                  target.symbol,
+                  budget,
+                  `🔥 Launch Snipe: ${target.symbol} (${target.ageSeconds}s old)`
+                );
+
+                if (success) {
+                  addLog(`🔥✅ Sniped ${target.symbol} for ${budget} SOL!`);
+                }
+              } catch (e: any) {
+                addLog(`🔥 Launch Hunter error: ${e.message}`);
+              }
+              break;
+            }
+
             case "whale_follow": {
               addLog(`🐋 Whale Follow: Monitoring top wallets`);
               break;
@@ -548,9 +625,11 @@ export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) =
     };
 
     evaluateStrategies();
-    pollingRef.current = setInterval(evaluateStrategies, 15000);
+    // Use 10s interval when New Launch Hunter is active (needs speed), 15s otherwise
+    const hasLaunchHunter = strategiesRef.current.some(s => s.id === 'new_launch' && s.enabled);
+    pollingRef.current = setInterval(evaluateStrategies, hasLaunchHunter ? 10000 : 15000);
     return () => { if (pollingRef.current) { clearInterval(pollingRef.current); pollingRef.current = null; } };
-  }, [activeStrategyKey, wallet.publicKey, fetchLiveHoldings, executeLiveSell, executeLiveBuy, addLog, recordEntryPrices, updatePeakPrices, fetchTrendingForDips]);
+  }, [activeStrategyKey, wallet.publicKey, fetchLiveHoldings, executeLiveSell, executeLiveBuy, addLog, recordEntryPrices, updatePeakPrices, fetchTrendingForDips, fetchNewLaunches]);
 
   const proceedToggle = (id: string) => {
     setStrategies((prev) => {
@@ -721,7 +800,7 @@ export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) =
                     Auto-Sell
                   </Badge>
                 )}
-                {strategy.id === "dip_buy" && (
+                {(strategy.id === "dip_buy" || strategy.id === "new_launch") && (
                   <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-primary/10 text-primary border-primary/30">
                     Auto-Buy
                   </Badge>
