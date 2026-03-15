@@ -5,5 +5,14 @@
   "server": {
     "url": "https://4df7c074-d81a-42c2-9a72-5460ace25b53.lovableproject.com?forceHideBadge=true",
     "cleartext": true
+  },
+  "plugins": {
+    "App": {
+      "androidScheme": "savag3bot",
+      "iosScheme": "savag3bot"
+    }
+  },
+  "android": {
+    "allowMixedContent": true
   }
 }
