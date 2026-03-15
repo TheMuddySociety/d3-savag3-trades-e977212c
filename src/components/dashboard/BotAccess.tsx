@@ -14,6 +14,7 @@ import { CopyTradeBot } from "./bot-tools/CopyTradeBot";
 import { SimPortfolio } from "./bot-tools/SimPortfolio";
 import { TradeHistory } from "./bot-tools/TradeHistory";
 import { LiveTradeHistory } from "./bot-tools/LiveTradeHistory";
+import { ProfitSimulator } from "./ProfitSimulator";
 import { useSimTrading } from "@/hooks/useSimTrading";
 import { useTradingMode } from "@/hooks/useTradingMode";
 import { useWallet } from "@solana/wallet-adapter-react";
