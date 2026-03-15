@@ -65,13 +65,28 @@ serve(async (req) => {
       })
       .filter((t: any) => t.amount > 0);
 
-    // Try to get token metadata from Jupiter token list for known tokens
+    // Try to get token metadata from Jupiter token list
     let tokenMeta: Record<string, { symbol: string; name: string; logoURI?: string }> = {};
+
+    // Add well-known tokens manually
+    tokenMeta["So11111111111111111111111111111111111111112"] = {
+      symbol: "SOL",
+      name: "Wrapped SOL",
+      logoURI: "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png",
+    };
+    tokenMeta["EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"] = {
+      symbol: "USDC",
+      name: "USD Coin",
+      logoURI: "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v/logo.png",
+    };
+
     try {
-      const knownMints = tokenBalances.map((t: any) => t.mint).join(",");
-      if (knownMints) {
+      const unknownMints = tokenBalances
+        .map((t: any) => t.mint)
+        .filter((m: string) => !tokenMeta[m]);
+      if (unknownMints.length > 0) {
         const metaRes = await fetch(
-          `https://tokens.jup.ag/tokens?ids=${knownMints}`
+          `https://tokens.jup.ag/tokens?ids=${unknownMints.join(",")}`
         );
         if (metaRes.ok) {
           const metaList = await metaRes.json();
