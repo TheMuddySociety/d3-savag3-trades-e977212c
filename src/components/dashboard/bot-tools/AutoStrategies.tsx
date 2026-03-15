@@ -149,17 +149,21 @@ export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) =
     }
   }, [wallet, executingTrade, addLog]);
 
+  // Stable key for active strategies
+  const activeStrategyKey = strategies.filter(s => s.enabled).map(s => s.id).join(',');
+  const strategiesRef = useRef(strategies);
+  strategiesRef.current = strategies;
+
   // Polling loop for active strategies
   useEffect(() => {
-    const activeStrategies = strategies.filter(s => s.enabled);
-    if (activeStrategies.length === 0) {
+    if (!activeStrategyKey) {
       if (pollingRef.current) { clearInterval(pollingRef.current); pollingRef.current = null; }
       return;
     }
-    if (pollingRef.current) return;
+    if (pollingRef.current) { clearInterval(pollingRef.current); pollingRef.current = null; }
 
     const evaluateStrategies = async () => {
-      const enabled = strategies.filter(s => s.enabled);
+      const enabled = strategiesRef.current.filter(s => s.enabled);
       if (enabled.length === 0) return;
 
       addLog(`Scanning ${enabled.length} strategy(ies)...`);
@@ -225,7 +229,6 @@ export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) =
             }
             case "momentum": {
               addLog(`📈 Momentum: Scanning ${holdings.length} position(s) for reversals`);
-              // Momentum needs historical price data — log monitoring for now
               for (const h of holdings) {
                 if (h.price > 0 && h.value > 0) {
                   addLog(`📈 ${h.symbol}: $${h.price.toFixed(8)} (${h.value.toFixed(2)} USD)`);
@@ -253,7 +256,7 @@ export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) =
     evaluateStrategies();
     pollingRef.current = setInterval(evaluateStrategies, 15000);
     return () => { if (pollingRef.current) { clearInterval(pollingRef.current); pollingRef.current = null; } };
-  }, [strategies.map(s => `${s.id}:${s.enabled}`).join(','), wallet.publicKey, fetchLiveHoldings, executeLiveSell, addLog]);
+  }, [activeStrategyKey, wallet.publicKey, fetchLiveHoldings, executeLiveSell, addLog]);
 
   const proceedToggle = (id: string) => {
     setStrategies((prev) =>
