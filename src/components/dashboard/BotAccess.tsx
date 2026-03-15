@@ -4,7 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { Bot, Clock, Crosshair, BarChart3, Brain, Wallet, RotateCcw, History, Zap, OctagonX, Layers, Eye, List } from "lucide-react";
+import { Bot, Clock, Crosshair, BarChart3, Brain, Wallet, RotateCcw, History, Zap, OctagonX, Layers, Eye, List, TrendingUp } from "lucide-react";
 import { DCABot } from "./bot-tools/DCABot";
 import { BuySniper } from "./bot-tools/BuySniper";
 import { VolumeBot } from "./bot-tools/VolumeBot";
@@ -14,6 +14,7 @@ import { CopyTradeBot } from "./bot-tools/CopyTradeBot";
 import { SimPortfolio } from "./bot-tools/SimPortfolio";
 import { TradeHistory } from "./bot-tools/TradeHistory";
 import { LiveTradeHistory } from "./bot-tools/LiveTradeHistory";
+import { ProfitSimulator } from "./ProfitSimulator";
 import { useSimTrading } from "@/hooks/useSimTrading";
 import { useTradingMode } from "@/hooks/useTradingMode";
 import { useWallet } from "@solana/wallet-adapter-react";
@@ -89,7 +90,7 @@ export const BotAccess = () => {
           </div>
         ) : (
           <Tabs defaultValue="sniper" className="w-full">
-            <TabsList className="w-full grid grid-cols-7 bg-muted/30 h-8 mb-3">
+            <TabsList className="w-full grid grid-cols-8 bg-muted/30 h-8 mb-3">
               <TabsTrigger value="sniper" className="text-[10px] gap-0.5 data-[state=active]:bg-primary/20 px-1">
                 <Crosshair className="h-3 w-3" />
                 <span className="hidden sm:inline">Sniper</span>
@@ -114,6 +115,10 @@ export const BotAccess = () => {
                 <Brain className="h-3 w-3" />
                 <span className="hidden sm:inline">Auto</span>
               </TabsTrigger>
+              <TabsTrigger value="profit" className="text-[10px] gap-0.5 data-[state=active]:bg-primary/20 px-1">
+                <TrendingUp className="h-3 w-3" />
+                <span className="hidden sm:inline">Profit</span>
+              </TabsTrigger>
               <TabsTrigger value="trades" className="text-[10px] gap-0.5 data-[state=active]:bg-accent/20 px-1">
                 <List className="h-3 w-3" />
                 <span className="hidden sm:inline">Trades</span>
@@ -137,6 +142,9 @@ export const BotAccess = () => {
             </TabsContent>
             <TabsContent value="auto" className="mt-0">
               <AutoStrategies sim={sim} isLive={isLive} killSignal={killSignal} />
+            </TabsContent>
+            <TabsContent value="profit" className="mt-0">
+              <ProfitSimulator />
             </TabsContent>
             <TabsContent value="trades" className="mt-0">
               <LiveTradeHistory />
