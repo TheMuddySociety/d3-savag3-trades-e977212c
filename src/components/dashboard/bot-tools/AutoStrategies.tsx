@@ -358,6 +358,15 @@ export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) =
         </div>
       )}
 
+      {/* Budget Management */}
+      <div className="p-3 rounded-lg border border-primary/20 bg-primary/5">
+        <div className="flex items-center gap-2 mb-2">
+          <Wallet className="h-4 w-4 text-primary" />
+          <span className="text-xs font-medium text-foreground">Trading Budget</span>
+        </div>
+        <BudgetManager />
+      </div>
+
       <div>
         <Label className="text-xs text-muted-foreground">Max budget per strategy (SOL)</Label>
         <Input type="number" value={maxBudget} onChange={(e) => setMaxBudget(e.target.value)} className="bg-muted/30 border-border text-sm mt-1" min="0.1" step="0.1" />
