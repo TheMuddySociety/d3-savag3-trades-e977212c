@@ -377,3 +377,12 @@ dialog[role="dialog"] ::-webkit-scrollbar-thumb {
   background: hsl(0 0% 20%);
   border-radius: 2px;
 }
+
+/* Hide scrollbar for horizontal tab scroll */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
