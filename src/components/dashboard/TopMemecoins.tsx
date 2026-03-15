@@ -139,6 +139,20 @@ export function TopMemecoins() {
       fetchMoonshot();
       const interval = setInterval(fetchMoonshot, 30000);
       return () => { cancelled = true; clearInterval(interval); };
+    } else if (dataSource === 'graduated') {
+      let cancelled = false;
+      const fetchGraduated = async () => {
+        setGraduatedLoading(true);
+        try {
+          const tokens = await pumpFunService.getGraduatedTokens(30);
+          if (!cancelled) setGraduatedTokens(tokens);
+        } catch {} finally {
+          if (!cancelled) setGraduatedLoading(false);
+        }
+      };
+      fetchGraduated();
+      const interval = setInterval(fetchGraduated, 30000);
+      return () => { cancelled = true; clearInterval(interval); };
     }
   }, [dataSource]);
 
