@@ -101,13 +101,14 @@ export const TradingModeProvider = ({ children }: { children: ReactNode }) => {
       const txid = await connection.sendRawTransaction(signed.serialize());
       await connection.confirmTransaction(txid);
 
-      // Record payment
-      await supabase.from('access_payments').insert({
-        wallet_address: publicKey.toString(),
-        tx_signature: txid,
-        sol_amount: FEE_FREE_COST,
-        payment_type: 'fee_free_pass',
+      // Verify payment on server (on-chain check prevents fake signatures)
+      const { data, error: verifyErr } = await supabase.functions.invoke('verify-payment', {
+        body: { walletAddress: publicKey.toString(), signature: txid },
       });
+
+      if (verifyErr || data?.error) {
+        throw new Error(data?.error || verifyErr?.message || 'Payment verification failed');
+      }
 
       setHasFreePass(true);
       toast({ title: "✨ Fee-Free Pass Activated!", description: "All platform fees removed permanently for this wallet" });
