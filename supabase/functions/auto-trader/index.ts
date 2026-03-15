@@ -194,6 +194,57 @@ serve(async (req) => {
         }
       }
 
+      // ═══ Evaluate NEW LAUNCH HUNTER strategy ═══
+      if (supportedStrategies.includes('new_launch')) {
+        try {
+          const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+          const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') || Deno.env.get('SUPABASE_PUBLISHABLE_KEY') || '';
+          
+          const launchResp = await fetch(`${supabaseUrl}/functions/v1/pumpfun-api`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${supabaseAnonKey}`,
+            },
+            body: JSON.stringify({ action: 'new_launches', limit: 10 }),
+          });
+
+          if (launchResp.ok) {
+            const launchData = await launchResp.json();
+            const launches = launchData?.tokens || [];
+            const now = Date.now();
+            const ownedMints = new Set(holdings.map(h => h.mint));
+
+            const candidates = launches.filter((t: any) => {
+              const ageSeconds = t.pairCreatedAt ? Math.floor((now - t.pairCreatedAt) / 1000) : 999;
+              return ageSeconds <= 60 && (t.liquidity || 0) > 100 && !ownedMints.has(t.address);
+            });
+
+            if (candidates.length > 0) {
+              const target = candidates[0];
+              const solLamports = Math.floor(maxBudget * 1e9).toString();
+              const ageSeconds = target.pairCreatedAt ? Math.floor((now - target.pairCreatedAt) / 1000) : 0;
+
+              queued += await queueTrade(supabase, {
+                walletAddress,
+                tokenMint: target.address,
+                tokenSymbol: target.symbol || target.address.slice(0, 6),
+                side: 'buy',
+                amountRaw: solLamports,
+                decimals: 9,
+                strategy: 'new_launch',
+                reason: `Launch Snipe: ${target.symbol} (${ageSeconds}s old, $${(target.liquidity || 0).toFixed(0)} liq)`,
+                entryPrice: 0,
+                currentPrice: target.price || 0,
+                pnl: 0,
+              });
+            }
+          }
+        } catch (e) {
+          console.error(`New launch eval error for ${walletAddress}:`, e);
+        }
+      }
+
       processed++;
     }
 
