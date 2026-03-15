@@ -183,25 +183,41 @@ export const BudgetManager = () => {
     }
   };
 
-  // Withdraw remaining deposit
+  // Withdraw remaining deposit via edge function
   const handleWithdraw = async () => {
     if (!budget || budget.remaining_amount <= 0) {
       toast({ title: "Nothing to withdraw", variant: "destructive" });
       return;
     }
 
-    toast({
-      title: "⏳ Withdrawal Requested",
-      description: `${budget.remaining_amount.toFixed(4)} ${currency} will be returned to your wallet. Processing may take a few minutes.`,
-    });
+    setLoading(true);
+    try {
+      toast({
+        title: "⏳ Processing Withdrawal",
+        description: `Sending ${budget.remaining_amount.toFixed(4)} ${currency} back to your wallet...`,
+      });
 
-    // Mark budget as inactive
-    await supabase
-      .from("auto_trade_budgets")
-      .update({ is_active: false, updated_at: new Date().toISOString() })
-      .eq("id", budget.id);
+      const { data, error } = await supabase.functions.invoke("withdraw", {
+        body: {
+          budget_id: budget.id,
+          wallet_address: walletAddress,
+        },
+      });
 
-    setBudget(null);
+      if (error) throw new Error(error.message);
+      if (data?.error) throw new Error(data.error);
+
+      toast({
+        title: "✅ Withdrawal Complete",
+        description: `${data.amount.toFixed(4)} ${data.currency} sent. TX: ${data.tx_signature?.slice(0, 12)}...`,
+      });
+
+      setBudget(null);
+    } catch (e: any) {
+      toast({ title: "Withdrawal Failed", description: e.message, variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const spentPercent = budget
