@@ -6,6 +6,8 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
+const SOL_MINT = "So11111111111111111111111111111111111111112";
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -13,11 +15,12 @@ serve(async (req) => {
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
   const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+  const heliusKey = Deno.env.get('HELIUS_API_KEY');
   const birdeyeKey = Deno.env.get('BIRDEYE_API_KEY');
   const supabase = createClient(supabaseUrl, supabaseKey);
 
   try {
-    // Get all active auto strategy configs
+    // Get all active auto configs with beachMode enabled
     const { data: configs, error } = await supabase
       .from('sim_bot_configs')
       .select('*')
@@ -26,122 +29,147 @@ serve(async (req) => {
 
     if (error) throw new Error(error.message);
     if (!configs || configs.length === 0) {
-      return new Response(JSON.stringify({ success: true, data: { processed: 0 } }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return jsonResponse({ success: true, data: { processed: 0, reason: 'no active configs' } });
     }
 
     let processed = 0;
+    let queued = 0;
 
     for (const config of configs) {
       const walletAddress = config.wallet_address;
-      const strategies = config.config?.strategies || [];
-      const maxBudget = config.config?.maxBudget || 1.0;
+      const strategies: string[] = (config.config as any)?.strategies || [];
+      const isBeachMode = (config.config as any)?.beachMode === true;
 
-      // --- Budget Check ---
-      const { data: budgets } = await supabase
-        .from('auto_trade_budgets')
-        .select('*')
-        .eq('wallet_address', walletAddress)
-        .eq('is_active', true);
-
-      const activeBudget = budgets && budgets.length > 0 ? budgets[0] : null;
-
-      if (!activeBudget) {
-        console.log(`No active budget for ${walletAddress} — skipping`);
+      // Only process Beach Mode configs (background execution)
+      if (!isBeachMode) {
+        console.log(`Skipping ${walletAddress} — beachMode not enabled`);
         continue;
       }
 
-      const budgetMode = activeBudget.budget_mode;
-      const remainingBudget = activeBudget.remaining_amount || 0;
-      const spendingLimit = activeBudget.spending_limit || 0;
+      if (strategies.length === 0) continue;
 
-      if (budgetMode === 'deposit' && remainingBudget <= 0) {
-        console.log(`Budget exhausted for ${walletAddress} — skipping`);
+      // Only process sell strategies (safe_exit, scalper) — these are the ones that work server-side
+      const sellStrategies = strategies.filter(s => s === 'safe_exit' || s === 'scalper');
+      if (sellStrategies.length === 0) {
+        console.log(`Skipping ${walletAddress} — no sell strategies active`);
         continue;
       }
 
-      // Get wallet and holdings
-      const { data: wallet } = await supabase
-        .from('sim_wallets')
-        .select('*')
-        .eq('wallet_address', walletAddress)
-        .single();
+      // Fetch REAL wallet holdings via Helius DAS
+      const holdings = await fetchRealHoldings(walletAddress, heliusKey);
+      if (holdings.length === 0) {
+        console.log(`No token holdings for ${walletAddress}`);
+        continue;
+      }
 
-      if (!wallet) continue;
+      console.log(`Found ${holdings.length} real token(s) for ${walletAddress}`);
 
-      const { data: holdings } = await supabase
-        .from('sim_holdings')
+      // Get or create entry prices
+      const { data: entryPriceRows } = await supabase
+        .from('auto_trade_entry_prices')
         .select('*')
         .eq('wallet_address', walletAddress);
 
-      // Evaluate Safe Exit strategy
-      if (strategies.includes('safe_exit') && holdings && holdings.length > 0 && birdeyeKey) {
-        const addresses = holdings.map((h: any) => h.token_address);
-        try {
-          const prices = await fetchPrices(addresses, birdeyeKey);
+      const entryPriceMap = new Map<string, number>();
+      for (const ep of (entryPriceRows || [])) {
+        entryPriceMap.set(ep.token_mint, Number(ep.entry_price));
+      }
 
-          for (const h of holdings) {
-            const livePrice = prices[h.token_address]?.value;
-            if (!livePrice || h.total_invested <= 0) continue;
-
-            const currentValue = h.amount * livePrice;
-            const pnl = ((currentValue - h.total_invested) / h.total_invested) * 100;
-
-            // Stop-loss at -15% or take-profit at +50%
-            if (pnl <= -15 || pnl >= 50) {
-              // Check budget before executing
-              const tradeCost = h.total_invested;
-              if (!checkBudget(activeBudget, tradeCost)) {
-                console.log(`Budget insufficient for safe_exit trade on ${walletAddress}`);
-                continue;
-              }
-
-              await executeSell(supabase, walletAddress, h, livePrice, 'auto');
-              await deductBudget(supabase, activeBudget, tradeCost);
-              processed++;
-            }
-          }
-        } catch (e) {
-          console.error(`Safe exit eval error for ${walletAddress}:`, e);
+      // Record entry prices for new tokens
+      for (const h of holdings) {
+        if (!entryPriceMap.has(h.mint) && h.price > 0) {
+          entryPriceMap.set(h.mint, h.price);
+          await supabase.from('auto_trade_entry_prices').upsert({
+            wallet_address: walletAddress,
+            token_mint: h.mint,
+            entry_price: h.price,
+          }, { onConflict: 'wallet_address,token_mint' });
+          console.log(`📌 Recorded entry for ${h.symbol}: $${h.price}`);
         }
       }
 
-      // Evaluate Scalper strategy
-      if (strategies.includes('scalper') && holdings && holdings.length > 0 && birdeyeKey) {
-        const addresses = holdings.map((h: any) => h.token_address);
-        try {
-          const prices = await fetchPrices(addresses, birdeyeKey);
+      // Fetch live prices via Birdeye
+      const mints = holdings.map(h => h.mint);
+      let livePrices: Record<string, number> = {};
+      if (birdeyeKey) {
+        livePrices = await fetchLivePrices(mints, birdeyeKey);
+      } else {
+        // Fallback to DAS prices
+        for (const h of holdings) {
+          if (h.price > 0) livePrices[h.mint] = h.price;
+        }
+      }
 
-          for (const h of holdings) {
-            const livePrice = prices[h.token_address]?.value;
-            if (!livePrice || h.total_invested <= 0) continue;
+      // Evaluate strategies
+      for (const strategy of sellStrategies) {
+        for (const h of holdings) {
+          const entryPrice = entryPriceMap.get(h.mint);
+          const livePrice = livePrices[h.mint];
+          if (!entryPrice || !livePrice || livePrice <= 0) continue;
 
-            const currentValue = h.amount * livePrice;
-            const pnl = ((currentValue - h.total_invested) / h.total_invested) * 100;
+          const pnl = ((livePrice - entryPrice) / entryPrice) * 100;
+          let shouldSell = false;
+          let reason = '';
 
-            // Scalper: sell on 3% gain
+          if (strategy === 'safe_exit') {
+            if (pnl <= -15) {
+              shouldSell = true;
+              reason = `Stop-Loss: ${h.symbol} at ${pnl.toFixed(1)}%`;
+            } else if (pnl >= 50) {
+              shouldSell = true;
+              reason = `Take-Profit: ${h.symbol} at +${pnl.toFixed(1)}%`;
+            }
+          } else if (strategy === 'scalper') {
             if (pnl >= 3) {
-              const tradeCost = h.total_invested;
-              if (!checkBudget(activeBudget, tradeCost)) {
-                console.log(`Budget insufficient for scalper trade on ${walletAddress}`);
-                continue;
-              }
-
-              await executeSell(supabase, walletAddress, h, livePrice, 'auto');
-              await deductBudget(supabase, activeBudget, tradeCost);
-              processed++;
+              shouldSell = true;
+              reason = `Scalper: ${h.symbol} at +${pnl.toFixed(1)}%`;
             }
           }
-        } catch (e) {
-          console.error(`Scalper eval error for ${walletAddress}:`, e);
+
+          if (shouldSell) {
+            // Check for existing pending trade for this token
+            const { data: existing } = await supabase
+              .from('pending_auto_trades')
+              .select('id')
+              .eq('wallet_address', walletAddress)
+              .eq('token_mint', h.mint)
+              .eq('status', 'pending')
+              .limit(1);
+
+            if (existing && existing.length > 0) {
+              console.log(`Already pending trade for ${h.symbol} — skipping`);
+              continue;
+            }
+
+            // Calculate raw amount for full sell
+            const rawAmount = Math.floor(h.amount * Math.pow(10, h.decimals)).toString();
+
+            // Queue the trade
+            await supabase.from('pending_auto_trades').insert({
+              wallet_address: walletAddress,
+              token_mint: h.mint,
+              token_symbol: h.symbol,
+              side: 'sell',
+              amount_raw: rawAmount,
+              decimals: h.decimals,
+              strategy,
+              reason,
+              entry_price: entryPrice,
+              current_price: livePrice,
+              pnl_percent: pnl,
+              status: 'pending',
+            });
+
+            console.log(`📋 Queued ${reason} for ${walletAddress}`);
+            queued++;
+          }
         }
       }
+
+      processed++;
     }
 
-    return new Response(JSON.stringify({ success: true, data: { processed } }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    return jsonResponse({ success: true, data: { processed, queued } });
   } catch (error: unknown) {
     console.error('auto-trader error:', error);
     const message = error instanceof Error ? error.message : 'Unknown error';
@@ -151,78 +179,94 @@ serve(async (req) => {
   }
 });
 
-function checkBudget(budget: any, tradeCost: number): boolean {
-  if (budget.budget_mode === 'deposit') {
-    return (budget.remaining_amount || 0) >= tradeCost;
-  }
-  if (budget.budget_mode === 'limit') {
-    return tradeCost <= (budget.spending_limit || 0);
-  }
-  return false;
-}
-
-async function deductBudget(supabase: any, budget: any, tradeCost: number) {
-  if (budget.budget_mode === 'deposit') {
-    const newSpent = (budget.spent_amount || 0) + tradeCost;
-    const newRemaining = Math.max(0, (budget.remaining_amount || 0) - tradeCost);
-    await supabase
-      .from('auto_trade_budgets')
-      .update({
-        spent_amount: newSpent,
-        remaining_amount: newRemaining,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', budget.id);
-    // Update in-memory for subsequent trades in same loop
-    budget.spent_amount = newSpent;
-    budget.remaining_amount = newRemaining;
-  }
-  // For 'limit' mode, no deduction — just a per-trade cap
-}
-
-async function executeSell(supabase: any, walletAddress: string, holding: any, price: number, botType: string) {
-  const slippage = 1 - (Math.random() * 0.015 + 0.005);
-  const execPrice = price * slippage;
-  const solReceived = holding.amount * execPrice;
-  const pnl = ((solReceived - holding.total_invested) / holding.total_invested) * 100;
-
-  // Update wallet balance
-  const { data: wallet } = await supabase
-    .from('sim_wallets')
-    .select('sol_balance')
-    .eq('wallet_address', walletAddress)
-    .single();
-
-  await supabase
-    .from('sim_wallets')
-    .update({ sol_balance: (wallet?.sol_balance || 0) + solReceived, updated_at: new Date().toISOString() })
-    .eq('wallet_address', walletAddress);
-
-  // Remove holding
-  await supabase.from('sim_holdings').delete().eq('id', holding.id);
-
-  // Record order
-  await supabase.from('sim_orders').insert({
-    wallet_address: walletAddress,
-    bot_type: botType,
-    token_address: holding.token_address,
-    token_symbol: holding.token_symbol || 'UNK',
-    side: 'sell',
-    sol_amount: solReceived,
-    token_amount: holding.amount,
-    price_at_execution: execPrice,
-    pnl_percent: pnl,
-    status: 'filled',
+function jsonResponse(data: any, status = 200) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });
 }
 
-async function fetchPrices(addresses: string[], apiKey: string) {
-  const list = addresses.join(',');
-  const response = await fetch(
-    `https://public-api.birdeye.so/defi/multi_price?list_address=${list}`,
-    { headers: { 'X-API-KEY': apiKey, 'x-chain': 'solana' } }
-  );
-  if (!response.ok) throw new Error(`Birdeye price fetch failed`);
-  const result = await response.json();
-  return result.data || {};
+interface RealHolding {
+  mint: string;
+  symbol: string;
+  amount: number;
+  decimals: number;
+  price: number;
+}
+
+async function fetchRealHoldings(walletAddress: string, heliusKey: string | undefined): Promise<RealHolding[]> {
+  if (!heliusKey) {
+    console.warn('No HELIUS_API_KEY — cannot fetch real holdings');
+    return [];
+  }
+
+  try {
+    const rpcUrl = `https://mainnet.helius-rpc.com/?api-key=${heliusKey}`;
+
+    // Get all token accounts
+    const tokensRes = await fetch(rpcUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        id: 'tokens',
+        method: 'searchAssets',
+        params: {
+          ownerAddress: walletAddress,
+          tokenType: 'fungible',
+          displayOptions: { showFungible: true },
+        },
+      }),
+    });
+
+    const tokensData = await tokensRes.json();
+    const items = tokensData?.result?.items || [];
+
+    const holdings: RealHolding[] = [];
+    for (const item of items) {
+      const tokenInfo = item.token_info;
+      if (!tokenInfo || !item.id) continue;
+      if (item.id === SOL_MINT) continue; // Skip native SOL
+
+      const balance = tokenInfo.balance || 0;
+      const decimals = tokenInfo.decimals || 6;
+      const amount = balance / Math.pow(10, decimals);
+      const pricePerToken = tokenInfo.price_info?.price_per_token || 0;
+
+      if (amount <= 0) continue;
+
+      holdings.push({
+        mint: item.id,
+        symbol: tokenInfo.symbol || item.id.slice(0, 6),
+        amount,
+        decimals,
+        price: pricePerToken,
+      });
+    }
+
+    return holdings;
+  } catch (e) {
+    console.error('fetchRealHoldings error:', e);
+    return [];
+  }
+}
+
+async function fetchLivePrices(mints: string[], apiKey: string): Promise<Record<string, number>> {
+  try {
+    const list = mints.join(',');
+    const response = await fetch(
+      `https://public-api.birdeye.so/defi/multi_price?list_address=${list}`,
+      { headers: { 'X-API-KEY': apiKey, 'x-chain': 'solana' } }
+    );
+    if (!response.ok) throw new Error(`Birdeye price fetch failed: ${response.status}`);
+    const result = await response.json();
+    const prices: Record<string, number> = {};
+    for (const [mint, data] of Object.entries(result.data || {})) {
+      prices[mint] = (data as any)?.value || 0;
+    }
+    return prices;
+  } catch (e) {
+    console.error('fetchLivePrices error:', e);
+    return {};
+  }
 }
