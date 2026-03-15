@@ -10,7 +10,7 @@ import { TradingModeProvider } from "@/hooks/useTradingMode";
 import { JupiverseKitProvider } from "jupiverse-kit";
 import "jupiverse-kit/dist/index.css";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { PhantomProvider, darkTheme } from "@phantom/react-sdk";
+import { PhantomProvider, darkTheme, AddressType } from "@phantom/react-sdk";
 
 const Landing = lazy(() => import("./pages/Landing"));
 const Index = lazy(() => import("./pages/Index"));
