@@ -14,7 +14,7 @@ import { CreateAlertDialog } from './CreateAlertDialog';
 import { usePriceAlerts } from '@/hooks/usePriceAlerts';
 import { useWallet } from '@solana/wallet-adapter-react';
 
-type DataSource = 'trending' | 'new_launches' | 'moonshot';
+type DataSource = 'trending' | 'new_launches' | 'moonshot' | 'graduated';
 
 const formatValue = (value: number, type: 'currency' | 'percent' = 'currency'): string => {
   if (type === 'percent') {
