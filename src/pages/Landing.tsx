@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Activity, ArrowRight, Zap, Shield, BarChart3 } from "lucide-react";
 import { toast } from "sonner";
 import { useWallet } from '@solana/wallet-adapter-react';
-import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
+import { UnifiedWalletButton } from 'jupiverse-kit';
 import { GlobeChart } from "@/components/dashboard/GlobeChart";
 
 const ADMIN_WALLETS = [
