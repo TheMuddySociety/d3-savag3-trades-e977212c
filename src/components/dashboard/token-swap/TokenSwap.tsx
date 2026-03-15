@@ -18,7 +18,7 @@ export function TokenSwap() {
           formProps: {
             initialAmount: "100",
             swapMode: "ExactInOrOut",
-            fixedMint: "So11111111111111111111111111111111111111112",
+            initialInputMint: "So11111111111111111111111111111111111111112",
             referralAccount: "ETz1CboRkEJZDZcstd6bjHtjhRsydHQNHPEYMuhcYK2Z",
             referralFee: 80,
           },

@@ -13,19 +13,13 @@ import { GlobeChart } from "@/components/dashboard/GlobeChart";
 import { MemeScanner } from "@/components/dashboard/MemeScanner";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useWallet } from "@solana/wallet-adapter-react";
-import { Activity } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { useAdminCheck } from "@/hooks/useAdminCheck";
 
 // Layout components
 import { DesktopSidebar, DesktopPanel } from "@/components/layout/DesktopSidebar";
 import { MobileBottomNav, MobileTab } from "@/components/layout/MobileBottomNav";
 import { MobileHeader } from "@/components/layout/MobileHeader";
 import { Header } from "@/components/layout/Header";
-
-const ADMIN_WALLETS = [
-  "Cra8LAvpQAk3hx4By5STHp4xrq7HSAnZLk4Jwzv1wUAH",
-  "BQefQgbpAqPjoGKLTmAA2haZh9pEURYNefPFwsTotgem"
-];
 
 // ─── MOBILE LAYOUT ────────────────────────────────────────
 function MobileDashboard() {
@@ -36,7 +30,7 @@ function MobileDashboard() {
   return (
     <div className="min-h-screen bg-background">
       <MobileHeader />
-      <div className="pt-12 pb-20 px-3 space-y-3">
+      <div className="pt-16 pb-20 px-3 space-y-3">
         {activeTab === 'trade' && (
           <>
             <TokenSwap />
@@ -78,11 +72,10 @@ function DesktopDashboard() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const { publicKey } = useWallet();
   const walletAddress = publicKey?.toBase58() || null;
-  const isAdmin = publicKey ? ADMIN_WALLETS.includes(publicKey.toBase58()) : false;
+  const { isAdmin } = useAdminCheck(walletAddress);
 
   const sidebarWidth = sidebarCollapsed ? 56 : 200;
 
-  // Main content panel (left/center - takes most space)
   const renderMainPanel = () => {
     switch (activePanel) {
       case 'swap':
@@ -140,7 +133,6 @@ function DesktopDashboard() {
     }
   };
 
-  // Right sidebar widgets — context-dependent
   const renderRightPanel = () => {
     switch (activePanel) {
       case 'swap':
@@ -236,8 +228,8 @@ function DesktopDashboard() {
             {renderMainPanel()}
           </div>
 
-          {/* Right sidebar widgets */}
-          <div className="w-[340px] shrink-0 border-l border-border overflow-y-auto p-4 space-y-4 bg-card/30">
+          {/* Right sidebar widgets — hidden below lg */}
+          <div className="hidden lg:block w-[340px] shrink-0 border-l border-border overflow-y-auto p-4 space-y-4 bg-card/30">
             {renderRightPanel()}
           </div>
         </div>

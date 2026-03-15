@@ -1,7 +1,6 @@
 
 import { Connection } from '@solana/web3.js';
 import { toast } from 'sonner';
-import fetch from 'cross-fetch';
 
 /**
  * Service for fetching Jupiter swap quotes

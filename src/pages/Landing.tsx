@@ -5,22 +5,17 @@ import { toast } from "sonner";
 import { useWallet } from '@solana/wallet-adapter-react';
 import { UnifiedWalletButton } from '@jup-ag/wallet-adapter';
 import { GlobeChart } from "@/components/dashboard/GlobeChart";
-
-const ADMIN_WALLETS = [
-  "Cra8LAvpQAk3hx4By5STHp4xrq7HSAnZLk4Jwzv1wUAH",
-  "BQefQgbpAqPjoGKLTmAA2haZh9pEURYNefPFwsTotgem"
-];
+import { useAdminCheck } from "@/hooks/useAdminCheck";
 
 const Landing = () => {
   const navigate = useNavigate();
   const { publicKey, connected } = useWallet();
+  const walletAddress = publicKey?.toBase58() || null;
+  const { isAdmin } = useAdminCheck(walletAddress);
   
   useEffect(() => {
     if (connected && publicKey) {
-      const walletAddress = publicKey.toString();
-      localStorage.setItem('connectedWallet', walletAddress);
-      localStorage.setItem('walletConnected', 'true');
-      if (ADMIN_WALLETS.includes(walletAddress)) {
+      if (isAdmin) {
         toast.success("Admin access granted");
         navigate('/admin');
       } else {
@@ -28,7 +23,7 @@ const Landing = () => {
         navigate('/dashboard');
       }
     }
-  }, [connected, publicKey]);
+  }, [connected, publicKey, isAdmin]);
 
   const handleLaunchApp = () => {
     navigate('/dashboard');
@@ -105,7 +100,6 @@ const Landing = () => {
           <div className="flex items-center justify-center">
             <div className="relative">
               <GlobeChart />
-              {/* Decorative ring */}
               <div className="absolute inset-0 rounded-full border border-primary/5" />
             </div>
           </div>

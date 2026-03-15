@@ -7,6 +7,7 @@ import { useNavigate, Link, useLocation } from "react-router-dom";
 import { useWallet } from '@solana/wallet-adapter-react';
 import { UnifiedWalletButton } from '@jup-ag/wallet-adapter';
 import { useTradingMode } from '@/hooks/useTradingMode';
+import { useAdminCheck } from '@/hooks/useAdminCheck';
 
 export function Header() {
   const { toast } = useToast();
@@ -16,8 +17,6 @@ export function Header() {
 
   const handleDisconnect = () => {
     disconnect();
-    localStorage.removeItem('walletConnected');
-    localStorage.removeItem('connectedWallet');
     toast({
       title: "Disconnected",
       description: "Wallet disconnected successfully",
@@ -75,32 +74,16 @@ export function Header() {
 
 // Full header for Landing page
 export function LandingHeader() {
-  const [isAdmin, setIsAdmin] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
   const { publicKey, connected, disconnect } = useWallet();
   const { hasFreePass, buyFreePass, isPaymentPending } = useTradingMode();
-
-  const ADMIN_WALLETS = [
-    "Cra8LAvpQAk3hx4By5STHp4xrq7HSAnZLk4Jwzv1wUAH",
-    "BQefQgbpAqPjoGKLTmAA2haZh9pEURYNefPFwsTotgem"
-  ];
-
-  useEffect(() => {
-    if (connected && publicKey) {
-      setIsAdmin(ADMIN_WALLETS.includes(publicKey.toString()));
-      localStorage.setItem('connectedWallet', publicKey.toString());
-      localStorage.setItem('walletConnected', 'true');
-    } else {
-      setIsAdmin(false);
-    }
-  }, [connected, publicKey]);
+  const walletAddress = publicKey?.toBase58() || null;
+  const { isAdmin } = useAdminCheck(walletAddress);
 
   const handleDisconnect = () => {
     disconnect();
-    localStorage.removeItem('walletConnected');
-    localStorage.removeItem('connectedWallet');
     toast({ title: "Disconnected", description: "Wallet disconnected" });
     navigate('/');
   };
