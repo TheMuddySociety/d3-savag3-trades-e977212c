@@ -1,7 +1,6 @@
 import { createAppKit } from '@reown/appkit/react';
 import { SolanaAdapter } from '@reown/appkit-adapter-solana/react';
 import { solana, solanaDevnet } from '@reown/appkit/networks';
-import type { AppKitNetwork } from '@reown/appkit';
 
 const projectId = '336bea3a7584798217797f3b46943ac5';
 
