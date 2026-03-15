@@ -167,6 +167,24 @@ export function FilterTabs({
                 {val === null ? 'Any' : val >= 1e6 ? `$${val / 1e6}M` : `$${val / 1e3}K`}
               </DropdownMenuItem>
             ))}
+            <DropdownMenuSeparator />
+            <DropdownMenuLabel className="text-xs text-muted-foreground">Bonding Curve</DropdownMenuLabel>
+            {([
+              { value: 'any' as const, label: 'Any' },
+              { value: '0-25' as const, label: '0–25% (Early)' },
+              { value: '25-50' as const, label: '25–50%' },
+              { value: '50-80' as const, label: '50–80%' },
+              { value: '80-99' as const, label: '80–99% (Near Grad)' },
+              { value: 'graduated' as const, label: '🎓 Graduated' },
+            ]).map((opt) => (
+              <DropdownMenuItem
+                key={opt.value}
+                className={cn("cursor-pointer", filterOptions.bondingCurveRange === opt.value && "bg-accent text-accent-foreground")}
+                onClick={() => onFilterOptionsChange?.({ ...filterOptions, bondingCurveRange: opt.value })}
+              >
+                {opt.label}
+              </DropdownMenuItem>
+            ))}
           </DropdownMenuContent>
         </DropdownMenu>
 
