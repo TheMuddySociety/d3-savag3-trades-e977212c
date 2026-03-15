@@ -92,6 +92,7 @@ export function TopMemecoins() {
     minMarketCap: null,
     minVolume: null,
     onlyPositive: false,
+    bondingCurveRange: 'any',
   });
 
   const { publicKey } = useWallet();
@@ -180,6 +181,19 @@ export function TopMemecoins() {
     }
     if (filterOptions.minVolume) {
       filtered = filtered.filter(t => t.volume24h >= filterOptions.minVolume!);
+    }
+    if (filterOptions.bondingCurveRange !== 'any') {
+      filtered = filtered.filter(t => {
+        const p = t.bondingCurveProgress;
+        switch (filterOptions.bondingCurveRange) {
+          case '0-25': return p != null && p < 25;
+          case '25-50': return p != null && p >= 25 && p < 50;
+          case '50-80': return p != null && p >= 50 && p < 80;
+          case '80-99': return p != null && p >= 80 && p < 100;
+          case 'graduated': return t.status === 'graduated' || p === 100;
+          default: return true;
+        }
+      });
     }
     
     switch (activeFilter) {

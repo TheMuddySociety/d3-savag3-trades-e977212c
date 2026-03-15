@@ -18,6 +18,7 @@ export interface FilterOptions {
   minMarketCap: number | null;
   minVolume: number | null;
   onlyPositive: boolean;
+  bondingCurveRange: 'any' | '0-25' | '25-50' | '50-80' | '80-99' | 'graduated';
 }
 
 interface FilterTabsProps {
@@ -46,6 +47,7 @@ const defaultFilterOptions: FilterOptions = {
   minMarketCap: null,
   minVolume: null,
   onlyPositive: false,
+  bondingCurveRange: 'any',
 };
 
 export function FilterTabs({ 
@@ -123,7 +125,7 @@ export function FilterTabs({
               size="sm"
               className={cn(
                 "rounded-full gap-2 border",
-                (filterOptions.onlyPositive || filterOptions.minMarketCap || filterOptions.minVolume)
+                (filterOptions.onlyPositive || filterOptions.minMarketCap || filterOptions.minVolume || filterOptions.bondingCurveRange !== 'any')
                   ? "bg-card border-primary text-primary"
                   : "bg-card/50 border-border hover:bg-card"
               )}
@@ -163,6 +165,24 @@ export function FilterTabs({
                 onClick={() => onFilterOptionsChange?.({ ...filterOptions, minVolume: val })}
               >
                 {val === null ? 'Any' : val >= 1e6 ? `$${val / 1e6}M` : `$${val / 1e3}K`}
+              </DropdownMenuItem>
+            ))}
+            <DropdownMenuSeparator />
+            <DropdownMenuLabel className="text-xs text-muted-foreground">Bonding Curve</DropdownMenuLabel>
+            {([
+              { value: 'any' as const, label: 'Any' },
+              { value: '0-25' as const, label: '0–25% (Early)' },
+              { value: '25-50' as const, label: '25–50%' },
+              { value: '50-80' as const, label: '50–80%' },
+              { value: '80-99' as const, label: '80–99% (Near Grad)' },
+              { value: 'graduated' as const, label: '🎓 Graduated' },
+            ]).map((opt) => (
+              <DropdownMenuItem
+                key={opt.value}
+                className={cn("cursor-pointer", filterOptions.bondingCurveRange === opt.value && "bg-accent text-accent-foreground")}
+                onClick={() => onFilterOptionsChange?.({ ...filterOptions, bondingCurveRange: opt.value })}
+              >
+                {opt.label}
               </DropdownMenuItem>
             ))}
           </DropdownMenuContent>
