@@ -47,6 +47,7 @@ const defaultFilterOptions: FilterOptions = {
   minMarketCap: null,
   minVolume: null,
   onlyPositive: false,
+  bondingCurveRange: 'any',
 };
 
 export function FilterTabs({ 
