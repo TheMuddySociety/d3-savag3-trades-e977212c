@@ -80,7 +80,7 @@ const Landing = () => {
                 <ArrowRight className="h-4 w-4" />
               </button>
               <UnifiedWalletButton />
-              
+              <appkit-button size="sm" label="WalletConnect" />
             </div>
 
             {/* Feature pills */}
