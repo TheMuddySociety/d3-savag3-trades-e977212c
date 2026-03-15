@@ -6,6 +6,7 @@ import { useWallet } from '@solana/wallet-adapter-react';
 import { UnifiedWalletButton } from '@jup-ag/wallet-adapter';
 import { GlobeChart } from "@/components/dashboard/GlobeChart";
 import { useAdminCheck } from "@/hooks/useAdminCheck";
+import { PhantomQRConnect } from "@/components/wallet/PhantomQRConnect";
 
 const Landing = () => {
   const navigate = useNavigate();
