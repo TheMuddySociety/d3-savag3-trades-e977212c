@@ -218,7 +218,7 @@ export function TokenTable({ tokens, onTokenClick, sortField, sortDirection, onS
                   </span>
                 </td>
                 <td className="px-3 py-4">
-                  <ATHBar current={token.marketCap} ath={ath} />
+                  <BondingCurveBar progress={token.bondingCurveProgress} status={token.status} />
                 </td>
                 <td className="px-3 py-4">
                   <span className="text-sm text-muted-foreground">
