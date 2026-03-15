@@ -5,6 +5,7 @@ import { TrendingCarousel, FilterTabs, TokenTable, FilterType } from './pumpfun'
 import { FilterOptions } from './pumpfun/FilterTabs';
 import { MemeToken } from '@/types/memeToken';
 import { LaunchpadService } from '@/services/launchpads/LaunchpadService';
+import { pumpFunService } from '@/services/pumpfun';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { tokenWebSocketService } from '@/services/websocket/TokenWebSocketService';
