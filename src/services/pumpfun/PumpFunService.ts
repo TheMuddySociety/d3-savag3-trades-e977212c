@@ -1,133 +1,122 @@
-import { PumpFunCoin, PumpFunApiResponse, PumpFunToken } from './types';
+import { PumpFunApiResponse, PumpFunToken } from './types';
 import { MemeToken } from '@/types/memeToken';
 import { supabase } from '@/integrations/supabase/client';
+
+interface PumpFunApiToken {
+  address: string;
+  name: string;
+  symbol: string;
+  price: number;
+  marketCap: number;
+  volume24h: number;
+  change24h: number;
+  change1h?: number;
+  change5m?: number;
+  liquidity: number;
+  logoUrl: string;
+  pairAddress?: string;
+  dexId?: string;
+  pairCreatedAt?: number;
+  txns24h?: { buys?: number; sells?: number };
+  websites?: { label: string; url: string }[];
+  socials?: { type: string; url: string }[];
+  graduated?: boolean;
+}
 
 class PumpFunService {
   private bullmeBaseUrl = 'https://api.bullme.one';
 
   /**
-   * Fetch coins from the official Pump.Fun API via edge function proxy
+   * Fetch from official Pump.Fun edge function proxy
    */
-  private async fetchFromPumpFun(endpoint: string, params?: Record<string, string | number>): Promise<PumpFunCoin[]> {
+  private async fetchFromProxy(action: string, limit: number = 30): Promise<PumpFunApiToken[]> {
     const { data, error } = await supabase.functions.invoke('pumpfun-api', {
-      body: { endpoint, params },
+      body: { action, limit },
     });
 
     if (error) {
       console.error('[PumpFun] Edge function error:', error);
-      throw new Error(`Pump.Fun API error: ${error.message}`);
+      throw error;
     }
 
-    // The API returns an array of coins directly
-    if (Array.isArray(data)) {
-      return data;
-    }
-
-    // Sometimes wrapped in a response object
-    if (data?.coins) return data.coins;
-    if (data?.data) return data.data;
-
-    console.warn('[PumpFun] Unexpected response format:', data);
-    return [];
+    return data?.tokens || [];
   }
 
   /**
-   * Get trending tokens from King of the Hill (official Pump.Fun API)
+   * Get trending Pump.Fun tokens (official API via DexScreener)
    */
   async getTrendingTokens(limit: number = 10): Promise<MemeToken[]> {
     try {
-      // Try official API first
-      const coins = await this.fetchFromPumpFun('/coins/king-of-the-hill', {
-        includeNsfw: 'false',
-      });
-
-      if (coins.length > 0) {
-        return coins.slice(0, limit).map(this.transformCoinToMemeToken);
+      const tokens = await this.fetchFromProxy('trending', limit);
+      if (tokens.length > 0) {
+        return tokens.slice(0, limit).map(this.transformApiToken);
       }
-
-      // Fallback to BullMe proxy
-      console.warn('[PumpFun] Official API returned no data, falling back to BullMe');
+      // Fallback to BullMe
       return this.getTrendingTokensLegacy(limit);
     } catch (error) {
-      console.warn('[PumpFun] Official API failed, falling back to BullMe:', error);
+      console.warn('[PumpFun] Official API failed, falling back:', error);
       return this.getTrendingTokensLegacy(limit);
     }
   }
 
   /**
-   * Get latest/newest tokens from official Pump.Fun API
+   * Get latest Pump.Fun tokens
    */
   async getLatestTokens(limit: number = 10): Promise<MemeToken[]> {
     try {
-      const coins = await this.fetchFromPumpFun('/coins/latest', {
-        includeNsfw: 'false',
-      });
-
-      if (coins.length > 0) {
-        return coins.slice(0, limit).map(this.transformCoinToMemeToken);
+      const tokens = await this.fetchFromProxy('latest', limit);
+      if (tokens.length > 0) {
+        return tokens.slice(0, limit).map(this.transformApiToken);
       }
-
       return this.getNewTokensLegacy(limit);
     } catch (error) {
-      console.warn('[PumpFun] Latest tokens fallback to BullMe:', error);
+      console.warn('[PumpFun] Latest tokens fallback:', error);
       return this.getNewTokensLegacy(limit);
     }
   }
 
   /**
-   * Get currently live tokens from official Pump.Fun API
+   * Get graduated Pump.Fun tokens
    */
-  async getCurrentlyLiveTokens(limit: number = 10): Promise<MemeToken[]> {
+  async getGraduatedTokens(limit: number = 10): Promise<MemeToken[]> {
     try {
-      const coins = await this.fetchFromPumpFun('/coins/currently-live', {
-        includeNsfw: 'false',
-      });
-
-      return coins.slice(0, limit).map(this.transformCoinToMemeToken);
+      const tokens = await this.fetchFromProxy('graduated', limit);
+      return tokens.slice(0, limit).map(this.transformApiToken);
     } catch (error) {
-      console.warn('[PumpFun] Currently live tokens error:', error);
+      console.warn('[PumpFun] Graduated tokens error:', error);
       return [];
     }
   }
 
   /**
-   * Transform official Pump.Fun coin to MemeToken
+   * Transform API token response to MemeToken
    */
-  private transformCoinToMemeToken(coin: PumpFunCoin): MemeToken {
-    const solReserves = coin.virtual_sol_reserves / 1e9; // lamports to SOL
-    const tokenReserves = coin.virtual_token_reserves / 1e6; // adjust decimals
-    const price = tokenReserves > 0 ? solReserves / tokenReserves : 0;
-    const bondingProgress = coin.complete ? 100 : Math.min(
-      ((coin.virtual_sol_reserves / 1e9) / 85) * 100, // ~85 SOL to graduate
-      99
-    );
-
+  private transformApiToken(token: PumpFunApiToken): MemeToken {
     return {
-      id: coin.mint,
-      name: coin.name || coin.symbol,
-      symbol: coin.symbol,
-      price: coin.usd_market_cap > 0 && coin.total_supply > 0
-        ? coin.usd_market_cap / (coin.total_supply / 1e6)
-        : price,
-      marketCap: coin.usd_market_cap || coin.market_cap || 0,
-      volume24h: 0, // Not provided directly by this endpoint
-      change24h: 0, // Not provided directly
-      logoUrl: coin.image_uri || '/placeholder.svg',
-      tokenAddress: coin.mint,
-      liquidity: solReserves * 2, // Approximate liquidity from reserves
-      holders: coin.reply_count || 0,
+      id: token.address,
+      name: token.name || token.symbol,
+      symbol: token.symbol,
+      price: token.price || 0,
+      marketCap: token.marketCap || 0,
+      volume24h: token.volume24h || 0,
+      change24h: token.change24h || 0,
+      change1h: token.change1h,
+      logoUrl: token.logoUrl || '/placeholder.svg',
+      tokenAddress: token.address,
+      liquidity: token.liquidity || 0,
+      holders: (token.txns24h?.buys || 0) + (token.txns24h?.sells || 0),
       tags: [
         'Pump.Fun',
-        coin.complete ? 'Graduated' : 'Bonding',
-        coin.is_currently_live ? 'Live' : '',
+        token.dexId === 'pumpswap' ? 'PumpSwap' : token.dexId || '',
+        token.graduated ? 'Graduated' : '',
       ].filter(Boolean),
-      timestamp: coin.created_timestamp || Date.now(),
-      status: coin.complete ? 'graduated' : 'active',
-      bondingCurveProgress: bondingProgress,
+      timestamp: token.pairCreatedAt || Date.now(),
+      status: token.graduated ? 'graduated' : 'active',
+      bondingCurveProgress: token.graduated ? 100 : undefined,
     };
   }
 
-  // ─── Legacy BullMe Proxy Methods ───────────────────────────────
+  // ─── Legacy BullMe Methods ───────────────────────────────
 
   async getNewTokens(): Promise<PumpFunToken[]> {
     try {
@@ -145,18 +134,18 @@ class PumpFunService {
   private async getTrendingTokensLegacy(limit: number): Promise<MemeToken[]> {
     const tokens = await this.getNewTokens();
     return tokens
-      .filter(token => token.tradeVolume24h > 0)
+      .filter(t => t.tradeVolume24h > 0)
       .sort((a, b) => b.tradeVolume24h - a.tradeVolume24h || b.marketCap - a.marketCap)
       .slice(0, limit)
-      .map(this.transformLegacyToMemeToken);
+      .map(this.transformLegacyToken);
   }
 
   private async getNewTokensLegacy(limit: number): Promise<MemeToken[]> {
     const tokens = await this.getNewTokens();
-    return tokens.slice(0, limit).map(this.transformLegacyToMemeToken);
+    return tokens.slice(0, limit).map(this.transformLegacyToken);
   }
 
-  private transformLegacyToMemeToken(token: PumpFunToken): MemeToken {
+  private transformLegacyToken(token: PumpFunToken): MemeToken {
     const change24h = token.buyVolume24h > token.sellVolume24h
       ? Math.min(((token.buyVolume24h - token.sellVolume24h) / token.sellVolume24h) * 100, 999)
       : -Math.min(((token.sellVolume24h - token.buyVolume24h) / token.buyVolume24h) * 100, 999);
