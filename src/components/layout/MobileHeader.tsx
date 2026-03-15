@@ -6,6 +6,7 @@ import { UnifiedWalletButton } from '@jup-ag/wallet-adapter';
 import { useTradingMode } from '@/hooks/useTradingMode';
 import { useToast } from '@/components/ui/use-toast';
 import { useNavigate } from 'react-router-dom';
+import { PhantomQRConnect } from '@/components/wallet/PhantomQRConnect';
 
 export function MobileHeader() {
   const { publicKey, connected, disconnect } = useWallet();
@@ -48,7 +49,10 @@ export function MobileHeader() {
               </Button>
             </>
           ) : (
-            <UnifiedWalletButton />
+            <>
+              <UnifiedWalletButton />
+              <PhantomQRConnect variant="compact" />
+            </>
           )}
         </div>
       </div>

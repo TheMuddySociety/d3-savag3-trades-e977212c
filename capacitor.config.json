@@ -1,6 +1,6 @@
 {
   "appId": "app.lovable.4df7c074d81a42c29a725460ace25b53",
-  "appName": "memebot-profit-finder",
+  "appName": "SAVAG3BOT",
   "webDir": "dist",
   "server": {
     "url": "https://4df7c074-d81a-42c2-9a72-5460ace25b53.lovableproject.com?forceHideBadge=true",
@@ -10,6 +10,17 @@
     "App": {
       "androidScheme": "savag3bot",
       "iosScheme": "savag3bot"
+    },
+    "SplashScreen": {
+      "launchShowDuration": 2000,
+      "launchAutoHide": true,
+      "launchFadeOutDuration": 500,
+      "backgroundColor": "#0A0A0B",
+      "androidSplashResourceName": "splash",
+      "androidScaleType": "CENTER_CROP",
+      "showSpinner": false,
+      "splashFullScreen": true,
+      "splashImmersive": true
     }
   },
   "android": {

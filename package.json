@@ -16,6 +16,7 @@
     "@capacitor/cli": "^8.2.0",
     "@capacitor/core": "^8.2.0",
     "@capacitor/ios": "^8.2.0",
+    "@capacitor/splash-screen": "^8.0.1",
     "@hookform/resolvers": "^3.9.0",
     "@jup-ag/jup-mobile-adapter": "^0.0.2",
     "@jup-ag/plugin": "^1.0.13",

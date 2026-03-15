@@ -10,6 +10,7 @@ import { TradingModeProvider } from "@/hooks/useTradingMode";
 import { JupiverseKitProvider } from "jupiverse-kit";
 import "jupiverse-kit/dist/index.css";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { PhantomProvider, darkTheme, AddressType } from "@phantom/react-sdk";
 
 const Landing = lazy(() => import("./pages/Landing"));
 const Index = lazy(() => import("./pages/Index"));
@@ -32,21 +33,29 @@ const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider defaultTheme="dark">
-        <JupiverseKitProvider
-          endpoint={RPC_PROXY}
-          autoConnect={true}
-          lang="en"
-          env="mainnet-beta"
-          theme="dark"
-          walletConnectProjectId="336bea3a7584798217797f3b46943ac5"
-          metadata={{
-            name: "SAVAG3BOT",
-            description: "Solana Memecoin Trading Terminal",
-            url: "https://memebot-profit-finder.lovable.app",
-            iconUrls: ["https://memebot-profit-finder.lovable.app/savag3bot-logo.png"],
+        <PhantomProvider
+          config={{
+            appId: "f3e1137b-609c-4f5e-91d7-c76a3e4f9f7d",
+            providers: ["phantom", "injected"],
+            addressTypes: [AddressType.solana],
           }}
+          theme={darkTheme}
         >
-          <TradingModeProvider>
+          <JupiverseKitProvider
+            endpoint={RPC_PROXY}
+            autoConnect={true}
+            lang="en"
+            env="mainnet-beta"
+            theme="dark"
+            walletConnectProjectId="336bea3a7584798217797f3b46943ac5"
+            metadata={{
+              name: "SAVAG3BOT",
+              description: "Solana Memecoin Trading Terminal",
+              url: "https://memebot-profit-finder.lovable.app",
+              iconUrls: ["https://memebot-profit-finder.lovable.app/savag3bot-logo.png"],
+            }}
+          >
+            <TradingModeProvider>
             <TooltipProvider>
               <Toaster />
               <Sonner />
@@ -64,8 +73,9 @@ const App = () => {
                 </BrowserRouter>
               </ErrorBoundary>
             </TooltipProvider>
-          </TradingModeProvider>
-        </JupiverseKitProvider>
+            </TradingModeProvider>
+          </JupiverseKitProvider>
+        </PhantomProvider>
       </ThemeProvider>
     </QueryClientProvider>
   );
