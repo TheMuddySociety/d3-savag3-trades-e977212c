@@ -93,6 +93,9 @@ export type Database = {
         Row: {
           entry_price: number
           id: string
+          lowest_price: number | null
+          peak_price: number | null
+          price_1h_ago: number | null
           recorded_at: string
           token_mint: string
           wallet_address: string
@@ -100,6 +103,9 @@ export type Database = {
         Insert: {
           entry_price: number
           id?: string
+          lowest_price?: number | null
+          peak_price?: number | null
+          price_1h_ago?: number | null
           recorded_at?: string
           token_mint: string
           wallet_address: string
@@ -107,6 +113,9 @@ export type Database = {
         Update: {
           entry_price?: number
           id?: string
+          lowest_price?: number | null
+          peak_price?: number | null
+          price_1h_ago?: number | null
           recorded_at?: string
           token_mint?: string
           wallet_address?: string
