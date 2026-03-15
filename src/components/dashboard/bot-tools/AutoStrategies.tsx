@@ -4,12 +4,13 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Brain, TrendingUp, TrendingDown, ShieldCheck, Flame, Palmtree, Zap, Users } from "lucide-react";
+import { Brain, TrendingUp, TrendingDown, ShieldCheck, Flame, Palmtree, Zap, Users, Wallet } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { useConnection } from "@solana/wallet-adapter-react";
 import { JupiterUltraService } from "@/services/jupiter/ultra";
 import { LiveTradeConfirmDialog } from "./LiveTradeConfirmDialog";
+import { BudgetManager } from "./BudgetManager";
 import { supabase } from "@/integrations/supabase/client";
 
 const SOL_MINT = "So11111111111111111111111111111111111111112";
@@ -356,6 +357,15 @@ export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) =
           <p className="text-[11px] text-accent font-medium">✅ {activeCount} strateg{activeCount > 1 ? "ies" : "y"} running in background — close your browser and earn!</p>
         </div>
       )}
+
+      {/* Budget Management */}
+      <div className="p-3 rounded-lg border border-primary/20 bg-primary/5">
+        <div className="flex items-center gap-2 mb-2">
+          <Wallet className="h-4 w-4 text-primary" />
+          <span className="text-xs font-medium text-foreground">Trading Budget</span>
+        </div>
+        <BudgetManager />
+      </div>
 
       <div>
         <Label className="text-xs text-muted-foreground">Max budget per strategy (SOL)</Label>

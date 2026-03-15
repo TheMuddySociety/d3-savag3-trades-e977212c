@@ -38,6 +38,29 @@ serve(async (req) => {
       const strategies = config.config?.strategies || [];
       const maxBudget = config.config?.maxBudget || 1.0;
 
+      // --- Budget Check ---
+      const { data: budgets } = await supabase
+        .from('auto_trade_budgets')
+        .select('*')
+        .eq('wallet_address', walletAddress)
+        .eq('is_active', true);
+
+      const activeBudget = budgets && budgets.length > 0 ? budgets[0] : null;
+
+      if (!activeBudget) {
+        console.log(`No active budget for ${walletAddress} — skipping`);
+        continue;
+      }
+
+      const budgetMode = activeBudget.budget_mode;
+      const remainingBudget = activeBudget.remaining_amount || 0;
+      const spendingLimit = activeBudget.spending_limit || 0;
+
+      if (budgetMode === 'deposit' && remainingBudget <= 0) {
+        console.log(`Budget exhausted for ${walletAddress} — skipping`);
+        continue;
+      }
+
       // Get wallet and holdings
       const { data: wallet } = await supabase
         .from('sim_wallets')
@@ -67,7 +90,15 @@ serve(async (req) => {
 
             // Stop-loss at -15% or take-profit at +50%
             if (pnl <= -15 || pnl >= 50) {
+              // Check budget before executing
+              const tradeCost = h.total_invested;
+              if (!checkBudget(activeBudget, tradeCost)) {
+                console.log(`Budget insufficient for safe_exit trade on ${walletAddress}`);
+                continue;
+              }
+
               await executeSell(supabase, walletAddress, h, livePrice, 'auto');
+              await deductBudget(supabase, activeBudget, tradeCost);
               processed++;
             }
           }
@@ -91,7 +122,14 @@ serve(async (req) => {
 
             // Scalper: sell on 3% gain
             if (pnl >= 3) {
+              const tradeCost = h.total_invested;
+              if (!checkBudget(activeBudget, tradeCost)) {
+                console.log(`Budget insufficient for scalper trade on ${walletAddress}`);
+                continue;
+              }
+
               await executeSell(supabase, walletAddress, h, livePrice, 'auto');
+              await deductBudget(supabase, activeBudget, tradeCost);
               processed++;
             }
           }
@@ -112,6 +150,35 @@ serve(async (req) => {
     });
   }
 });
+
+function checkBudget(budget: any, tradeCost: number): boolean {
+  if (budget.budget_mode === 'deposit') {
+    return (budget.remaining_amount || 0) >= tradeCost;
+  }
+  if (budget.budget_mode === 'limit') {
+    return tradeCost <= (budget.spending_limit || 0);
+  }
+  return false;
+}
+
+async function deductBudget(supabase: any, budget: any, tradeCost: number) {
+  if (budget.budget_mode === 'deposit') {
+    const newSpent = (budget.spent_amount || 0) + tradeCost;
+    const newRemaining = Math.max(0, (budget.remaining_amount || 0) - tradeCost);
+    await supabase
+      .from('auto_trade_budgets')
+      .update({
+        spent_amount: newSpent,
+        remaining_amount: newRemaining,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', budget.id);
+    // Update in-memory for subsequent trades in same loop
+    budget.spent_amount = newSpent;
+    budget.remaining_amount = newRemaining;
+  }
+  // For 'limit' mode, no deduction — just a per-trade cap
+}
 
 async function executeSell(supabase: any, walletAddress: string, holding: any, price: number, botType: string) {
   const slippage = 1 - (Math.random() * 0.015 + 0.005);
