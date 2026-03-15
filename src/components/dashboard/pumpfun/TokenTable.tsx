@@ -178,7 +178,6 @@ export function TokenTable({ tokens, onTokenClick, sortField, sortDirection, onS
             const change5m = token.change5m ?? 0;
             const change1h = token.change1h ?? 0;
             const txns = token.holders || 0;
-            const ath = token.marketCap * (1 + Math.random() * 0.5);
             
             return (
               <tr 
