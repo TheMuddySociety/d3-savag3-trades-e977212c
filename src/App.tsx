@@ -10,7 +10,6 @@ import { TradingModeProvider } from "@/hooks/useTradingMode";
 import { JupiverseKitProvider } from "jupiverse-kit";
 import "jupiverse-kit/dist/index.css";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { PhantomProvider, darkTheme, AddressType } from "@phantom/react-sdk";
 
 const Landing = lazy(() => import("./pages/Landing"));
 const Index = lazy(() => import("./pages/Index"));
@@ -33,14 +32,6 @@ const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider defaultTheme="dark">
-        <PhantomProvider
-          config={{
-            appId: "f3e1137b-609c-4f5e-91d7-c76a3e4f9f7d",
-            providers: ["phantom", "injected"],
-            addressTypes: [AddressType.solana],
-          }}
-          theme={darkTheme}
-        >
           <JupiverseKitProvider
             endpoint={RPC_PROXY}
             autoConnect={true}
@@ -75,7 +66,6 @@ const App = () => {
             </TooltipProvider>
             </TradingModeProvider>
           </JupiverseKitProvider>
-        </PhantomProvider>
       </ThemeProvider>
     </QueryClientProvider>
   );
