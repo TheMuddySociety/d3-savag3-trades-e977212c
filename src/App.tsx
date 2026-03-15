@@ -12,6 +12,7 @@ import "jupiverse-kit/dist/index.css";
 import Landing from "./pages/Landing";
 import Index from "./pages/Index";
 import Admin from "./pages/Admin";
+import TokenDetail from "./pages/TokenDetail";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
