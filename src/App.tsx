@@ -10,6 +10,7 @@ import { TradingModeProvider } from "@/hooks/useTradingMode";
 import { JupiverseKitProvider } from "jupiverse-kit";
 import "jupiverse-kit/dist/index.css";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import "@/providers/ReownAppKit"; // Initialize Reown AppKit (side-effect)
 
 const Landing = lazy(() => import("./pages/Landing"));
 const Index = lazy(() => import("./pages/Index"));
