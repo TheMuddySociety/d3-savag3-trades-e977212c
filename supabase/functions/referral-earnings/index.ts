@@ -111,12 +111,38 @@ serve(async (req) => {
       logoURI: tokenMeta[t.mint]?.logoURI || null,
     }));
 
+    // Fetch trade stats using service role (bypasses RLS)
+    let tradeStats = { totalTrades: 0, totalInputUsd: 0, totalOutputUsd: 0, estimatedFees: 0 };
+    try {
+      const sb = createClient(
+        Deno.env.get("SUPABASE_URL")!,
+        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+      );
+      const { data: trades, count } = await sb
+        .from("live_trades")
+        .select("input_usd_value, output_usd_value", { count: "exact" });
+
+      if (trades) {
+        const totalInputUsd = trades.reduce((s: number, t: any) => s + (t.input_usd_value || 0), 0);
+        const totalOutputUsd = trades.reduce((s: number, t: any) => s + (t.output_usd_value || 0), 0);
+        tradeStats = {
+          totalTrades: count || trades.length,
+          totalInputUsd,
+          totalOutputUsd,
+          estimatedFees: totalOutputUsd * 0.005,
+        };
+      }
+    } catch {
+      // Trade stats are optional
+    }
+
     return new Response(
       JSON.stringify({
         referralWallet: REFERRAL_WALLET,
         solBalance,
         tokenBalances: enrichedBalances,
         totalTokenAccounts: accounts.length,
+        tradeStats,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
