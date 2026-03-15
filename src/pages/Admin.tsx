@@ -93,9 +93,10 @@ const Admin = () => {
           </section>
 
           <Tabs defaultValue="tokens" className="w-full max-w-5xl mx-auto">
-            <TabsList className="grid w-full grid-cols-3 mb-8">
+            <TabsList className="grid w-full grid-cols-4 mb-8">
               <TabsTrigger value="tokens">Dev Token Tracker</TabsTrigger>
               <TabsTrigger value="collections">NFT Scam Tracker</TabsTrigger>
+              <TabsTrigger value="referral">Referral Earnings</TabsTrigger>
               <TabsTrigger value="payments">Access Payments</TabsTrigger>
             </TabsList>
 
