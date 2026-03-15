@@ -395,7 +395,7 @@ export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) =
       }
 
       const holdings = await fetchLiveHoldings();
-      if (holdings.length === 0 && !enabled.some(s => s.id === 'dip_buy')) {
+      if (holdings.length === 0 && !enabled.some(s => s.id === 'dip_buy' || s.id === 'new_launch')) {
         addLog("No token holdings found in wallet");
         return;
       }
