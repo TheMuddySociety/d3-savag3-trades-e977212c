@@ -13,7 +13,16 @@ serve(async (req) => {
   }
 
   try {
-    const { endpoint, params } = await req.json();
+    let endpoint = '/coins/king-of-the-hill';
+    let params: Record<string, string | number> = {};
+
+    try {
+      const body = await req.json();
+      if (body.endpoint) endpoint = body.endpoint;
+      if (body.params) params = body.params;
+    } catch {
+      // Use defaults if no body
+    }
 
     // Supported endpoints
     const allowedEndpoints = [
