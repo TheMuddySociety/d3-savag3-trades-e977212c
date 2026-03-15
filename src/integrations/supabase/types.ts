@@ -89,6 +89,30 @@ export type Database = {
         }
         Relationships: []
       }
+      auto_trade_entry_prices: {
+        Row: {
+          entry_price: number
+          id: string
+          recorded_at: string
+          token_mint: string
+          wallet_address: string
+        }
+        Insert: {
+          entry_price: number
+          id?: string
+          recorded_at?: string
+          token_mint: string
+          wallet_address: string
+        }
+        Update: {
+          entry_price?: number
+          id?: string
+          recorded_at?: string
+          token_mint?: string
+          wallet_address?: string
+        }
+        Relationships: []
+      }
       chat_messages: {
         Row: {
           content: string
@@ -241,6 +265,63 @@ export type Database = {
           status?: string
           trade_type?: string
           tx_signature?: string
+          wallet_address?: string
+        }
+        Relationships: []
+      }
+      pending_auto_trades: {
+        Row: {
+          amount_raw: string
+          created_at: string
+          current_price: number | null
+          decimals: number
+          entry_price: number | null
+          executed_at: string | null
+          id: string
+          pnl_percent: number | null
+          reason: string | null
+          side: string
+          status: string
+          strategy: string
+          token_mint: string
+          token_symbol: string | null
+          tx_signature: string | null
+          wallet_address: string
+        }
+        Insert: {
+          amount_raw: string
+          created_at?: string
+          current_price?: number | null
+          decimals?: number
+          entry_price?: number | null
+          executed_at?: string | null
+          id?: string
+          pnl_percent?: number | null
+          reason?: string | null
+          side?: string
+          status?: string
+          strategy: string
+          token_mint: string
+          token_symbol?: string | null
+          tx_signature?: string | null
+          wallet_address: string
+        }
+        Update: {
+          amount_raw?: string
+          created_at?: string
+          current_price?: number | null
+          decimals?: number
+          entry_price?: number | null
+          executed_at?: string | null
+          id?: string
+          pnl_percent?: number | null
+          reason?: string | null
+          side?: string
+          status?: string
+          strategy?: string
+          token_mint?: string
+          token_symbol?: string | null
+          tx_signature?: string | null
           wallet_address?: string
         }
         Relationships: []
