@@ -34,7 +34,7 @@ const App = () => {
             name: "SAVAG3BOT",
             description: "Solana Memecoin Trading Terminal",
             url: "https://memebot-profit-finder.lovable.app",
-            iconUrls: ["https://memebot-profit-finder.lovable.app/favicon.ico"],
+            iconUrls: ["https://memebot-profit-finder.lovable.app/savag3bot-logo.png"],
           }}
         >
           <TradingModeProvider>
