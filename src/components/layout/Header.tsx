@@ -69,7 +69,10 @@ export function Header() {
       )}
       
       {!connected && (
-        <UnifiedWalletButton />
+        <div className="flex items-center gap-2">
+          <UnifiedWalletButton />
+          <appkit-button size="sm" label="WalletConnect" />
+        </div>
       )}
     </div>
   );
