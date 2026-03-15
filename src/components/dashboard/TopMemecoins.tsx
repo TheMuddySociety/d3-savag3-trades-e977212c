@@ -156,9 +156,9 @@ export function TopMemecoins() {
     }
   }, [dataSource]);
 
-  const tokens = dataSource === 'trending' ? trendingTokens : dataSource === 'moonshot' ? moonshotTokens : launchTokens;
-  const loading = dataSource === 'trending' ? trendingLoading : dataSource === 'moonshot' ? moonshotLoading : launchLoading;
-  const error = dataSource === 'moonshot' ? null : launchError;
+  const tokens = dataSource === 'trending' ? trendingTokens : dataSource === 'moonshot' ? moonshotTokens : dataSource === 'graduated' ? graduatedTokens : launchTokens;
+  const loading = dataSource === 'trending' ? trendingLoading : dataSource === 'moonshot' ? moonshotLoading : dataSource === 'graduated' ? graduatedLoading : launchLoading;
+  const error = dataSource === 'moonshot' || dataSource === 'graduated' ? null : launchError;
 
   const handleSort = (field: string) => {
     if (sortField === field) {
