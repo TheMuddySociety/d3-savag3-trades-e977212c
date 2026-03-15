@@ -4,7 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { Bot, Clock, Crosshair, BarChart3, Brain, Wallet, RotateCcw, History, Zap, OctagonX, Layers, Eye, List } from "lucide-react";
+import { Bot, Clock, Crosshair, BarChart3, Brain, Wallet, RotateCcw, History, Zap, OctagonX, Layers, Eye, List, TrendingUp } from "lucide-react";
 import { DCABot } from "./bot-tools/DCABot";
 import { BuySniper } from "./bot-tools/BuySniper";
 import { VolumeBot } from "./bot-tools/VolumeBot";
