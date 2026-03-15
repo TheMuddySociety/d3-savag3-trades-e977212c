@@ -138,9 +138,9 @@ export function TokenTable({ tokens, onTokenClick, sortField, sortDirection, onS
         </thead>
         <tbody className="divide-y divide-border">
           {tokens.map((token, index) => {
-            const change5m = (Math.random() - 0.5) * 50;
-            const change1h = token.change24h * 0.3;
-            const txns = Math.floor(token.holders * 0.8);
+            const change5m = token.change5m ?? 0;
+            const change1h = token.change1h ?? 0;
+            const txns = token.holders || 0;
             const ath = token.marketCap * (1 + Math.random() * 0.5);
             
             return (
