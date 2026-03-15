@@ -92,6 +92,7 @@ export function TopMemecoins() {
     minMarketCap: null,
     minVolume: null,
     onlyPositive: false,
+    bondingCurveRange: 'any',
   });
 
   const { publicKey } = useWallet();
