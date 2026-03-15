@@ -174,6 +174,15 @@ serve(async (req) => {
       })
       .eq('id', budget_id);
 
+    // Record withdrawal in history
+    await supabase.from('withdrawals').insert({
+      wallet_address,
+      amount: withdrawAmount,
+      currency: budget.currency,
+      tx_signature: txSignature,
+      budget_id,
+    });
+
     return new Response(JSON.stringify({
       success: true,
       tx_signature: txSignature,

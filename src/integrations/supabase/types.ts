@@ -425,6 +425,36 @@ export type Database = {
         }
         Relationships: []
       }
+      withdrawals: {
+        Row: {
+          amount: number
+          budget_id: string | null
+          created_at: string
+          currency: string
+          id: string
+          tx_signature: string
+          wallet_address: string
+        }
+        Insert: {
+          amount?: number
+          budget_id?: string | null
+          created_at?: string
+          currency?: string
+          id?: string
+          tx_signature: string
+          wallet_address: string
+        }
+        Update: {
+          amount?: number
+          budget_id?: string | null
+          created_at?: string
+          currency?: string
+          id?: string
+          tx_signature?: string
+          wallet_address?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

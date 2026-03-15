@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Wallet, ArrowDownToLine, ArrowUpFromLine, Shield, Lock, DollarSign, Coins } from "lucide-react";
+import { WithdrawalHistory } from "./WithdrawalHistory";
 import { useToast } from "@/hooks/use-toast";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { Connection, PublicKey, SystemProgram, Transaction } from "@solana/web3.js";
@@ -402,6 +403,9 @@ export const BudgetManager = () => {
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* Withdrawal History */}
+      <WithdrawalHistory />
     </div>
   );
 };
