@@ -112,6 +112,45 @@ const ATHBar = ({ current, ath }: { current: number; ath: number }) => {
   );
 };
 
+// Bonding Curve Progress indicator
+const BondingCurveBar = ({ progress, status }: { progress?: number; status?: string }) => {
+  const isGraduated = status === 'graduated' || progress === 100;
+  
+  if (isGraduated) {
+    return (
+      <div className="flex items-center gap-1.5">
+        <span className="text-xs font-medium text-accent">🎓 Graduated</span>
+      </div>
+    );
+  }
+
+  if (progress === undefined || progress === null) {
+    return <span className="text-xs text-muted-foreground">—</span>;
+  }
+
+  const clampedProgress = Math.min(Math.max(progress, 0), 100);
+  const progressColor = clampedProgress >= 80
+    ? 'from-accent to-accent/80'
+    : clampedProgress >= 50
+      ? 'from-yellow-500 to-yellow-500/80'
+      : 'from-primary to-primary/80';
+
+  return (
+    <div className="flex flex-col gap-1 min-w-[80px]">
+      <div className="flex items-center justify-between">
+        <span className="text-[10px] text-muted-foreground">Bonding</span>
+        <span className="text-[10px] font-mono font-medium text-foreground">{clampedProgress.toFixed(0)}%</span>
+      </div>
+      <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
+        <div
+          className={cn("h-full rounded-full bg-gradient-to-r transition-all", progressColor)}
+          style={{ width: `${clampedProgress}%` }}
+        />
+      </div>
+    </div>
+  );
+};
+
 export function TokenTable({ tokens, onTokenClick, sortField, sortDirection, onSort }: TokenTableProps) {
   return (
     <div className="overflow-x-auto">
