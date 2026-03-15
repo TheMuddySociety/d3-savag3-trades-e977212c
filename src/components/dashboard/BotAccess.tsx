@@ -143,6 +143,9 @@ export const BotAccess = () => {
             <TabsContent value="auto" className="mt-0">
               <AutoStrategies sim={sim} isLive={isLive} killSignal={killSignal} />
             </TabsContent>
+            <TabsContent value="profit" className="mt-0">
+              <ProfitSimulator />
+            </TabsContent>
             <TabsContent value="trades" className="mt-0">
               <LiveTradeHistory />
             </TabsContent>
