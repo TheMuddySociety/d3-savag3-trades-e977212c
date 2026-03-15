@@ -90,7 +90,7 @@ export const BotAccess = () => {
           </div>
         ) : (
           <Tabs defaultValue="sniper" className="w-full">
-            <TabsList className="w-full grid grid-cols-7 bg-muted/30 h-8 mb-3">
+            <TabsList className="w-full grid grid-cols-8 bg-muted/30 h-8 mb-3">
               <TabsTrigger value="sniper" className="text-[10px] gap-0.5 data-[state=active]:bg-primary/20 px-1">
                 <Crosshair className="h-3 w-3" />
                 <span className="hidden sm:inline">Sniper</span>
@@ -114,6 +114,10 @@ export const BotAccess = () => {
               <TabsTrigger value="auto" className="text-[10px] gap-0.5 data-[state=active]:bg-primary/20 px-1">
                 <Brain className="h-3 w-3" />
                 <span className="hidden sm:inline">Auto</span>
+              </TabsTrigger>
+              <TabsTrigger value="profit" className="text-[10px] gap-0.5 data-[state=active]:bg-primary/20 px-1">
+                <TrendingUp className="h-3 w-3" />
+                <span className="hidden sm:inline">Profit</span>
               </TabsTrigger>
               <TabsTrigger value="trades" className="text-[10px] gap-0.5 data-[state=active]:bg-accent/20 px-1">
                 <List className="h-3 w-3" />
