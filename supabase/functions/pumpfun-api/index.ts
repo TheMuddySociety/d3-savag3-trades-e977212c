@@ -34,6 +34,9 @@ serve(async (req) => {
       case 'graduated':
         data = await fetchPumpFunGraduated(limit);
         break;
+      case 'new_launches':
+        data = await fetchNewLaunches(limit);
+        break;
       default:
         data = await fetchPumpFunTrending(limit);
     }
