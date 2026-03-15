@@ -44,32 +44,13 @@ export function ReferralEarningsTracker() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      // Fetch referral wallet balances and trade stats in parallel
-      const [earningsRes, tradesRes] = await Promise.all([
-        supabase.functions.invoke("referral-earnings"),
-        supabase.from("live_trades").select("input_usd_value, output_usd_value"),
-      ]);
+      const earningsRes = await supabase.functions.invoke("referral-earnings");
 
       if (earningsRes.data) {
         setReferralData(earningsRes.data);
-      }
-
-      if (tradesRes.data) {
-        const trades = tradesRes.data;
-        const totalInputUsd = trades.reduce(
-          (s, t) => s + (t.input_usd_value || 0),
-          0
-        );
-        const totalOutputUsd = trades.reduce(
-          (s, t) => s + (t.output_usd_value || 0),
-          0
-        );
-        setTradeStats({
-          totalTrades: trades.length,
-          totalInputUsd,
-          totalOutputUsd,
-          estimatedFees: totalOutputUsd * 0.005, // 0.5% referral fee
-        });
+        if (earningsRes.data.tradeStats) {
+          setTradeStats(earningsRes.data.tradeStats);
+        }
       }
     } catch (err) {
       toast.error("Failed to load referral data");
