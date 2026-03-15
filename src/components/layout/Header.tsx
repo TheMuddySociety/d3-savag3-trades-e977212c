@@ -15,6 +15,7 @@ export function Header() {
   const navigate = useNavigate();
   const { publicKey, connected, disconnect } = useWallet();
   const { hasFreePass, buyFreePass, isPaymentPending } = useTradingMode();
+  const { signOut } = useWalletAuth();
 
   const handleDisconnect = () => {
     disconnect();
