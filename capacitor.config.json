@@ -1,0 +1,9 @@
+{
+  "appId": "app.lovable.4df7c074d81a42c29a725460ace25b53",
+  "appName": "memebot-profit-finder",
+  "webDir": "dist",
+  "server": {
+    "url": "https://4df7c074-d81a-42c2-9a72-5460ace25b53.lovableproject.com?forceHideBadge=true",
+    "cleartext": true
+  }
+}
