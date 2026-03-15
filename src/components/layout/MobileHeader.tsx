@@ -2,7 +2,7 @@ import { Activity, LogOut, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useWallet } from '@solana/wallet-adapter-react';
-import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
+import { UnifiedWalletButton } from '@jup-ag/wallet-adapter';
 import { useTradingMode } from '@/hooks/useTradingMode';
 import { useToast } from '@/components/ui/use-toast';
 import { useNavigate } from 'react-router-dom';
@@ -48,7 +48,7 @@ export function MobileHeader() {
               </Button>
             </>
           ) : (
-            <WalletMultiButton className="!bg-primary !text-primary-foreground !rounded-md !text-[10px] !h-7 !px-3" />
+            <UnifiedWalletButton />
           )}
         </div>
       </div>

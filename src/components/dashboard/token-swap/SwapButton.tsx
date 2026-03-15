@@ -1,7 +1,7 @@
 
 import { Button } from "@/components/ui/button";
 import { RefreshCw } from "lucide-react";
-import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
+import { UnifiedWalletButton } from '@jup-ag/wallet-adapter';
 
 interface SwapButtonProps {
   connected: boolean;
@@ -13,7 +13,7 @@ interface SwapButtonProps {
 export function SwapButton({ connected, isSwapping, quote, handleSwap }: SwapButtonProps) {
   if (!connected) {
     return (
-      <WalletMultiButton className="w-full bg-solana hover:bg-solana-dark text-primary-foreground" />
+      <UnifiedWalletButton />
     );
   }
 

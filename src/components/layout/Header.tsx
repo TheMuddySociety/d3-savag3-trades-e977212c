@@ -5,7 +5,7 @@ import { Shield, LogOut, Activity, Sparkles } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import { useWallet } from '@solana/wallet-adapter-react';
-import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
+import { UnifiedWalletButton } from '@jup-ag/wallet-adapter';
 import { useTradingMode } from '@/hooks/useTradingMode';
 
 export function Header() {
@@ -67,7 +67,7 @@ export function Header() {
       )}
       
       {!connected && (
-        <WalletMultiButton className="!bg-primary !text-primary-foreground !rounded-md !text-xs !h-8 !px-4" />
+        <UnifiedWalletButton />
       )}
     </div>
   );
@@ -188,7 +188,7 @@ export function LandingHeader() {
           )}
           
           {!connected && (
-            <WalletMultiButton className="!bg-primary !text-primary-foreground !rounded-md !text-xs !h-8 !px-4" />
+            <UnifiedWalletButton />
           )}
         </div>
       </div>

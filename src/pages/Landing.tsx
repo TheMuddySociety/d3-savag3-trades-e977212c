@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Activity, ArrowRight, Zap, Shield, BarChart3 } from "lucide-react";
 import { toast } from "sonner";
 import { useWallet } from '@solana/wallet-adapter-react';
-import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
+import { UnifiedWalletButton } from '@jup-ag/wallet-adapter';
 import { GlobeChart } from "@/components/dashboard/GlobeChart";
 
 const ADMIN_WALLETS = [
@@ -83,7 +83,7 @@ const Landing = () => {
                 Launch App
                 <ArrowRight className="h-4 w-4" />
               </button>
-              <WalletMultiButton className="!bg-secondary !text-foreground !rounded-md !text-sm !h-11 !px-6 !font-medium !border !border-border" />
+              <UnifiedWalletButton />
             </div>
 
             {/* Feature pills */}
