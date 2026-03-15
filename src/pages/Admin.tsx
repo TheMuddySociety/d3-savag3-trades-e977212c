@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { DevTokenTracker } from "@/components/admin/DevTokenTracker";
 import { NFTCollectionTracker } from "@/components/admin/NFTCollectionTracker";
+import { ReferralEarningsTracker } from "@/components/admin/ReferralEarningsTracker";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { useAdminCheck } from "@/hooks/useAdminCheck";
 
