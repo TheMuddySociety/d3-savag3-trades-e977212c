@@ -17,7 +17,7 @@ export function Header() {
   const { hasFreePass, buyFreePass, isPaymentPending } = useTradingMode();
   const { signOut } = useWalletAuth();
 
-  const handleDisconnect = () => {
+  const handleDisconnect = async () => {
     await signOut();
     disconnect();
     toast({
