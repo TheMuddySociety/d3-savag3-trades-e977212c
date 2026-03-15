@@ -87,16 +87,8 @@ export class JupiterQuoteService {
         };
       }
       
-      // Fallback to simulated quote
-      const outAmount = amount * (1 + (Math.random() * 0.1 - 0.05)); // +/- 5%
-      const priceImpact = Math.random() * 1.5; // 0-1.5% price impact
-      
-      return {
-        inAmount: amount,
-        outAmount,
-        priceImpact,
-        routeInfo: "V6 Swap via Jupiter (Simulated)"
-      };
+      // No simulated fallback — return null on failure
+      return null;
     } catch (error) {
       console.error('Error getting swap quote:', error);
       return null;

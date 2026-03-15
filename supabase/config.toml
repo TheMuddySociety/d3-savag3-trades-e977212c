@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.auto-trader]
 verify_jwt = false
+
+[functions.ai-profit-analysis]
+verify_jwt = false

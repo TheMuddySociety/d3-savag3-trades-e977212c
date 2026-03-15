@@ -70,28 +70,26 @@ const SortHeader = ({
   </th>
 );
 
-// Mini sparkline chart component
-const MiniChart = ({ positive }: { positive: boolean }) => {
-  const points = React.useMemo(() => {
-    const pts = [];
-    let y = 20;
-    for (let i = 0; i < 20; i++) {
-      y += (Math.random() - 0.5) * 8;
-      y = Math.max(5, Math.min(35, y));
-      pts.push(`${i * 5},${positive ? 40 - y : y}`);
-    }
-    return pts.join(' ');
-  }, [positive]);
-
+// Direction indicator based on real change data
+const DirectionIndicator = ({ change }: { change: number }) => {
+  const isPositive = change >= 0;
+  const absChange = Math.abs(change);
+  // Bar height scales with magnitude (capped at 100%)
+  const barHeight = Math.min(absChange / 50, 1) * 30 + 5;
+  
   return (
-    <svg width="80" height="40" className="opacity-80">
-      <polyline
-        points={points}
-        fill="none"
-        stroke={positive ? '#22c55e' : '#ef4444'}
-        strokeWidth="1.5"
-      />
-    </svg>
+    <div className="flex items-end justify-center h-10 w-20 gap-[2px]">
+      {[0.4, 0.7, 1, 0.8, 0.5].map((scale, i) => (
+        <div
+          key={i}
+          className={cn(
+            "w-2 rounded-sm transition-all",
+            isPositive ? "bg-accent" : "bg-destructive"
+          )}
+          style={{ height: `${barHeight * scale}px` }}
+        />
+      ))}
+    </div>
   );
 };
 
@@ -207,7 +205,7 @@ export function TokenTable({ tokens, onTokenClick, sortField, sortDirection, onS
                   </div>
                 </td>
                 <td className="px-3 py-4">
-                  <MiniChart positive={token.change24h >= 0} />
+                  <DirectionIndicator change={token.change24h} />
                 </td>
                 <td className="px-3 py-4">
                   <span className={cn(
