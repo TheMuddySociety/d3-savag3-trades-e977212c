@@ -143,6 +143,60 @@ export type Database = {
         }
         Relationships: []
       }
+      live_trades: {
+        Row: {
+          bot_type: string | null
+          created_at: string
+          id: string
+          input_amount: number
+          input_mint: string
+          input_symbol: string | null
+          input_usd_value: number | null
+          output_amount: number
+          output_mint: string
+          output_symbol: string | null
+          output_usd_value: number | null
+          status: string
+          trade_type: string
+          tx_signature: string
+          wallet_address: string
+        }
+        Insert: {
+          bot_type?: string | null
+          created_at?: string
+          id?: string
+          input_amount?: number
+          input_mint: string
+          input_symbol?: string | null
+          input_usd_value?: number | null
+          output_amount?: number
+          output_mint: string
+          output_symbol?: string | null
+          output_usd_value?: number | null
+          status?: string
+          trade_type?: string
+          tx_signature: string
+          wallet_address: string
+        }
+        Update: {
+          bot_type?: string | null
+          created_at?: string
+          id?: string
+          input_amount?: number
+          input_mint?: string
+          input_symbol?: string | null
+          input_usd_value?: number | null
+          output_amount?: number
+          output_mint?: string
+          output_symbol?: string | null
+          output_usd_value?: number | null
+          status?: string
+          trade_type?: string
+          tx_signature?: string
+          wallet_address?: string
+        }
+        Relationships: []
+      }
       price_alerts: {
         Row: {
           created_at: string

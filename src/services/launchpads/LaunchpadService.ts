@@ -1,5 +1,5 @@
 import { pumpFunService } from '../pumpfun';
-import { BullmeService } from '../bullme/BullmeService';
+import { BullmeService, BullmeToken } from '../bullme/BullmeService';
 import { MemeToken } from '@/types/memeToken';
 
 export interface LaunchpadConfig {
@@ -11,46 +11,17 @@ export interface LaunchpadConfig {
 }
 
 export const LAUNCHPADS: LaunchpadConfig[] = [
-  {
-    id: 'all',
-    name: 'All Launchpads',
-    displayName: 'All',
-    color: 'bg-primary',
-    icon: '🚀'
-  },
-  {
-    id: 'pumpfun',
-    name: 'Pump.Fun',
-    displayName: 'Pump.Fun',
-    color: 'bg-green-500',
-    icon: '💎'
-  },
-  {
-    id: 'bullme',
-    name: 'Bullme.one',
-    displayName: 'Bullme',
-    color: 'bg-blue-500',
-    icon: '🐂'
-  },
-  {
-    id: 'raydium',
-    name: 'Raydium',
-    displayName: 'Raydium',
-    color: 'bg-purple-500',
-    icon: '⚡'
-  },
-  {
-    id: 'jupiter',
-    name: 'Jupiter',
-    displayName: 'Jupiter',
-    color: 'bg-orange-500',
-    icon: '🪐'
-  }
+  { id: 'all', name: 'All Launchpads', displayName: 'All', color: 'bg-primary', icon: '🚀' },
+  { id: 'pumpfun', name: 'Pump.Fun', displayName: 'Pump.Fun', color: 'bg-green-500', icon: '💎' },
+  { id: 'bullme', name: 'Bullme.one', displayName: 'Bullme', color: 'bg-blue-500', icon: '🐂' },
+  { id: 'moonshot', name: 'Moonshot', displayName: 'Moonshot', color: 'bg-yellow-500', icon: '🌙' },
+  { id: 'raydium', name: 'Raydium', displayName: 'Raydium', color: 'bg-purple-500', icon: '⚡' },
+  { id: 'jupiter', name: 'Jupiter', displayName: 'Jupiter', color: 'bg-orange-500', icon: '🪐' },
 ];
 
 export class LaunchpadService {
   private static cache = new Map<string, { data: MemeToken[], timestamp: number }>();
-  private static readonly CACHE_DURATION = 30000; // 30 seconds
+  private static readonly CACHE_DURATION = 30000;
 
   static async getTokensByLaunchpad(launchpadId: string, limit: number = 10): Promise<MemeToken[]> {
     const cacheKey = `${launchpadId}-${limit}`;
@@ -74,11 +45,14 @@ export class LaunchpadService {
           const bullmeTokens = await BullmeService.getNewTokens();
           tokens = this.mapBullmeToMemeTokens(bullmeTokens.slice(0, limit));
           break;
+        case 'moonshot':
+          tokens = await this.fetchDexScreenerTokens('moonshot', limit);
+          break;
         case 'raydium':
-          tokens = await this.getMockRaydiumTokens(limit);
+          tokens = await this.fetchDexScreenerTokens('raydium', limit);
           break;
         case 'jupiter':
-          tokens = await this.getMockJupiterTokens(limit);
+          tokens = await this.fetchDexScreenerTokens('jupiter', limit);
           break;
         default:
           tokens = await pumpFunService.getTrendingTokens(limit);
@@ -94,19 +68,21 @@ export class LaunchpadService {
 
   private static async getAllTokens(limit: number): Promise<MemeToken[]> {
     try {
-      const [pumpFunTokens, bullmeTokens] = await Promise.all([
-        pumpFunService.getTrendingTokens(Math.ceil(limit * 0.4)),
-        BullmeService.getNewTokens()
+      const [pumpFunTokens, bullmeTokens, moonshotTokens, raydiumTokens] = await Promise.allSettled([
+        pumpFunService.getTrendingTokens(Math.ceil(limit * 0.3)),
+        BullmeService.getNewTokens(),
+        this.fetchDexScreenerTokens('moonshot', Math.ceil(limit * 0.2)),
+        this.fetchDexScreenerTokens('raydium', Math.ceil(limit * 0.2)),
       ]);
 
-      const mappedBullme = this.mapBullmeToMemeTokens(bullmeTokens.slice(0, Math.ceil(limit * 0.3)));
-      const mockRaydium = await this.getMockRaydiumTokens(Math.ceil(limit * 0.2));
-      const mockJupiter = await this.getMockJupiterTokens(Math.ceil(limit * 0.1));
+      const pf = pumpFunTokens.status === 'fulfilled' ? pumpFunTokens.value : [];
+      const bm = bullmeTokens.status === 'fulfilled'
+        ? this.mapBullmeToMemeTokens(bullmeTokens.value.slice(0, Math.ceil(limit * 0.2)))
+        : [];
+      const ms = moonshotTokens.status === 'fulfilled' ? moonshotTokens.value : [];
+      const ry = raydiumTokens.status === 'fulfilled' ? raydiumTokens.value : [];
 
-      const allTokens = [...pumpFunTokens, ...mappedBullme, ...mockRaydium, ...mockJupiter];
-      
-      // Sort by volume and return top tokens
-      return allTokens
+      return [...pf, ...bm, ...ms, ...ry]
         .sort((a, b) => b.volume24h - a.volume24h)
         .slice(0, limit);
     } catch (error) {
@@ -115,60 +91,83 @@ export class LaunchpadService {
     }
   }
 
-  private static mapBullmeToMemeTokens(bullmeTokens: any[]): MemeToken[] {
-    return bullmeTokens.map((token, index) => ({
-      id: token.address || `bullme-${index}`,
-      name: token.name || `Token ${index + 1}`,
-      symbol: token.symbol || 'UNK',
-      price: parseFloat(token.price) || Math.random() * 0.01,
-      marketCap: parseFloat(token.fdv) || Math.random() * 1000000,
-      volume24h: parseFloat(token.volume24h) || Math.random() * 100000,
-      change24h: parseFloat(token.change24h) || (Math.random() - 0.5) * 200,
-      logoUrl: token.logoURI || '/placeholder.svg',
-      tokenAddress: token.address,
-      liquidity: parseFloat(token.liquidity) || Math.random() * 50000,
-      holders: parseInt(token.holders) || Math.floor(Math.random() * 1000),
-      tags: ['Bullme', 'New'],
-      timestamp: Date.now(),
-      bondingCurveProgress: Math.random()
-    }));
+  private static mapBullmeToMemeTokens(bullmeTokens: BullmeToken[]): MemeToken[] {
+    return bullmeTokens.map((token, index) => {
+      const supply = token.totalSupply || 1;
+      const price = token.marketCap > 0 && supply > 0 ? token.marketCap / supply : 0;
+      const buyVol = token.buyVolume24h || 0;
+      const sellVol = token.sellVolume24h || 0;
+      const totalVol = buyVol + sellVol;
+      const change24h = totalVol > 0 ? ((buyVol - sellVol) / totalVol) * 100 : 0;
+
+      return {
+        id: token.address || `bullme-${index}`,
+        name: token.name || `Token ${index + 1}`,
+        symbol: token.symbol || 'UNK',
+        price,
+        marketCap: token.marketCap || 0,
+        volume24h: token.tradeVolume24h || 0,
+        change24h,
+        logoUrl: token.logo || '/placeholder.svg',
+        tokenAddress: token.address,
+        liquidity: token.liquidity || 0,
+        holders: token.tradeCount || 0,
+        tags: ['Bullme', token.status === 'active' ? 'Active' : 'New'],
+        timestamp: token.timestamp || Date.now(),
+        bondingCurveProgress: token.bondingCurveProgress || 0,
+      };
+    });
   }
 
-  private static async getMockRaydiumTokens(limit: number): Promise<MemeToken[]> {
-    return Array.from({ length: limit }, (_, i) => ({
-      id: `raydium-${i}`,
-      name: `Raydium Token ${i + 1}`,
-      symbol: `RAY${i + 1}`,
-      price: Math.random() * 0.1,
-      marketCap: Math.random() * 5000000,
-      volume24h: Math.random() * 200000,
-      change24h: (Math.random() - 0.5) * 100,
-      logoUrl: '/placeholder.svg',
-      tokenAddress: `ray${i}${'x'.repeat(40)}`,
-      liquidity: Math.random() * 100000,
-      holders: Math.floor(Math.random() * 2000),
-      tags: ['Raydium', 'DEX'],
-      timestamp: Date.now(),
-      bondingCurveProgress: Math.random()
-    }));
-  }
+  /**
+   * Fetch real token data from DexScreener filtered by dexId
+   */
+  private static async fetchDexScreenerTokens(dexId: string, limit: number): Promise<MemeToken[]> {
+    try {
+      const resp = await fetch(
+        `https://api.dexscreener.com/latest/dex/search?q=${dexId}&chain=solana`
+      );
+      if (!resp.ok) {
+        console.warn(`DexScreener search failed for ${dexId}: ${resp.status}`);
+        return [];
+      }
+      const data = await resp.json();
+      const pairs = (data?.pairs || []).filter(
+        (p: any) => p.chainId === 'solana' && (dexId === 'moonshot' || p.dexId?.toLowerCase().includes(dexId))
+      );
 
-  private static async getMockJupiterTokens(limit: number): Promise<MemeToken[]> {
-    return Array.from({ length: limit }, (_, i) => ({
-      id: `jupiter-${i}`,
-      name: `Jupiter Token ${i + 1}`,
-      symbol: `JUP${i + 1}`,
-      price: Math.random() * 0.05,
-      marketCap: Math.random() * 3000000,
-      volume24h: Math.random() * 150000,
-      change24h: (Math.random() - 0.5) * 80,
-      logoUrl: '/placeholder.svg',
-      tokenAddress: `jup${i}${'x'.repeat(40)}`,
-      liquidity: Math.random() * 75000,
-      holders: Math.floor(Math.random() * 1500),
-      tags: ['Jupiter', 'Swap'],
-      timestamp: Date.now(),
-      bondingCurveProgress: Math.random()
-    }));
+      const seen = new Set<string>();
+      const tokens: MemeToken[] = [];
+
+      for (const pair of pairs) {
+        const addr = pair.baseToken?.address;
+        if (!addr || seen.has(addr)) continue;
+        seen.add(addr);
+
+        tokens.push({
+          id: addr,
+          name: pair.baseToken?.name || '',
+          symbol: pair.baseToken?.symbol || '',
+          price: parseFloat(pair.priceUsd) || 0,
+          marketCap: pair.marketCap || pair.fdv || 0,
+          volume24h: pair.volume?.h24 || 0,
+          change24h: pair.priceChange?.h24 || 0,
+          logoUrl: pair.info?.imageUrl || '/placeholder.svg',
+          tokenAddress: addr,
+          liquidity: pair.liquidity?.usd || 0,
+          holders: 0,
+          tags: [dexId.charAt(0).toUpperCase() + dexId.slice(1), 'DEX'],
+          timestamp: pair.pairCreatedAt || Date.now(),
+          bondingCurveProgress: undefined,
+        });
+
+        if (tokens.length >= limit) break;
+      }
+
+      return tokens;
+    } catch (error) {
+      console.error(`DexScreener fetch error for ${dexId}:`, error);
+      return [];
+    }
   }
 }

@@ -1,9 +1,10 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Loader2, Wifi, WifiOff, TrendingUp, Rocket, Globe } from 'lucide-react';
+import { Loader2, Wifi, WifiOff, TrendingUp, Rocket, Globe, Moon } from 'lucide-react';
 import { useRealtimeTokens } from '@/hooks/useRealtimeTokens';
 import { TrendingCarousel, FilterTabs, TokenTable, FilterType } from './pumpfun';
 import { FilterOptions } from './pumpfun/FilterTabs';
 import { MemeToken } from '@/types/memeToken';
+import { LaunchpadService } from '@/services/launchpads/LaunchpadService';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { tokenWebSocketService } from '@/services/websocket/TokenWebSocketService';
@@ -12,7 +13,7 @@ import { CreateAlertDialog } from './CreateAlertDialog';
 import { usePriceAlerts } from '@/hooks/usePriceAlerts';
 import { useWallet } from '@solana/wallet-adapter-react';
 
-type DataSource = 'trending' | 'new_launches';
+type DataSource = 'trending' | 'new_launches' | 'moonshot';
 
 const formatValue = (value: number, type: 'currency' | 'percent' = 'currency'): string => {
   if (type === 'percent') {
@@ -77,8 +78,9 @@ export function TopMemecoins() {
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [dataSource, setDataSource] = useState<DataSource>('trending');
   const [trendingTokens, setTrendingTokens] = useState<MemeToken[]>([]);
+  const [moonshotTokens, setMoonshotTokens] = useState<MemeToken[]>([]);
   const [trendingLoading, setTrendingLoading] = useState(false);
-  const [trendingError, setTrendingError] = useState<string | null>(null);
+  const [moonshotLoading, setMoonshotLoading] = useState(false);
   const [selectedToken, setSelectedToken] = useState<MemeToken | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [alertToken, setAlertToken] = useState<MemeToken | null>(null);
@@ -106,28 +108,40 @@ export function TopMemecoins() {
   const { tokens: launchTokens, loading: launchLoading, error: launchError, isConnected, lastUpdate } = useRealtimeTokens('all', 30);
 
   useEffect(() => {
-    if (dataSource !== 'trending') return;
-    let cancelled = false;
-    const fetchTrending = async () => {
-      setTrendingLoading(true);
-      setTrendingError(null);
-      try {
-        const tokens = await tokenWebSocketService.fetchTrendingTokens();
-        if (!cancelled) setTrendingTokens(tokens);
-      } catch (err) {
-        if (!cancelled) setTrendingError(err instanceof Error ? err.message : 'Failed to fetch trending');
-      } finally {
-        if (!cancelled) setTrendingLoading(false);
-      }
-    };
-    fetchTrending();
-    const interval = setInterval(fetchTrending, 30000);
-    return () => { cancelled = true; clearInterval(interval); };
+    if (dataSource === 'trending') {
+      let cancelled = false;
+      const fetchTrending = async () => {
+        setTrendingLoading(true);
+        try {
+          const tokens = await tokenWebSocketService.fetchTrendingTokens();
+          if (!cancelled) setTrendingTokens(tokens);
+        } catch {} finally {
+          if (!cancelled) setTrendingLoading(false);
+        }
+      };
+      fetchTrending();
+      const interval = setInterval(fetchTrending, 30000);
+      return () => { cancelled = true; clearInterval(interval); };
+    } else if (dataSource === 'moonshot') {
+      let cancelled = false;
+      const fetchMoonshot = async () => {
+        setMoonshotLoading(true);
+        try {
+          const tokens = await LaunchpadService.getTokensByLaunchpad('moonshot', 30);
+          if (!cancelled) setMoonshotTokens(tokens);
+        } catch {} finally {
+          if (!cancelled) setMoonshotLoading(false);
+        }
+      };
+      fetchMoonshot();
+      const interval = setInterval(fetchMoonshot, 30000);
+      return () => { cancelled = true; clearInterval(interval); };
+    }
   }, [dataSource]);
 
-  const tokens = dataSource === 'trending' ? trendingTokens : launchTokens;
-  const loading = dataSource === 'trending' ? trendingLoading : launchLoading;
-  const error = dataSource === 'trending' ? trendingError : launchError;
+  const tokens = dataSource === 'trending' ? trendingTokens : dataSource === 'moonshot' ? moonshotTokens : launchTokens;
+  const loading = dataSource === 'trending' ? trendingLoading : dataSource === 'moonshot' ? moonshotLoading : launchLoading;
+  const error = dataSource === 'moonshot' ? null : launchError;
 
   const handleSort = (field: string) => {
     if (sortField === field) {
@@ -240,6 +254,20 @@ export function TopMemecoins() {
           >
             <Rocket className="h-3.5 w-3.5" />
             New Launches
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            className={cn(
+              "rounded-full gap-1.5 h-7 text-xs px-3 transition-all",
+              dataSource === 'moonshot'
+                ? "bg-primary text-primary-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+            )}
+            onClick={() => setDataSource('moonshot')}
+          >
+            <Moon className="h-3.5 w-3.5" />
+            Moonshot
           </Button>
         </div>
 

@@ -167,6 +167,27 @@ export class JupiterUltraService {
 
       if (result.status === 'Success') {
         toast.success(`Swap successful! Tx: ${result.signature?.substring(0, 8)}...`);
+
+        // Log trade to live_trades table
+        try {
+          await supabase.from('live_trades').insert({
+            wallet_address: taker,
+            tx_signature: result.signature || '',
+            input_mint: inputMint,
+            output_mint: outputMint,
+            input_amount: parseFloat(order.inAmount) || 0,
+            output_amount: parseFloat(order.outAmount) || 0,
+            input_usd_value: order.inUsdValue || 0,
+            output_usd_value: order.outUsdValue || 0,
+            input_symbol: null,
+            output_symbol: null,
+            status: 'success',
+            trade_type: 'swap',
+            bot_type: null,
+          });
+        } catch (logErr) {
+          console.warn('Failed to log trade:', logErr);
+        }
       } else {
         toast.error(`Swap failed: ${result.error || 'Unknown error'}`);
       }
