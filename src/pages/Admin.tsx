@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { DevTokenTracker } from "@/components/admin/DevTokenTracker";
 import { NFTCollectionTracker } from "@/components/admin/NFTCollectionTracker";
+import { ReferralEarningsTracker } from "@/components/admin/ReferralEarningsTracker";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { useAdminCheck } from "@/hooks/useAdminCheck";
 
@@ -92,9 +93,10 @@ const Admin = () => {
           </section>
 
           <Tabs defaultValue="tokens" className="w-full max-w-5xl mx-auto">
-            <TabsList className="grid w-full grid-cols-3 mb-8">
+            <TabsList className="grid w-full grid-cols-4 mb-8">
               <TabsTrigger value="tokens">Dev Token Tracker</TabsTrigger>
               <TabsTrigger value="collections">NFT Scam Tracker</TabsTrigger>
+              <TabsTrigger value="referral">Referral Earnings</TabsTrigger>
               <TabsTrigger value="payments">Access Payments</TabsTrigger>
             </TabsList>
 
@@ -104,6 +106,10 @@ const Admin = () => {
 
             <TabsContent value="collections">
               <NFTCollectionTracker crossRefWallets={nftCrossRef} />
+            </TabsContent>
+
+            <TabsContent value="referral">
+              <ReferralEarningsTracker />
             </TabsContent>
 
             <TabsContent value="payments">
