@@ -37,7 +37,7 @@ const App = () => {
           config={{
             appId: "f3e1137b-609c-4f5e-91d7-c76a3e4f9f7d",
             providers: ["phantom", "injected"],
-            addressTypes: ["solana"],
+            addressTypes: [AddressType.solana],
           }}
           theme={darkTheme}
         >
