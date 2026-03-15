@@ -80,8 +80,10 @@ export function TopMemecoins() {
   const [dataSource, setDataSource] = useState<DataSource>('trending');
   const [trendingTokens, setTrendingTokens] = useState<MemeToken[]>([]);
   const [moonshotTokens, setMoonshotTokens] = useState<MemeToken[]>([]);
+  const [graduatedTokens, setGraduatedTokens] = useState<MemeToken[]>([]);
   const [trendingLoading, setTrendingLoading] = useState(false);
   const [moonshotLoading, setMoonshotLoading] = useState(false);
+  const [graduatedLoading, setGraduatedLoading] = useState(false);
   const [selectedToken, setSelectedToken] = useState<MemeToken | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [alertToken, setAlertToken] = useState<MemeToken | null>(null);
