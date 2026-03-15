@@ -21,10 +21,9 @@ serve(async (req) => {
       if (body.endpoint) endpoint = body.endpoint;
       if (body.params) params = body.params;
     } catch {
-      // Use defaults if no body
+      // Use defaults
     }
 
-    // Supported endpoints
     const allowedEndpoints = [
       '/coins/latest',
       '/coins/king-of-the-hill',
@@ -32,7 +31,7 @@ serve(async (req) => {
       '/coins/for-you',
     ];
 
-    const basePath = endpoint?.split('?')[0];
+    const basePath = endpoint.split('?')[0];
     if (!allowedEndpoints.includes(basePath)) {
       return new Response(JSON.stringify({ error: 'Endpoint not allowed' }), {
         status: 400,
@@ -40,7 +39,6 @@ serve(async (req) => {
       });
     }
 
-    // Build query string from params
     const queryParams = new URLSearchParams();
     if (params) {
       for (const [key, value] of Object.entries(params)) {
@@ -52,7 +50,6 @@ serve(async (req) => {
 
     const queryString = queryParams.toString();
     const url = `${PUMP_API_BASE}${endpoint}${queryString ? '?' + queryString : ''}`;
-
     console.log(`[PumpFun API] Fetching: ${url}`);
 
     const response = await fetch(url, {
@@ -60,20 +57,36 @@ serve(async (req) => {
       headers: {
         'Accept': 'application/json',
         'Origin': 'https://pump.fun',
-        'User-Agent': 'Mozilla/5.0',
+        'Referer': 'https://pump.fun/',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
       },
     });
 
+    const responseText = await response.text();
+    console.log(`[PumpFun API] Status: ${response.status}, Body length: ${responseText.length}`);
+
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`[PumpFun API] Error ${response.status}: ${errorText}`);
-      return new Response(JSON.stringify({ error: `Pump.Fun API error: ${response.status}`, details: errorText }), {
+      console.error(`[PumpFun API] Error response: ${responseText.substring(0, 500)}`);
+      return new Response(JSON.stringify({ 
+        error: `Pump.Fun API returned ${response.status}`,
+        details: responseText.substring(0, 200),
+      }), {
         status: response.status,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    const data = await response.json();
+    // Try to parse as JSON
+    let data;
+    try {
+      data = JSON.parse(responseText);
+    } catch {
+      console.error(`[PumpFun API] Non-JSON response: ${responseText.substring(0, 200)}`);
+      return new Response(JSON.stringify({ error: 'Non-JSON response from Pump.Fun', raw: responseText.substring(0, 200) }), {
+        status: 502,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
     return new Response(JSON.stringify(data), {
       status: 200,
