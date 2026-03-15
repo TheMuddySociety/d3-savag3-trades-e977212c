@@ -66,7 +66,6 @@ const App = () => {
             </TooltipProvider>
             </TradingModeProvider>
           </JupiverseKitProvider>
-        </PhantomProvider>
       </ThemeProvider>
     </QueryClientProvider>
   );
