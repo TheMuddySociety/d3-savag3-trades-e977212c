@@ -1,4 +1,5 @@
 
+import { lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -8,17 +9,24 @@ import { ThemeProvider } from "@/hooks/use-theme";
 import { TradingModeProvider } from "@/hooks/useTradingMode";
 import { JupiverseKitProvider } from "jupiverse-kit";
 import "jupiverse-kit/dist/index.css";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
-import Landing from "./pages/Landing";
-import Index from "./pages/Index";
-import Admin from "./pages/Admin";
-import TokenDetail from "./pages/TokenDetail";
-import NotFound from "./pages/NotFound";
+const Landing = lazy(() => import("./pages/Landing"));
+const Index = lazy(() => import("./pages/Index"));
+const Admin = lazy(() => import("./pages/Admin"));
+const TokenDetail = lazy(() => import("./pages/TokenDetail"));
+const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient();
 
-// Use Helius RPC for better performance (public key is fine client-side)
+// Use Helius RPC via public endpoint (domain-restricted key)
 const HELIUS_RPC = "https://mainnet.helius-rpc.com/?api-key=9d3be76b-1741-43d2-a8f9-3880668415ad";
+
+const PageLoader = () => (
+  <div className="min-h-screen flex items-center justify-center bg-background">
+    <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+  </div>
+);
 
 const App = () => {
   return (
@@ -42,15 +50,19 @@ const App = () => {
             <TooltipProvider>
               <Toaster />
               <Sonner />
-              <BrowserRouter>
-                <Routes>
-                  <Route path="/" element={<Landing />} />
-                  <Route path="/dashboard" element={<Index />} />
-                  <Route path="/token/:address" element={<TokenDetail />} />
-                  <Route path="/admin" element={<Admin />} />
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-              </BrowserRouter>
+              <ErrorBoundary>
+                <BrowserRouter>
+                  <Suspense fallback={<PageLoader />}>
+                    <Routes>
+                      <Route path="/" element={<Landing />} />
+                      <Route path="/dashboard" element={<Index />} />
+                      <Route path="/token/:address" element={<TokenDetail />} />
+                      <Route path="/admin" element={<Admin />} />
+                      <Route path="*" element={<NotFound />} />
+                    </Routes>
+                  </Suspense>
+                </BrowserRouter>
+              </ErrorBoundary>
             </TooltipProvider>
           </TradingModeProvider>
         </JupiverseKitProvider>
