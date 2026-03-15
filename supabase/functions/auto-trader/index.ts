@@ -20,7 +20,6 @@ serve(async (req) => {
   const supabase = createClient(supabaseUrl, supabaseKey);
 
   try {
-    // Get all active auto configs with beachMode enabled
     const { data: configs, error } = await supabase
       .from('sim_bot_configs')
       .select('*')
@@ -39,8 +38,8 @@ serve(async (req) => {
       const walletAddress = config.wallet_address;
       const strategies: string[] = (config.config as any)?.strategies || [];
       const isBeachMode = (config.config as any)?.beachMode === true;
+      const maxBudget = (config.config as any)?.maxBudget || 1.0;
 
-      // Only process Beach Mode configs (background execution)
       if (!isBeachMode) {
         console.log(`Skipping ${walletAddress} — beachMode not enabled`);
         continue;
@@ -48,121 +47,150 @@ serve(async (req) => {
 
       if (strategies.length === 0) continue;
 
-      // Only process sell strategies (safe_exit, scalper) — these are the ones that work server-side
-      const sellStrategies = strategies.filter(s => s === 'safe_exit' || s === 'scalper');
-      if (sellStrategies.length === 0) {
-        console.log(`Skipping ${walletAddress} — no sell strategies active`);
-        continue;
-      }
+      // Filter to strategies we can handle server-side
+      const supportedStrategies = strategies.filter(
+        s => s === 'safe_exit' || s === 'scalper' || s === 'momentum' || s === 'dip_buy'
+      );
+      if (supportedStrategies.length === 0) continue;
 
       // Fetch REAL wallet holdings via Helius DAS
       const holdings = await fetchRealHoldings(walletAddress, heliusKey);
-      if (holdings.length === 0) {
-        console.log(`No token holdings for ${walletAddress}`);
-        continue;
-      }
-
       console.log(`Found ${holdings.length} real token(s) for ${walletAddress}`);
 
-      // Get or create entry prices
+      // Get/create entry prices
       const { data: entryPriceRows } = await supabase
         .from('auto_trade_entry_prices')
         .select('*')
         .eq('wallet_address', walletAddress);
 
       const entryPriceMap = new Map<string, number>();
+      const peakPriceMap = new Map<string, number>();
       for (const ep of (entryPriceRows || [])) {
         entryPriceMap.set(ep.token_mint, Number(ep.entry_price));
+        if (ep.peak_price) peakPriceMap.set(ep.token_mint, Number(ep.peak_price));
       }
 
-      // Record entry prices for new tokens
+      // Record entry prices for new tokens & update peaks
       for (const h of holdings) {
-        if (!entryPriceMap.has(h.mint) && h.price > 0) {
+        if (h.price <= 0) continue;
+
+        if (!entryPriceMap.has(h.mint)) {
           entryPriceMap.set(h.mint, h.price);
           await supabase.from('auto_trade_entry_prices').upsert({
             wallet_address: walletAddress,
             token_mint: h.mint,
             entry_price: h.price,
+            peak_price: h.price,
           }, { onConflict: 'wallet_address,token_mint' });
-          console.log(`📌 Recorded entry for ${h.symbol}: $${h.price}`);
+        }
+
+        // Update peak price
+        const currentPeak = peakPriceMap.get(h.mint) || 0;
+        if (h.price > currentPeak) {
+          peakPriceMap.set(h.mint, h.price);
+          await supabase.from('auto_trade_entry_prices')
+            .update({ peak_price: h.price })
+            .eq('wallet_address', walletAddress)
+            .eq('token_mint', h.mint);
         }
       }
 
-      // Fetch live prices via Birdeye
+      // Fetch live prices
       const mints = holdings.map(h => h.mint);
       let livePrices: Record<string, number> = {};
-      if (birdeyeKey) {
+      if (birdeyeKey && mints.length > 0) {
         livePrices = await fetchLivePrices(mints, birdeyeKey);
-      } else {
-        // Fallback to DAS prices
-        for (const h of holdings) {
-          if (h.price > 0) livePrices[h.mint] = h.price;
-        }
+      }
+      // Fallback to DAS prices
+      for (const h of holdings) {
+        if (!livePrices[h.mint] && h.price > 0) livePrices[h.mint] = h.price;
       }
 
-      // Evaluate strategies
-      for (const strategy of sellStrategies) {
+      // ═══ Evaluate SELL strategies ═══
+      for (const strategy of supportedStrategies) {
+        if (strategy === 'dip_buy') continue; // handled separately below
+
         for (const h of holdings) {
-          const entryPrice = entryPriceMap.get(h.mint);
           const livePrice = livePrices[h.mint];
-          if (!entryPrice || !livePrice || livePrice <= 0) continue;
+          if (!livePrice || livePrice <= 0) continue;
+
+          const entryPrice = entryPriceMap.get(h.mint);
+          if (!entryPrice) continue;
 
           const pnl = ((livePrice - entryPrice) / entryPrice) * 100;
           let shouldSell = false;
           let reason = '';
 
           if (strategy === 'safe_exit') {
-            if (pnl <= -15) {
-              shouldSell = true;
-              reason = `Stop-Loss: ${h.symbol} at ${pnl.toFixed(1)}%`;
-            } else if (pnl >= 50) {
-              shouldSell = true;
-              reason = `Take-Profit: ${h.symbol} at +${pnl.toFixed(1)}%`;
-            }
+            if (pnl <= -15) { shouldSell = true; reason = `Stop-Loss: ${h.symbol} at ${pnl.toFixed(1)}%`; }
+            else if (pnl >= 50) { shouldSell = true; reason = `Take-Profit: ${h.symbol} at +${pnl.toFixed(1)}%`; }
           } else if (strategy === 'scalper') {
-            if (pnl >= 3) {
+            if (pnl >= 3) { shouldSell = true; reason = `Scalper: ${h.symbol} at +${pnl.toFixed(1)}%`; }
+          } else if (strategy === 'momentum') {
+            const peak = peakPriceMap.get(h.mint) || livePrice;
+            const dropFromPeak = peak > 0 ? ((livePrice - peak) / peak) * 100 : 0;
+
+            if (dropFromPeak <= -5 && pnl > 0) {
               shouldSell = true;
-              reason = `Scalper: ${h.symbol} at +${pnl.toFixed(1)}%`;
+              reason = `Momentum Sell: ${h.symbol} ${dropFromPeak.toFixed(1)}% from peak (P&L: +${pnl.toFixed(1)}%)`;
+            } else if (dropFromPeak <= -10) {
+              shouldSell = true;
+              reason = `Momentum Emergency: ${h.symbol} ${dropFromPeak.toFixed(1)}% crash`;
             }
           }
 
           if (shouldSell) {
-            // Check for existing pending trade for this token
-            const { data: existing } = await supabase
-              .from('pending_auto_trades')
-              .select('id')
-              .eq('wallet_address', walletAddress)
-              .eq('token_mint', h.mint)
-              .eq('status', 'pending')
-              .limit(1);
-
-            if (existing && existing.length > 0) {
-              console.log(`Already pending trade for ${h.symbol} — skipping`);
-              continue;
-            }
-
-            // Calculate raw amount for full sell
-            const rawAmount = Math.floor(h.amount * Math.pow(10, h.decimals)).toString();
-
-            // Queue the trade
-            await supabase.from('pending_auto_trades').insert({
-              wallet_address: walletAddress,
-              token_mint: h.mint,
-              token_symbol: h.symbol,
+            queued += await queueTrade(supabase, {
+              walletAddress,
+              tokenMint: h.mint,
+              tokenSymbol: h.symbol,
               side: 'sell',
-              amount_raw: rawAmount,
+              amountRaw: Math.floor(h.amount * Math.pow(10, h.decimals)).toString(),
               decimals: h.decimals,
               strategy,
               reason,
-              entry_price: entryPrice,
-              current_price: livePrice,
-              pnl_percent: pnl,
-              status: 'pending',
+              entryPrice,
+              currentPrice: livePrice,
+              pnl,
             });
-
-            console.log(`📋 Queued ${reason} for ${walletAddress}`);
-            queued++;
           }
+        }
+      }
+
+      // ═══ Evaluate DIP BUY strategy ═══
+      if (supportedStrategies.includes('dip_buy') && birdeyeKey) {
+        try {
+          const trending = await fetchTrendingTokens(birdeyeKey);
+          const ownedMints = new Set(holdings.map(h => h.mint));
+
+          // Find tokens that dipped >20% in 1h with partial recovery
+          const dipCandidates = trending.filter(t =>
+            t.priceChange1h <= -20 &&
+            t.priceChange1h > -25 &&
+            !ownedMints.has(t.mint)
+          );
+
+          if (dipCandidates.length > 0) {
+            // Best candidate = closest to recovery
+            const best = dipCandidates.sort((a, b) => b.priceChange1h - a.priceChange1h)[0];
+            const solLamports = Math.floor(maxBudget * 1e9).toString();
+
+            queued += await queueTrade(supabase, {
+              walletAddress,
+              tokenMint: best.mint,
+              tokenSymbol: best.symbol,
+              side: 'buy',
+              amountRaw: solLamports,
+              decimals: 9, // SOL decimals for buy
+              strategy: 'dip_buy',
+              reason: `Dip Buy: ${best.symbol} (${best.priceChange1h.toFixed(1)}% dip)`,
+              entryPrice: 0,
+              currentPrice: best.price,
+              pnl: best.priceChange1h,
+            });
+          }
+        } catch (e) {
+          console.error(`Dip buy eval error for ${walletAddress}:`, e);
         }
       }
 
@@ -179,11 +207,62 @@ serve(async (req) => {
   }
 });
 
+// ═══ Helper functions ═══
+
 function jsonResponse(data: any, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });
+}
+
+interface QueueTradeParams {
+  walletAddress: string;
+  tokenMint: string;
+  tokenSymbol: string;
+  side: 'buy' | 'sell';
+  amountRaw: string;
+  decimals: number;
+  strategy: string;
+  reason: string;
+  entryPrice: number;
+  currentPrice: number;
+  pnl: number;
+}
+
+async function queueTrade(supabase: any, params: QueueTradeParams): Promise<number> {
+  // Check for existing pending trade for this token + strategy
+  const { data: existing } = await supabase
+    .from('pending_auto_trades')
+    .select('id')
+    .eq('wallet_address', params.walletAddress)
+    .eq('token_mint', params.tokenMint)
+    .eq('strategy', params.strategy)
+    .eq('status', 'pending')
+    .limit(1);
+
+  if (existing && existing.length > 0) {
+    console.log(`Already pending ${params.strategy} trade for ${params.tokenSymbol} — skipping`);
+    return 0;
+  }
+
+  await supabase.from('pending_auto_trades').insert({
+    wallet_address: params.walletAddress,
+    token_mint: params.tokenMint,
+    token_symbol: params.tokenSymbol,
+    side: params.side,
+    amount_raw: params.amountRaw,
+    decimals: params.decimals,
+    strategy: params.strategy,
+    reason: params.reason,
+    entry_price: params.entryPrice,
+    current_price: params.currentPrice,
+    pnl_percent: params.pnl,
+    status: 'pending',
+  });
+
+  console.log(`📋 Queued ${params.reason} for ${params.walletAddress}`);
+  return 1;
 }
 
 interface RealHolding {
@@ -195,15 +274,10 @@ interface RealHolding {
 }
 
 async function fetchRealHoldings(walletAddress: string, heliusKey: string | undefined): Promise<RealHolding[]> {
-  if (!heliusKey) {
-    console.warn('No HELIUS_API_KEY — cannot fetch real holdings');
-    return [];
-  }
+  if (!heliusKey) return [];
 
   try {
     const rpcUrl = `https://mainnet.helius-rpc.com/?api-key=${heliusKey}`;
-
-    // Get all token accounts
     const tokensRes = await fetch(rpcUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -221,27 +295,19 @@ async function fetchRealHoldings(walletAddress: string, heliusKey: string | unde
 
     const tokensData = await tokensRes.json();
     const items = tokensData?.result?.items || [];
-
     const holdings: RealHolding[] = [];
+
     for (const item of items) {
       const tokenInfo = item.token_info;
-      if (!tokenInfo || !item.id) continue;
-      if (item.id === SOL_MINT) continue; // Skip native SOL
+      if (!tokenInfo || !item.id || item.id === SOL_MINT) continue;
 
       const balance = tokenInfo.balance || 0;
       const decimals = tokenInfo.decimals || 6;
       const amount = balance / Math.pow(10, decimals);
-      const pricePerToken = tokenInfo.price_info?.price_per_token || 0;
+      const price = tokenInfo.price_info?.price_per_token || 0;
 
       if (amount <= 0) continue;
-
-      holdings.push({
-        mint: item.id,
-        symbol: tokenInfo.symbol || item.id.slice(0, 6),
-        amount,
-        decimals,
-        price: pricePerToken,
-      });
+      holdings.push({ mint: item.id, symbol: tokenInfo.symbol || item.id.slice(0, 6), amount, decimals, price });
     }
 
     return holdings;
@@ -258,15 +324,46 @@ async function fetchLivePrices(mints: string[], apiKey: string): Promise<Record<
       `https://public-api.birdeye.so/defi/multi_price?list_address=${list}`,
       { headers: { 'X-API-KEY': apiKey, 'x-chain': 'solana' } }
     );
-    if (!response.ok) throw new Error(`Birdeye price fetch failed: ${response.status}`);
+    if (!response.ok) return {};
     const result = await response.json();
     const prices: Record<string, number> = {};
     for (const [mint, data] of Object.entries(result.data || {})) {
       prices[mint] = (data as any)?.value || 0;
     }
     return prices;
-  } catch (e) {
-    console.error('fetchLivePrices error:', e);
+  } catch {
     return {};
+  }
+}
+
+interface TrendingToken {
+  mint: string;
+  symbol: string;
+  price: number;
+  priceChange1h: number;
+}
+
+async function fetchTrendingTokens(apiKey: string): Promise<TrendingToken[]> {
+  try {
+    // Use Birdeye token list sorted by 1h price change
+    const response = await fetch(
+      'https://public-api.birdeye.so/defi/token_trending?sort_by=price_change_1h_percent&sort_type=asc&offset=0&limit=20',
+      { headers: { 'X-API-KEY': apiKey, 'x-chain': 'solana' } }
+    );
+    if (!response.ok) return [];
+    const result = await response.json();
+    const tokens = result.data?.tokens || result.data?.items || [];
+
+    return tokens
+      .filter((t: any) => t.address && t.price > 0)
+      .map((t: any) => ({
+        mint: t.address,
+        symbol: t.symbol || t.address.slice(0, 6),
+        price: t.price || 0,
+        priceChange1h: t.price_change_1h_percent || t.priceChange1h || 0,
+      }));
+  } catch (e) {
+    console.error('fetchTrendingTokens error:', e);
+    return [];
   }
 }

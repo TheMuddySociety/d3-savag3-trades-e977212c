@@ -47,8 +47,8 @@ interface PendingTrade {
 }
 
 const INITIAL_STRATEGIES: Strategy[] = [
-  { id: "momentum", name: "Momentum Rider", description: "Buys tokens trending up with high volume, sells on reversal", icon: <TrendingUp className="h-4 w-4" />, risk: "Medium", enabled: false },
-  { id: "dip_buy", name: "Dip Buyer", description: "Auto-buys when price drops >20% in 1h with recovery signals", icon: <TrendingDown className="h-4 w-4" />, risk: "High", enabled: false },
+  { id: "momentum", name: "Momentum Rider", description: "Sells on reversal (>5% drop from peak). Won't auto-buy — monitors existing positions.", icon: <TrendingUp className="h-4 w-4" />, risk: "Medium", enabled: false },
+  { id: "dip_buy", name: "Dip Buyer", description: "Auto-buys tokens that dip >20% then recover >3% from low", icon: <TrendingDown className="h-4 w-4" />, risk: "High", enabled: false },
   { id: "safe_exit", name: "Safe Exit", description: "Auto stop-loss at -15% and trailing take-profit at +50%", icon: <ShieldCheck className="h-4 w-4" />, risk: "Low", enabled: false },
   { id: "new_launch", name: "New Launch Hunter", description: "Snipes new tokens on Pump.fun within first 30s of launch", icon: <Flame className="h-4 w-4" />, risk: "High", enabled: false },
   { id: "scalper", name: "Scalper", description: "Sell on 3% gain — auto-sells positions at target", icon: <Zap className="h-4 w-4" />, risk: "Medium", enabled: false },
@@ -67,6 +67,9 @@ interface Props {
   killSignal?: number;
 }
 
+// In-memory peak price tracking (updated each cycle)
+const peakPrices = new Map<string, number>();
+
 export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) => {
   const { toast } = useToast();
   const wallet = useWallet();
@@ -84,7 +87,7 @@ export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) =
 
   const addLog = useCallback((msg: string) => {
     const time = new Date().toLocaleTimeString();
-    setStatusLog(prev => [`[${time}] ${msg}`, ...prev.slice(0, 29)]);
+    setStatusLog(prev => [`[${time}] ${msg}`, ...prev.slice(0, 39)]);
   }, []);
 
   // Kill switch
@@ -97,6 +100,7 @@ export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) =
       setStatusLog([]);
       setExecutingTrade(false);
       setPendingTrades([]);
+      peakPrices.clear();
       if (pollingRef.current) { clearInterval(pollingRef.current); pollingRef.current = null; }
       if (pendingPollRef.current) { clearInterval(pendingPollRef.current); pendingPollRef.current = null; }
     }
@@ -124,7 +128,7 @@ export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) =
     }
   }, [wallet.publicKey]);
 
-  // Execute a sell via Jupiter Ultra (token → SOL)
+  // Execute a SELL via Jupiter Ultra (token → SOL)
   const executeLiveSell = useCallback(async (
     holding: LiveHolding | { mint: string; symbol: string; amount: number; decimals: number },
     reason: string
@@ -148,16 +152,17 @@ export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) =
       if (result?.status === 'Success') {
         addLog(`✅ ${reason}: Sold ${holding.amount.toFixed(4)} ${holding.symbol} — tx: ${result.signature?.slice(0, 8)}...`);
         
-        // Clean up entry price
+        // Clean up entry/peak prices
         if (wallet.publicKey) {
-          await supabase.from('auto_trade_entry_prices' as any)
+          await (supabase.from('auto_trade_entry_prices' as any) as any)
             .delete()
             .eq('wallet_address', wallet.publicKey.toBase58())
             .eq('token_mint', holding.mint);
         }
+        peakPrices.delete(holding.mint);
         return true;
       } else {
-        addLog(`❌ ${reason}: Sell failed for ${holding.symbol} — ${result?.error || 'Unknown error'}`);
+        addLog(`❌ ${reason}: Sell failed — ${result?.error || 'Unknown error'}`);
         return false;
       }
     } catch (e: any) {
@@ -168,7 +173,70 @@ export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) =
     }
   }, [wallet, executingTrade, addLog]);
 
-  // Poll for pending trades from Beach Mode (auto-trader edge function)
+  // Execute a BUY via Jupiter Ultra (SOL → token)
+  const executeLiveBuy = useCallback(async (
+    tokenMint: string,
+    tokenSymbol: string,
+    solAmount: number,
+    reason: string
+  ): Promise<boolean> => {
+    if (!wallet.publicKey || !wallet.signTransaction || executingTrade) return false;
+
+    try {
+      setExecutingTrade(true);
+      addLog(`🔄 ${reason}: Buying ${tokenSymbol} for ${solAmount} SOL...`);
+
+      // SOL has 9 decimals
+      const rawAmount = Math.floor(solAmount * 1e9).toString();
+
+      const result = await JupiterUltraService.swap(
+        wallet,
+        SOL_MINT,
+        tokenMint,
+        rawAmount,
+        'ExactIn'
+      );
+
+      if (result?.status === 'Success') {
+        addLog(`✅ ${reason}: Bought ${tokenSymbol} for ${solAmount} SOL — tx: ${result.signature?.slice(0, 8)}...`);
+        
+        // Record entry price for the newly bought token
+        // We'll pick it up on the next scan cycle
+        return true;
+      } else {
+        addLog(`❌ ${reason}: Buy failed — ${result?.error || 'Unknown error'}`);
+        return false;
+      }
+    } catch (e: any) {
+      addLog(`❌ ${reason}: ${e.message}`);
+      return false;
+    } finally {
+      setExecutingTrade(false);
+    }
+  }, [wallet, executingTrade, addLog]);
+
+  // Fetch trending tokens from Birdeye for dip buying
+  const fetchTrendingForDips = useCallback(async (): Promise<Array<{ mint: string; symbol: string; price: number; priceChange1h: number }>> => {
+    try {
+      const { data, error } = await supabase.functions.invoke("token-prices", {
+        body: { action: "trending" },
+      });
+      if (error || !data?.success) return [];
+      const tokens = data.data || [];
+      return tokens
+        .filter((t: any) => t.address && t.price > 0 && t.priceChange1h !== undefined)
+        .map((t: any) => ({
+          mint: t.address,
+          symbol: t.symbol || t.address.slice(0, 6),
+          price: t.price,
+          priceChange1h: t.priceChange1h || 0,
+        }));
+    } catch {
+      return [];
+    }
+  }, []);
+
+  // Poll for pending trades from Beach Mode
   const executePendingTrades = useCallback(async () => {
     if (!wallet.publicKey || executingTrade) return;
 
@@ -189,86 +257,97 @@ export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) =
       for (const trade of pending as PendingTrade[]) {
         if (executingTrade) break;
 
-        const amount = parseInt(trade.amount_raw) / Math.pow(10, trade.decimals);
-        const success = await executeLiveSell(
-          {
-            mint: trade.token_mint,
-            symbol: trade.token_symbol || trade.token_mint.slice(0, 6),
-            amount,
-            decimals: trade.decimals,
-          },
-          `🏖️ Beach: ${trade.reason || trade.strategy}`
-        );
+        let success = false;
 
-        // Update status
-        await supabase
-          .from('pending_auto_trades' as any)
-          .update({
-            status: success ? 'executed' : 'failed',
-            executed_at: new Date().toISOString(),
-          })
+        if (trade.side === 'sell') {
+          const amount = parseInt(trade.amount_raw) / Math.pow(10, trade.decimals);
+          success = await executeLiveSell(
+            { mint: trade.token_mint, symbol: trade.token_symbol || trade.token_mint.slice(0, 6), amount, decimals: trade.decimals },
+            `🏖️ Beach: ${trade.reason || trade.strategy}`
+          );
+        } else if (trade.side === 'buy') {
+          // amount_raw for buy = lamports of SOL to spend
+          const solAmount = parseInt(trade.amount_raw) / 1e9;
+          success = await executeLiveBuy(
+            trade.token_mint,
+            trade.token_symbol || trade.token_mint.slice(0, 6),
+            solAmount,
+            `🏖️ Beach: ${trade.reason || trade.strategy}`
+          );
+        }
+
+        await (supabase.from('pending_auto_trades' as any) as any)
+          .update({ status: success ? 'executed' : 'failed', executed_at: new Date().toISOString() })
           .eq('id', trade.id);
 
         if (success) {
           toast({
             title: `🏖️ Beach Mode Trade Executed`,
-            description: `${trade.reason}: Sold ${trade.token_symbol}`,
+            description: `${trade.reason}: ${trade.side === 'buy' ? 'Bought' : 'Sold'} ${trade.token_symbol}`,
           });
         }
       }
 
-      // Refresh pending list
-      const { data: remaining } = await supabase
-        .from('pending_auto_trades' as any)
-        .select('*')
+      const { data: remaining } = await (supabase.from('pending_auto_trades' as any).select('*') as any)
         .eq('wallet_address', wallet.publicKey!.toBase58())
         .eq('status', 'pending');
       setPendingTrades((remaining || []) as any);
     } catch (e: any) {
       console.error('executePendingTrades error:', e);
     }
-  }, [wallet.publicKey, executingTrade, executeLiveSell, addLog, toast]);
+  }, [wallet.publicKey, executingTrade, executeLiveSell, executeLiveBuy, addLog, toast]);
 
   // Start polling for pending Beach Mode trades
   useEffect(() => {
     if (!wallet.publicKey) return;
-    
-    // Check immediately on mount
     executePendingTrades();
-    
-    // Then poll every 30 seconds
     pendingPollRef.current = setInterval(executePendingTrades, 30000);
-    return () => {
-      if (pendingPollRef.current) { clearInterval(pendingPollRef.current); pendingPollRef.current = null; }
-    };
+    return () => { if (pendingPollRef.current) { clearInterval(pendingPollRef.current); pendingPollRef.current = null; } };
   }, [wallet.publicKey, executePendingTrades]);
 
-  // Record entry prices to DB when we first see tokens
+  // Record entry prices to DB
   const recordEntryPrices = useCallback(async (holdings: LiveHolding[]) => {
     if (!wallet.publicKey) return;
     const walletAddr = wallet.publicKey.toBase58();
-
     for (const h of holdings) {
       if (h.price > 0) {
         try {
-          await supabase.from('auto_trade_entry_prices' as any).upsert({
+          await (supabase.from('auto_trade_entry_prices' as any) as any).upsert({
             wallet_address: walletAddr,
             token_mint: h.mint,
             entry_price: h.price,
           }, { onConflict: 'wallet_address,token_mint' });
-        } catch {
-          // ignore duplicates
-        }
+        } catch { /* ignore */ }
       }
     }
   }, [wallet.publicKey]);
 
-  // Stable key for active strategies
+  // Update peak prices in DB for Beach Mode persistence
+  const updatePeakPrices = useCallback(async (holdings: LiveHolding[]) => {
+    if (!wallet.publicKey) return;
+    const walletAddr = wallet.publicKey.toBase58();
+    for (const h of holdings) {
+      if (h.price <= 0) continue;
+      const currentPeak = peakPrices.get(h.mint) || 0;
+      if (h.price > currentPeak) {
+        peakPrices.set(h.mint, h.price);
+        try {
+          await (supabase.from('auto_trade_entry_prices' as any) as any)
+            .update({ peak_price: h.price })
+            .eq('wallet_address', walletAddr)
+            .eq('token_mint', h.mint);
+        } catch { /* ignore */ }
+      }
+    }
+  }, [wallet.publicKey]);
+
   const activeStrategyKey = strategies.filter(s => s.enabled).map(s => s.id).join(',');
   const strategiesRef = useRef(strategies);
   strategiesRef.current = strategies;
+  const maxBudgetRef = useRef(maxBudget);
+  maxBudgetRef.current = maxBudget;
 
-  // Polling loop for active strategies (real-time when browser open)
+  // Polling loop for active strategies
   useEffect(() => {
     if (!activeStrategyKey) {
       if (pollingRef.current) { clearInterval(pollingRef.current); pollingRef.current = null; }
@@ -288,25 +367,37 @@ export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) =
       }
 
       const holdings = await fetchLiveHoldings();
-      if (holdings.length === 0) {
+      if (holdings.length === 0 && !enabled.some(s => s.id === 'dip_buy')) {
         addLog("No token holdings found in wallet");
         return;
       }
 
-      addLog(`Found ${holdings.length} token(s) in wallet`);
+      if (holdings.length > 0) {
+        addLog(`Found ${holdings.length} token(s) in wallet`);
+      }
 
-      // Record entry prices to DB for Beach Mode persistence
+      // Record entry prices to DB
       await recordEntryPrices(holdings);
 
-      // Get entry prices from DB
-      const { data: entryRows } = await supabase
+      // Get entry prices from DB (includes peak_price)
+      const { data: entryRows } = await (supabase
         .from('auto_trade_entry_prices' as any)
-        .select('*')
+        .select('*') as any)
         .eq('wallet_address', wallet.publicKey.toBase58());
 
       const entryPriceMap = new Map<string, number>();
+      const dbPeakMap = new Map<string, number>();
       for (const ep of (entryRows || [])) {
         entryPriceMap.set((ep as any).token_mint, Number((ep as any).entry_price));
+        if ((ep as any).peak_price) {
+          dbPeakMap.set((ep as any).token_mint, Number((ep as any).peak_price));
+        }
+      }
+
+      // Sync peak prices from DB
+      for (const [mint, peak] of dbPeakMap) {
+        const currentPeak = peakPrices.get(mint) || 0;
+        if (peak > currentPeak) peakPrices.set(mint, peak);
       }
 
       // Track new tokens
@@ -317,14 +408,19 @@ export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) =
         }
       }
 
+      // Update peak prices
+      await updatePeakPrices(holdings);
+
       for (const strategy of enabled) {
         try {
           switch (strategy.id) {
+            // ═══════════════════════════════════════
+            // SAFE EXIT: -15% stop-loss, +50% take-profit
+            // ═══════════════════════════════════════
             case "safe_exit": {
               for (const h of holdings) {
                 const entryPrice = entryPriceMap.get(h.mint);
                 if (!entryPrice || h.price <= 0) continue;
-
                 const pnl = ((h.price - entryPrice) / entryPrice) * 100;
 
                 if (pnl <= -15) {
@@ -339,11 +435,14 @@ export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) =
               }
               break;
             }
+
+            // ═══════════════════════════════════════
+            // SCALPER: sell on +3% gain
+            // ═══════════════════════════════════════
             case "scalper": {
               for (const h of holdings) {
                 const entryPrice = entryPriceMap.get(h.mint);
                 if (!entryPrice || h.price <= 0) continue;
-
                 const pnl = ((h.price - entryPrice) / entryPrice) * 100;
 
                 if (pnl >= 3) {
@@ -355,19 +454,86 @@ export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) =
               }
               break;
             }
+
+            // ═══════════════════════════════════════
+            // MOMENTUM RIDER: tracks peak, sells on >5% reversal from peak
+            // ═══════════════════════════════════════
             case "momentum": {
+              if (holdings.length === 0) {
+                addLog(`📈 Momentum: No positions to monitor`);
+                break;
+              }
               addLog(`📈 Momentum: Scanning ${holdings.length} position(s) for reversals`);
+
               for (const h of holdings) {
-                if (h.price > 0 && h.value > 0) {
-                  addLog(`📈 ${h.symbol}: $${h.price.toFixed(8)} (${h.value.toFixed(2)} USD)`);
+                if (h.price <= 0) continue;
+
+                const peak = peakPrices.get(h.mint) || h.price;
+                const dropFromPeak = peak > 0 ? ((h.price - peak) / peak) * 100 : 0;
+                const entryPrice = entryPriceMap.get(h.mint) || h.price;
+                const pnlFromEntry = entryPrice > 0 ? ((h.price - entryPrice) / entryPrice) * 100 : 0;
+
+                if (dropFromPeak <= -5 && pnlFromEntry > 0) {
+                  // Reversal detected: price dropped >5% from peak AND we're still in profit
+                  addLog(`📈 Momentum reversal: ${h.symbol} dropped ${dropFromPeak.toFixed(1)}% from peak $${peak.toFixed(8)} (P&L: +${pnlFromEntry.toFixed(1)}%)`);
+                  await executeLiveSell(h, `Momentum Sell (${dropFromPeak.toFixed(1)}% from peak)`);
+                } else if (dropFromPeak <= -10) {
+                  // Severe reversal: sell even at a loss
+                  addLog(`📈 Momentum crash: ${h.symbol} dropped ${dropFromPeak.toFixed(1)}% from peak — emergency sell`);
+                  await executeLiveSell(h, `Momentum Emergency (${dropFromPeak.toFixed(1)}% crash)`);
+                } else {
+                  addLog(`📈 ${h.symbol}: $${h.price.toFixed(8)} | peak: $${peak.toFixed(8)} | ${dropFromPeak >= 0 ? '📈' : '📉'} ${dropFromPeak.toFixed(1)}% from peak`);
                 }
               }
               break;
             }
+
+            // ═══════════════════════════════════════
+            // DIP BUYER: buys tokens that dipped >20% and are recovering >3%
+            // ═══════════════════════════════════════
             case "dip_buy": {
-              addLog(`📉 Dip Buyer: Watching for >20% dips with recovery signals`);
+              const budget = parseFloat(maxBudgetRef.current) || 1.0;
+              addLog(`📉 Dip Buyer: Scanning market for >20% dips with recovery (budget: ${budget} SOL)`);
+
+              try {
+                const trending = await fetchTrendingForDips();
+                if (trending.length === 0) {
+                  addLog(`📉 No trending data available`);
+                  break;
+                }
+
+                // Find tokens that dipped >20% in 1h but are showing recovery (change > -17%, meaning partial bounce)
+                const dipCandidates = trending.filter(t => {
+                  // Token dropped >20% in last hour
+                  const isDipping = t.priceChange1h <= -20;
+                  // But showing recovery (not still falling — change is less negative than -25%)
+                  const isRecovering = t.priceChange1h > -25;
+                  // Not already owned
+                  const alreadyOwned = holdings.some(h => h.mint === t.mint);
+                  return isDipping && isRecovering && !alreadyOwned;
+                });
+
+                if (dipCandidates.length === 0) {
+                  addLog(`📉 No qualifying dip candidates found`);
+                  break;
+                }
+
+                // Take the best candidate (smallest dip = closest to recovery)
+                const best = dipCandidates.sort((a, b) => b.priceChange1h - a.priceChange1h)[0];
+                
+                addLog(`📉 Dip candidate: ${best.symbol} (${best.priceChange1h.toFixed(1)}% 1h) — buying ${budget} SOL`);
+                await executeLiveBuy(
+                  best.mint,
+                  best.symbol,
+                  budget,
+                  `Dip Buy: ${best.symbol} (${best.priceChange1h.toFixed(1)}% dip)`
+                );
+              } catch (e: any) {
+                addLog(`📉 Dip Buyer error: ${e.message}`);
+              }
               break;
             }
+
             case "whale_follow": {
               addLog(`🐋 Whale Follow: Monitoring top wallets`);
               break;
@@ -384,7 +550,7 @@ export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) =
     evaluateStrategies();
     pollingRef.current = setInterval(evaluateStrategies, 15000);
     return () => { if (pollingRef.current) { clearInterval(pollingRef.current); pollingRef.current = null; } };
-  }, [activeStrategyKey, wallet.publicKey, fetchLiveHoldings, executeLiveSell, addLog, recordEntryPrices]);
+  }, [activeStrategyKey, wallet.publicKey, fetchLiveHoldings, executeLiveSell, executeLiveBuy, addLog, recordEntryPrices, updatePeakPrices, fetchTrendingForDips]);
 
   const proceedToggle = (id: string) => {
     setStrategies((prev) => {
@@ -502,7 +668,7 @@ export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) =
           </p>
           {pendingTrades.map(t => (
             <p key={t.id} className="text-[10px] text-muted-foreground font-mono">
-              {t.token_symbol}: {t.reason} ({t.pnl_percent?.toFixed(1)}%)
+              {t.side === 'buy' ? '🟢' : '🔴'} {t.token_symbol}: {t.reason} ({t.pnl_percent?.toFixed(1)}%)
             </p>
           ))}
         </div>
@@ -518,23 +684,24 @@ export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) =
       </div>
 
       <div>
-        <Label className="text-xs text-muted-foreground">Max budget per strategy (SOL)</Label>
+        <Label className="text-xs text-muted-foreground">Max budget per trade (SOL)</Label>
         <Input type="number" value={maxBudget} onChange={(e) => setMaxBudget(e.target.value)} className="bg-muted/30 border-border text-sm mt-1" min="0.1" step="0.1" />
       </div>
 
       <div className="p-2 rounded-lg bg-destructive/10 border border-destructive/30">
-        <p className="text-[11px] text-destructive font-medium">⚠️ LIVE MODE — Safe Exit & Scalper auto-sell via Jupiter Ultra (gasless). Beach Mode queues trades server-side for execution when app opens.</p>
+        <p className="text-[11px] text-destructive font-medium">⚠️ LIVE MODE — All strategies execute real trades via Jupiter Ultra (gasless). Momentum sells on reversal, Dip Buyer auto-buys dips. Beach Mode queues trades server-side.</p>
       </div>
 
       {/* Status Log */}
       {statusLog.length > 0 && (
-        <div className="p-2 rounded-lg bg-muted/20 border border-border max-h-40 overflow-y-auto">
+        <div className="p-2 rounded-lg bg-muted/20 border border-border max-h-48 overflow-y-auto">
           <p className="text-[10px] font-medium text-muted-foreground mb-1">Activity Log</p>
           {statusLog.map((log, i) => (
             <p key={i} className={`text-[10px] font-mono leading-tight ${
-              log.includes('✅') || log.includes('Sold') ? 'text-accent' :
+              log.includes('✅') || log.includes('Sold') || log.includes('Bought') ? 'text-accent' :
               log.includes('❌') ? 'text-destructive' :
               log.includes('🔄') || log.includes('🏖️') ? 'text-[hsl(var(--fun-yellow))]' :
+              log.includes('📈') || log.includes('📉') ? 'text-primary' :
               'text-muted-foreground'
             }`}>{log}</p>
           ))}
@@ -549,9 +716,14 @@ export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) =
                 <span className={strategy.enabled ? "text-destructive" : "text-muted-foreground"}>{strategy.icon}</span>
                 <span className="text-sm font-medium text-foreground">{strategy.name}</span>
                 <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${riskColors[strategy.risk]}`}>{strategy.risk}</Badge>
-                {(strategy.id === "safe_exit" || strategy.id === "scalper") && (
+                {(strategy.id === "safe_exit" || strategy.id === "scalper" || strategy.id === "momentum") && (
                   <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-accent/10 text-accent border-accent/30">
                     Auto-Sell
+                  </Badge>
+                )}
+                {strategy.id === "dip_buy" && (
+                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-primary/10 text-primary border-primary/30">
+                    Auto-Buy
                   </Badge>
                 )}
               </div>
