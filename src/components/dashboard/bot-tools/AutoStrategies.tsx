@@ -259,28 +259,32 @@ export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) =
   }, [activeStrategyKey, wallet.publicKey, fetchLiveHoldings, executeLiveSell, addLog]);
 
   const proceedToggle = (id: string) => {
-    setStrategies((prev) =>
-      prev.map((s) => {
-        if (s.id === id) {
-          const next = !s.enabled;
-          sim.saveBotConfig('auto', {
-            strategies: prev.map(st => st.id === id ? { ...st, enabled: next } : st).filter(st => st.enabled).map(st => st.id),
-            maxBudget: parseFloat(maxBudget),
-            beachMode,
-          }, next || prev.filter(st => st.id !== id).some(st => st.enabled));
-          
-          if (next) {
-            addLog(`✅ ${s.name} activated`);
+    setStrategies((prev) => {
+      const updated = prev.map((s) => s.id === id ? { ...s, enabled: !s.enabled } : s);
+      const target = updated.find(s => s.id === id);
+      const activeIds = updated.filter(s => s.enabled).map(s => s.id);
+
+      sim.saveBotConfig('auto', {
+        strategies: activeIds,
+        maxBudget: parseFloat(maxBudget),
+        beachMode,
+      }, activeIds.length > 0);
+
+      // Defer toast/log out of the setState callback to avoid render-phase conflicts
+      setTimeout(() => {
+        if (target) {
+          if (target.enabled) {
+            addLog(`✅ ${target.name} activated`);
+            toast({ title: `${target.name} Enabled`, description: `LIVE: ${target.description}` });
           } else {
-            addLog(`⏹️ ${s.name} deactivated`);
+            addLog(`⏹️ ${target.name} deactivated`);
+            toast({ title: `${target.name} Disabled`, description: "Deactivated" });
           }
-          
-          toast({ title: next ? `${s.name} Enabled` : `${s.name} Disabled`, description: next ? `LIVE: ${s.description}` : "Deactivated" });
-          return { ...s, enabled: next };
         }
-        return s;
-      })
-    );
+      }, 0);
+
+      return updated;
+    });
   };
 
   const toggleStrategy = (id: string) => {
