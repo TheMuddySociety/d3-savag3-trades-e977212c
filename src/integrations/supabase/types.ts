@@ -41,6 +41,54 @@ export type Database = {
         }
         Relationships: []
       }
+      auto_trade_budgets: {
+        Row: {
+          budget_mode: string
+          created_at: string
+          currency: string
+          deposit_amount: number
+          escrow_amount: number
+          escrow_tx: string | null
+          id: string
+          is_active: boolean
+          remaining_amount: number
+          spending_limit: number | null
+          spent_amount: number
+          updated_at: string
+          wallet_address: string
+        }
+        Insert: {
+          budget_mode?: string
+          created_at?: string
+          currency?: string
+          deposit_amount?: number
+          escrow_amount?: number
+          escrow_tx?: string | null
+          id?: string
+          is_active?: boolean
+          remaining_amount?: number
+          spending_limit?: number | null
+          spent_amount?: number
+          updated_at?: string
+          wallet_address: string
+        }
+        Update: {
+          budget_mode?: string
+          created_at?: string
+          currency?: string
+          deposit_amount?: number
+          escrow_amount?: number
+          escrow_tx?: string | null
+          id?: string
+          is_active?: boolean
+          remaining_amount?: number
+          spending_limit?: number | null
+          spent_amount?: number
+          updated_at?: string
+          wallet_address?: string
+        }
+        Relationships: []
+      }
       chat_messages: {
         Row: {
           content: string
