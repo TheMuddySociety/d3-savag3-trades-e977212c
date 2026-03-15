@@ -1,10 +1,11 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Loader2, Wifi, WifiOff, TrendingUp, Rocket, Globe, Moon } from 'lucide-react';
+import { Loader2, Wifi, WifiOff, TrendingUp, Rocket, Globe, Moon, GraduationCap } from 'lucide-react';
 import { useRealtimeTokens } from '@/hooks/useRealtimeTokens';
 import { TrendingCarousel, FilterTabs, TokenTable, FilterType } from './pumpfun';
 import { FilterOptions } from './pumpfun/FilterTabs';
 import { MemeToken } from '@/types/memeToken';
 import { LaunchpadService } from '@/services/launchpads/LaunchpadService';
+import { pumpFunService } from '@/services/pumpfun';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { tokenWebSocketService } from '@/services/websocket/TokenWebSocketService';
@@ -13,7 +14,7 @@ import { CreateAlertDialog } from './CreateAlertDialog';
 import { usePriceAlerts } from '@/hooks/usePriceAlerts';
 import { useWallet } from '@solana/wallet-adapter-react';
 
-type DataSource = 'trending' | 'new_launches' | 'moonshot';
+type DataSource = 'trending' | 'new_launches' | 'moonshot' | 'graduated';
 
 const formatValue = (value: number, type: 'currency' | 'percent' = 'currency'): string => {
   if (type === 'percent') {
@@ -79,8 +80,10 @@ export function TopMemecoins() {
   const [dataSource, setDataSource] = useState<DataSource>('trending');
   const [trendingTokens, setTrendingTokens] = useState<MemeToken[]>([]);
   const [moonshotTokens, setMoonshotTokens] = useState<MemeToken[]>([]);
+  const [graduatedTokens, setGraduatedTokens] = useState<MemeToken[]>([]);
   const [trendingLoading, setTrendingLoading] = useState(false);
   const [moonshotLoading, setMoonshotLoading] = useState(false);
+  const [graduatedLoading, setGraduatedLoading] = useState(false);
   const [selectedToken, setSelectedToken] = useState<MemeToken | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [alertToken, setAlertToken] = useState<MemeToken | null>(null);
@@ -136,12 +139,26 @@ export function TopMemecoins() {
       fetchMoonshot();
       const interval = setInterval(fetchMoonshot, 30000);
       return () => { cancelled = true; clearInterval(interval); };
+    } else if (dataSource === 'graduated') {
+      let cancelled = false;
+      const fetchGraduated = async () => {
+        setGraduatedLoading(true);
+        try {
+          const tokens = await pumpFunService.getGraduatedTokens(30);
+          if (!cancelled) setGraduatedTokens(tokens);
+        } catch {} finally {
+          if (!cancelled) setGraduatedLoading(false);
+        }
+      };
+      fetchGraduated();
+      const interval = setInterval(fetchGraduated, 30000);
+      return () => { cancelled = true; clearInterval(interval); };
     }
   }, [dataSource]);
 
-  const tokens = dataSource === 'trending' ? trendingTokens : dataSource === 'moonshot' ? moonshotTokens : launchTokens;
-  const loading = dataSource === 'trending' ? trendingLoading : dataSource === 'moonshot' ? moonshotLoading : launchLoading;
-  const error = dataSource === 'moonshot' ? null : launchError;
+  const tokens = dataSource === 'trending' ? trendingTokens : dataSource === 'moonshot' ? moonshotTokens : dataSource === 'graduated' ? graduatedTokens : launchTokens;
+  const loading = dataSource === 'trending' ? trendingLoading : dataSource === 'moonshot' ? moonshotLoading : dataSource === 'graduated' ? graduatedLoading : launchLoading;
+  const error = dataSource === 'moonshot' || dataSource === 'graduated' ? null : launchError;
 
   const handleSort = (field: string) => {
     if (sortField === field) {
@@ -254,6 +271,20 @@ export function TopMemecoins() {
           >
             <Rocket className="h-3.5 w-3.5" />
             New Launches
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            className={cn(
+              "rounded-full gap-1.5 h-7 text-xs px-3 transition-all",
+              dataSource === 'graduated'
+                ? "bg-primary text-primary-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+            )}
+            onClick={() => setDataSource('graduated')}
+          >
+            <GraduationCap className="h-3.5 w-3.5" />
+            Graduated
           </Button>
           <Button
             size="sm"
