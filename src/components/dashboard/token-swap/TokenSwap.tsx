@@ -19,6 +19,7 @@ export function TokenSwap() {
             initialAmount: "100",
             swapMode: "ExactInOrOut",
             initialInputMint: "So11111111111111111111111111111111111111112",
+            initialOutputMint: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
             referralAccount: "ETz1CboRkEJZDZcstd6bjHtjhRsydHQNHPEYMuhcYK2Z",
             referralFee: 80,
           },
