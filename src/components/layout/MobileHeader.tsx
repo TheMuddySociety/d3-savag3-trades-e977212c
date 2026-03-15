@@ -51,7 +51,7 @@ export function MobileHeader() {
           ) : (
             <>
               <UnifiedWalletButton />
-              <PhantomQRConnect variant="compact" />
+              
             </>
           )}
         </div>

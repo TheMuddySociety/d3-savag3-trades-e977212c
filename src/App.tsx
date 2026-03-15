@@ -32,14 +32,6 @@ const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider defaultTheme="dark">
-        <PhantomProvider
-          config={{
-            appId: "f3e1137b-609c-4f5e-91d7-c76a3e4f9f7d",
-            providers: ["phantom", "injected"],
-            addressTypes: [AddressType.solana],
-          }}
-          theme={darkTheme}
-        >
           <JupiverseKitProvider
             endpoint={RPC_PROXY}
             autoConnect={true}
