@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Loader2, Wifi, WifiOff, TrendingUp, Rocket, Globe, Moon } from 'lucide-react';
+import { Loader2, Wifi, WifiOff, TrendingUp, Rocket, Globe, Moon, GraduationCap } from 'lucide-react';
 import { useRealtimeTokens } from '@/hooks/useRealtimeTokens';
 import { TrendingCarousel, FilterTabs, TokenTable, FilterType } from './pumpfun';
 import { FilterOptions } from './pumpfun/FilterTabs';
