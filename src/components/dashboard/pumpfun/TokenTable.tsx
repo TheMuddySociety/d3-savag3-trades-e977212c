@@ -164,9 +164,7 @@ export function TokenTable({ tokens, onTokenClick, sortField, sortDirection, onS
               Graph
             </th>
             <SortHeader label="MCAP" field="marketCap" sortField={sortField} sortDirection={sortDirection} onSort={onSort} />
-            <th className="px-3 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-              ATH
-            </th>
+            <SortHeader label="Bonding" field="bondingCurveProgress" sortField={sortField} sortDirection={sortDirection} onSort={onSort} />
             <SortHeader label="Age" field="timestamp" sortField={sortField} sortDirection={sortDirection} onSort={onSort} />
             <SortHeader label="TXNs" field="holders" sortField={sortField} sortDirection={sortDirection} onSort={onSort} />
             <SortHeader label="24H Vol" field="volume24h" sortField={sortField} sortDirection={sortDirection} onSort={onSort} />
