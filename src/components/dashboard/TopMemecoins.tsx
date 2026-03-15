@@ -256,6 +256,20 @@ export function TopMemecoins() {
             <Rocket className="h-3.5 w-3.5" />
             New Launches
           </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            className={cn(
+              "rounded-full gap-1.5 h-7 text-xs px-3 transition-all",
+              dataSource === 'moonshot'
+                ? "bg-primary text-primary-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+            )}
+            onClick={() => setDataSource('moonshot')}
+          >
+            <Moon className="h-3.5 w-3.5" />
+            Moonshot
+          </Button>
         </div>
 
         <div className="flex items-center gap-2">
