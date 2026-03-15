@@ -4,6 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TrendingUp, TrendingDown, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
+const SOL_MINT = 'So11111111111111111111111111111111111111112';
+
 interface MiniChartProps {
   title?: string;
 }
@@ -15,39 +17,41 @@ export function MiniChart({ title = "SOL/USD" }: MiniChartProps) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchSolPrice = async () => {
+    const fetchSolData = async () => {
       try {
-        const { data, error } = await supabase.functions.invoke('token-prices', {
-          body: { action: 'sol_price' },
-        });
+        // Fetch SOL price and real price history in parallel
+        const [priceResult, historyResult] = await Promise.allSettled([
+          supabase.functions.invoke('token-prices', {
+            body: { action: 'sol_price' },
+          }),
+          supabase.functions.invoke('token-prices', {
+            body: { action: 'price_history', address: SOL_MINT, interval: '1H' },
+          }),
+        ]);
 
-        if (error) throw error;
-        if (data?.success && data.data) {
-          const solPrice = data.data.price;
-          const solChange = data.data.change24h || 0;
-          setPrice(solPrice);
-          setChange(solChange);
+        // Set current price
+        if (priceResult.status === 'fulfilled' && priceResult.value.data?.success && priceResult.value.data.data) {
+          setPrice(priceResult.value.data.data.price);
+          setChange(priceResult.value.data.data.change24h || 0);
+        }
 
-          // Build sparkline from current price with slight historical variance
-          const now = Date.now();
-          const points = Array.from({ length: 24 }, (_, i) => {
-            const variance = 1 + (Math.sin(i * 0.5) * 0.02) + ((Math.random() - 0.5) * 0.01);
-            const historicalPrice = solPrice * variance * (solChange >= 0 
-              ? (0.97 + (i / 24) * 0.03) 
-              : (1.03 - (i / 24) * 0.03));
-            return { value: historicalPrice, timestamp: now - (23 - i) * 3600000 };
-          });
+        // Set real chart data from price history
+        if (historyResult.status === 'fulfilled' && historyResult.value.data?.success && Array.isArray(historyResult.value.data.data) && historyResult.value.data.data.length > 0) {
+          const points = historyResult.value.data.data.map((p: { unixTime: number; value: number }) => ({
+            value: p.value,
+            timestamp: p.unixTime * 1000,
+          }));
           setChartData(points);
         }
       } catch (err) {
-        console.error('Failed to fetch SOL price:', err);
+        console.error('Failed to fetch SOL data:', err);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchSolPrice();
-    const interval = setInterval(fetchSolPrice, 30000); // refresh every 30s
+    fetchSolData();
+    const interval = setInterval(fetchSolData, 30000);
     return () => clearInterval(interval);
   }, []);
 

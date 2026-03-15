@@ -157,7 +157,7 @@ class PumpFunService {
       price: token.marketCap / token.totalSupply,
       marketCap: token.marketCap,
       volume24h: token.tradeVolume24h,
-      change24h: isNaN(change24h) ? Math.random() * 20 - 10 : change24h,
+      change24h: isNaN(change24h) ? 0 : change24h,
       logoUrl: token.logo,
       tokenAddress: token.address,
       liquidity: token.liquidity,

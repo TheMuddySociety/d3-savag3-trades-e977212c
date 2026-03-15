@@ -58,56 +58,6 @@ const HOLDER_COLORS = [
   'hsl(var(--muted))',
 ];
 
-// ── Mock fallback generators ────────────────────────────────────────
-
-function generateMockPriceHistory(token: MemeToken): PricePoint[] {
-  const points = 48;
-  const data: PricePoint[] = [];
-  let price = token.price * (1 - Math.abs(token.change24h) / 100);
-  const trend = token.change24h >= 0 ? 1 : -1;
-  for (let i = 0; i < points; i++) {
-    const noise = (Math.random() - 0.45) * price * 0.06;
-    const drift = trend * price * 0.003;
-    price = Math.max(price * 0.5, price + noise + drift);
-    const time = new Date(Date.now() - (points - i) * 30 * 60000);
-    data.push({ time: time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), price: +price.toPrecision(4) });
-  }
-  return data;
-}
-
-function generateMockHolders(): HolderSegment[] {
-  const top10 = 28 + Math.random() * 15;
-  const top50 = 15 + Math.random() * 10;
-  const top200 = 12 + Math.random() * 8;
-  const others = Math.max(5, 100 - top10 - top50 - top200);
-  return [
-    { name: 'Top 10', value: +top10.toFixed(1), color: HOLDER_COLORS[0] },
-    { name: 'Top 11-50', value: +top50.toFixed(1), color: HOLDER_COLORS[1] },
-    { name: 'Top 51-200', value: +top200.toFixed(1), color: HOLDER_COLORS[2] },
-    { name: 'Others', value: +others.toFixed(1), color: HOLDER_COLORS[3] },
-  ];
-}
-
-function generateMockTrades(token: MemeToken): Trade[] {
-  const trades: Trade[] = [];
-  for (let i = 0; i < 15; i++) {
-    const isBuy = Math.random() > 0.45;
-    const amount = +(Math.random() * token.price * 50000).toPrecision(4);
-    const solAmount = +(amount / 67).toFixed(3);
-    const time = new Date(Date.now() - i * (60000 + Math.random() * 120000));
-    trades.push({
-      id: i,
-      type: isBuy ? 'buy' : 'sell',
-      amount,
-      solAmount,
-      price: +(token.price * (1 + (Math.random() - 0.5) * 0.02)).toPrecision(4),
-      time: time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-      wallet: `${Math.random().toString(36).slice(2, 6)}...${Math.random().toString(36).slice(2, 6)}`,
-    });
-  }
-  return trades;
-}
-
 // ── Data fetching hooks ─────────────────────────────────────────────
 
 function useTokenDetail(token: MemeToken | null, open: boolean) {
