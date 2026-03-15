@@ -1,4 +1,5 @@
 import React, { useMemo, useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Dialog,
   DialogContent,
@@ -235,6 +236,7 @@ const fmt = (v: number, type: 'usd' | 'compact' | 'pct' = 'usd') => {
 // ── Component ───────────────────────────────────────────────────────
 
 export function TokenDetailModal({ token, open, onOpenChange, onSetAlert }: TokenDetailModalProps) {
+  const navigate = useNavigate();
   const { priceData, holders, trades, loading, dataSource } = useTokenDetail(token, open);
 
   const [showSwap, setShowSwap] = useState(false);
@@ -552,6 +554,17 @@ export function TokenDetailModal({ token, open, onOpenChange, onSetAlert }: Toke
           <div className="flex gap-2">
             {token.tokenAddress && (
               <>
+                <Button
+                  size="sm"
+                  variant="default"
+                  className="gap-1.5 text-xs flex-1"
+                  onClick={() => {
+                    onOpenChange(false);
+                    navigate(`/token/${token.tokenAddress}`);
+                  }}
+                >
+                  <ExternalLink className="h-3 w-3" /> Full Details
+                </Button>
                 <Button size="sm" variant="outline" className="gap-1.5 text-xs flex-1" asChild>
                   <a href={`https://solscan.io/token/${token.tokenAddress}`} target="_blank" rel="noopener noreferrer">
                     <ExternalLink className="h-3 w-3" /> Solscan
