@@ -173,9 +173,9 @@ export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) =
     if (!wallet.publicKey || executingTrade) return;
 
     try {
-      const { data: pending, error } = await supabase
+      const { data: pending, error } = await (supabase
         .from('pending_auto_trades' as any)
-        .select('*')
+        .select('*') as any)
         .eq('wallet_address', wallet.publicKey.toBase58())
         .eq('status', 'pending')
         .order('created_at', { ascending: true })
