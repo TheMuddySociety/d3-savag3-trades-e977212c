@@ -8,14 +8,17 @@ import { useWallet } from '@solana/wallet-adapter-react';
 import { UnifiedWalletButton } from '@jup-ag/wallet-adapter';
 import { useTradingMode } from '@/hooks/useTradingMode';
 import { useAdminCheck } from '@/hooks/useAdminCheck';
+import { useWalletAuth } from '@/hooks/useWalletAuth';
 
 export function Header() {
   const { toast } = useToast();
   const navigate = useNavigate();
   const { publicKey, connected, disconnect } = useWallet();
   const { hasFreePass, buyFreePass, isPaymentPending } = useTradingMode();
+  const { signOut } = useWalletAuth();
 
-  const handleDisconnect = () => {
+  const handleDisconnect = async () => {
+    await signOut();
     disconnect();
     toast({
       title: "Disconnected",
@@ -81,8 +84,10 @@ export function LandingHeader() {
   const { hasFreePass, buyFreePass, isPaymentPending } = useTradingMode();
   const walletAddress = publicKey?.toBase58() || null;
   const { isAdmin } = useAdminCheck(walletAddress);
+  const { signOut } = useWalletAuth();
 
-  const handleDisconnect = () => {
+  const handleDisconnect = async () => {
+    await signOut();
     disconnect();
     toast({ title: "Disconnected", description: "Wallet disconnected" });
     navigate('/');
