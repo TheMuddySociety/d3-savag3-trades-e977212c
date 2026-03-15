@@ -18,6 +18,7 @@ export interface FilterOptions {
   minMarketCap: number | null;
   minVolume: number | null;
   onlyPositive: boolean;
+  bondingCurveRange: 'any' | '0-25' | '25-50' | '50-80' | '80-99' | 'graduated';
 }
 
 interface FilterTabsProps {
