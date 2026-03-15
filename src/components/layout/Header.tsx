@@ -8,6 +8,7 @@ import { useWallet } from '@solana/wallet-adapter-react';
 import { UnifiedWalletButton } from '@jup-ag/wallet-adapter';
 import { useTradingMode } from '@/hooks/useTradingMode';
 import { useAdminCheck } from '@/hooks/useAdminCheck';
+import { useWalletAuth } from '@/hooks/useWalletAuth';
 
 export function Header() {
   const { toast } = useToast();
