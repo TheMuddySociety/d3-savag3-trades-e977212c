@@ -33,21 +33,26 @@ const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider defaultTheme="dark">
-        <JupiverseKitProvider
-          endpoint={RPC_PROXY}
-          autoConnect={true}
-          lang="en"
-          env="mainnet-beta"
-          theme="dark"
-          walletConnectProjectId="336bea3a7584798217797f3b46943ac5"
-          metadata={{
-            name: "SAVAG3BOT",
-            description: "Solana Memecoin Trading Terminal",
-            url: "https://memebot-profit-finder.lovable.app",
-            iconUrls: ["https://memebot-profit-finder.lovable.app/savag3bot-logo.png"],
-          }}
+        <PhantomProvider
+          appId="f3e1137b-609c-4f5e-91d7-c76a3e4f9f7d"
+          theme={darkTheme}
+          deepLinkScheme="savag3bot"
         >
-          <TradingModeProvider>
+          <JupiverseKitProvider
+            endpoint={RPC_PROXY}
+            autoConnect={true}
+            lang="en"
+            env="mainnet-beta"
+            theme="dark"
+            walletConnectProjectId="336bea3a7584798217797f3b46943ac5"
+            metadata={{
+              name: "SAVAG3BOT",
+              description: "Solana Memecoin Trading Terminal",
+              url: "https://memebot-profit-finder.lovable.app",
+              iconUrls: ["https://memebot-profit-finder.lovable.app/savag3bot-logo.png"],
+            }}
+          >
+            <TradingModeProvider>
             <TooltipProvider>
               <Toaster />
               <Sonner />
