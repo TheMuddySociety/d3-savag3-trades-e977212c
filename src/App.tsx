@@ -19,8 +19,8 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient();
 
-// Use Helius RPC via public endpoint (domain-restricted key)
-const HELIUS_RPC = "https://mainnet.helius-rpc.com/?api-key=9d3be76b-1741-43d2-a8f9-3880668415ad";
+// Helius RPC proxied through edge function — API key never reaches client
+const RPC_PROXY = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/rpc-proxy`;
 
 const PageLoader = () => (
   <div className="min-h-screen flex items-center justify-center bg-background">
@@ -33,7 +33,7 @@ const App = () => {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider defaultTheme="dark">
         <JupiverseKitProvider
-          endpoint={HELIUS_RPC}
+          endpoint={RPC_PROXY}
           autoConnect={true}
           lang="en"
           env="mainnet-beta"
