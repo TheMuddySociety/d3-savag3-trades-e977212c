@@ -625,9 +625,11 @@ export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) =
     };
 
     evaluateStrategies();
-    pollingRef.current = setInterval(evaluateStrategies, 15000);
+    // Use 10s interval when New Launch Hunter is active (needs speed), 15s otherwise
+    const hasLaunchHunter = strategiesRef.current.some(s => s.id === 'new_launch' && s.enabled);
+    pollingRef.current = setInterval(evaluateStrategies, hasLaunchHunter ? 10000 : 15000);
     return () => { if (pollingRef.current) { clearInterval(pollingRef.current); pollingRef.current = null; } };
-  }, [activeStrategyKey, wallet.publicKey, fetchLiveHoldings, executeLiveSell, executeLiveBuy, addLog, recordEntryPrices, updatePeakPrices, fetchTrendingForDips]);
+  }, [activeStrategyKey, wallet.publicKey, fetchLiveHoldings, executeLiveSell, executeLiveBuy, addLog, recordEntryPrices, updatePeakPrices, fetchTrendingForDips, fetchNewLaunches]);
 
   const proceedToggle = (id: string) => {
     setStrategies((prev) => {
