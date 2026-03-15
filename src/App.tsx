@@ -28,6 +28,7 @@ const App = () => {
           autoConnect={true}
           lang="en"
           env="mainnet-beta"
+          walletConnectProjectId="336bea3a7584798217797f3b46943ac5"
           metadata={{
             name: "SAVAG3BOT",
             description: "Solana Memecoin Trading Terminal",
