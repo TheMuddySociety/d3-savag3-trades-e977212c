@@ -18,6 +18,7 @@ export function Header() {
   const { signOut } = useWalletAuth();
 
   const handleDisconnect = () => {
+    await signOut();
     disconnect();
     toast({
       title: "Disconnected",
