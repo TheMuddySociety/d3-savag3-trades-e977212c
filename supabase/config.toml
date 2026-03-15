@@ -14,3 +14,6 @@ verify_jwt = false
 
 [functions.ai-profit-analysis]
 verify_jwt = false
+
+[functions.check-admin]
+verify_jwt = false

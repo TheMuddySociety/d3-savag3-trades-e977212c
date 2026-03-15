@@ -25,7 +25,7 @@ export function MobileBottomNav({ activeTab, onTabChange }: MobileBottomNavProps
             key={tab.id}
             onClick={() => onTabChange(tab.id)}
             className={cn(
-              "flex flex-col items-center gap-1 px-3 py-1.5 rounded-lg transition-all min-w-[56px]",
+              "relative flex flex-col items-center gap-1 px-3 py-1.5 rounded-lg transition-all min-w-[56px]",
               activeTab === tab.id
                 ? "text-primary"
                 : "text-muted-foreground"

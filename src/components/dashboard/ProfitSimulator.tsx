@@ -249,15 +249,22 @@ export function ProfitSimulator() {
         </div>
       </CardContent>
       
-      {simulatedProfit > 0 && (
+      {(simulatedProfit !== 0 || aiResults) && (
         <CardFooter className="border-t border-border p-4 flex flex-col items-center gap-2">
           <div className="text-sm text-muted-foreground">
             {usingAI ? "AI-Powered Profit Estimate" : "Estimated Profit"} (after {daysHeld} days)
           </div>
-          <div className="flex items-center gap-2 font-bold text-2xl text-solana">
-            <Sparkles className="h-5 w-5 animate-pulse" />
-            {formatNumber(simulatedProfit)}
-            <Sparkles className="h-5 w-5 animate-pulse" />
+          <div className={cn(
+            "flex items-center gap-2 font-bold text-2xl",
+            simulatedProfit >= 0 ? "text-chart-green" : "text-destructive"
+          )}>
+            {simulatedProfit >= 0 ? (
+              <Sparkles className="h-5 w-5 animate-pulse" />
+            ) : (
+              <AlertTriangle className="h-5 w-5" />
+            )}
+            {simulatedProfit < 0 ? "-" : "+"}{formatNumber(Math.abs(simulatedProfit))}
+            {simulatedProfit >= 0 && <Sparkles className="h-5 w-5 animate-pulse" />}
           </div>
           
           {usingAI && aiResults && (
@@ -265,13 +272,13 @@ export function ProfitSimulator() {
               <div className="flex justify-between items-center">
                 <span className="text-sm text-muted-foreground">AI Confidence</span>
                 <div className="flex items-center">
-                  <div className="w-24 h-2 bg-gray-200 rounded-full overflow-hidden">
+                  <div className="w-24 h-2 bg-muted rounded-full overflow-hidden">
                     <div 
-                      className="h-full bg-solana" 
+                      className="h-full bg-primary" 
                       style={{ width: `${aiResults.confidenceScore * 100}%` }}
                     ></div>
                   </div>
-                  <span className="ml-2 text-sm">{aiResults.confidenceScore * 100}%</span>
+                  <span className="ml-2 text-sm">{Math.round(aiResults.confidenceScore * 100)}%</span>
                 </div>
               </div>
               

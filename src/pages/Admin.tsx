@@ -10,6 +10,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { DevTokenTracker } from "@/components/admin/DevTokenTracker";
 import { NFTCollectionTracker } from "@/components/admin/NFTCollectionTracker";
+import { useWallet } from "@solana/wallet-adapter-react";
+import { useAdminCheck } from "@/hooks/useAdminCheck";
 
 interface PaymentRecord {
   id: string;
@@ -19,15 +21,11 @@ interface PaymentRecord {
   created_at: string;
 }
 
-const ADMIN_WALLETS = [
-  "Cra8LAvpQAk3hx4By5STHp4xrq7HSAnZLk4Jwzv1wUAH",
-  "BQefQgbpAqPjoGKLTmAA2haZh9pEURYNefPFwsTotgem"
-];
-
 const Admin = () => {
   const navigate = useNavigate();
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const { publicKey, connected } = useWallet();
+  const walletAddress = publicKey?.toBase58() || null;
+  const { isAdmin, isLoading: adminLoading } = useAdminCheck(walletAddress);
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
   const [paymentsLoading, setPaymentsLoading] = useState(false);
 
@@ -48,24 +46,20 @@ const Admin = () => {
   };
 
   useEffect(() => {
-    const connectedWallet = localStorage.getItem('connectedWallet') || "";
-    const isAdminWallet = ADMIN_WALLETS.includes(connectedWallet);
-    if (!isAdminWallet) {
+    if (adminLoading) return;
+    if (!isAdmin) {
       toast.error("Admin access denied.");
       navigate('/dashboard');
       return;
     }
-    setIsAdmin(true);
-    setLoading(false);
     fetchPayments();
-  }, [navigate]);
+  }, [isAdmin, adminLoading, navigate]);
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
     toast.success("Copied to clipboard");
   };
 
-  // Cross-reference: compute wallets appearing in both trackers
   const { devCrossRef, nftCrossRef } = useMemo(() => {
     const devWallets: string[] = [];
     const nftWallets: string[] = [];
@@ -80,14 +74,12 @@ const Admin = () => {
         if (c.devWallet) nftWallets.push(c.devWallet);
       }
     } catch {}
-    // Dev wallets that also appear as NFT collection addresses or dev wallets
     const devCrossRef = devWallets.filter(w => nftWallets.includes(w));
-    // NFT addresses/devWallets that also appear in dev tracker
     const nftCrossRef = [...new Set(nftWallets)].filter(w => devWallets.includes(w));
     return { devCrossRef, nftCrossRef };
-  }, [isAdmin]); // re-compute when admin loads
+  }, [isAdmin]);
 
-  if (loading || !isAdmin) return null;
+  if (adminLoading || !isAdmin) return null;
 
   return (
     <div className="min-h-screen bg-background text-foreground pb-20">

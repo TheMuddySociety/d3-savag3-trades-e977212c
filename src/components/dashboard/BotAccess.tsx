@@ -90,36 +90,36 @@ export const BotAccess = () => {
           </div>
         ) : (
           <Tabs defaultValue="sniper" className="w-full">
-            <TabsList className="w-full grid grid-cols-8 bg-muted/30 h-8 mb-3">
-              <TabsTrigger value="sniper" className="text-[10px] gap-0.5 data-[state=active]:bg-primary/20 px-1">
+            <TabsList className="w-full flex overflow-x-auto snap-x bg-muted/30 h-8 mb-3 gap-0.5 no-scrollbar">
+              <TabsTrigger value="sniper" className="text-[10px] gap-0.5 data-[state=active]:bg-primary/20 px-2 shrink-0 snap-start">
                 <Crosshair className="h-3 w-3" />
                 <span className="hidden sm:inline">Sniper</span>
               </TabsTrigger>
-              <TabsTrigger value="dca" className="text-[10px] gap-0.5 data-[state=active]:bg-accent/20 px-1">
+              <TabsTrigger value="dca" className="text-[10px] gap-0.5 data-[state=active]:bg-accent/20 px-2 shrink-0 snap-start">
                 <Clock className="h-3 w-3" />
                 <span className="hidden sm:inline">DCA</span>
               </TabsTrigger>
-              <TabsTrigger value="volume" className="text-[10px] gap-0.5 data-[state=active]:bg-accent/20 px-1">
+              <TabsTrigger value="volume" className="text-[10px] gap-0.5 data-[state=active]:bg-accent/20 px-2 shrink-0 snap-start">
                 <BarChart3 className="h-3 w-3" />
                 <span className="hidden sm:inline">Vol</span>
               </TabsTrigger>
-              <TabsTrigger value="batch" className="text-[10px] gap-0.5 data-[state=active]:bg-primary/20 px-1">
+              <TabsTrigger value="batch" className="text-[10px] gap-0.5 data-[state=active]:bg-primary/20 px-2 shrink-0 snap-start">
                 <Layers className="h-3 w-3" />
                 <span className="hidden sm:inline">Batch</span>
               </TabsTrigger>
-              <TabsTrigger value="copy" className="text-[10px] gap-0.5 data-[state=active]:bg-[hsl(var(--fun-purple))]/20 px-1">
+              <TabsTrigger value="copy" className="text-[10px] gap-0.5 data-[state=active]:bg-[hsl(var(--fun-purple))]/20 px-2 shrink-0 snap-start">
                 <Eye className="h-3 w-3" />
                 <span className="hidden sm:inline">Copy</span>
               </TabsTrigger>
-              <TabsTrigger value="auto" className="text-[10px] gap-0.5 data-[state=active]:bg-primary/20 px-1">
+              <TabsTrigger value="auto" className="text-[10px] gap-0.5 data-[state=active]:bg-primary/20 px-2 shrink-0 snap-start">
                 <Brain className="h-3 w-3" />
                 <span className="hidden sm:inline">Auto</span>
               </TabsTrigger>
-              <TabsTrigger value="profit" className="text-[10px] gap-0.5 data-[state=active]:bg-primary/20 px-1">
+              <TabsTrigger value="profit" className="text-[10px] gap-0.5 data-[state=active]:bg-primary/20 px-2 shrink-0 snap-start">
                 <TrendingUp className="h-3 w-3" />
                 <span className="hidden sm:inline">Profit</span>
               </TabsTrigger>
-              <TabsTrigger value="trades" className="text-[10px] gap-0.5 data-[state=active]:bg-accent/20 px-1">
+              <TabsTrigger value="trades" className="text-[10px] gap-0.5 data-[state=active]:bg-accent/20 px-2 shrink-0 snap-start">
                 <List className="h-3 w-3" />
                 <span className="hidden sm:inline">Trades</span>
               </TabsTrigger>
