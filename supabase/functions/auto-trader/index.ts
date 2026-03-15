@@ -49,7 +49,7 @@ serve(async (req) => {
 
       // Filter to strategies we can handle server-side
       const supportedStrategies = strategies.filter(
-        s => s === 'safe_exit' || s === 'scalper' || s === 'momentum' || s === 'dip_buy'
+        s => s === 'safe_exit' || s === 'scalper' || s === 'momentum' || s === 'dip_buy' || s === 'new_launch'
       );
       if (supportedStrategies.length === 0) continue;
 
