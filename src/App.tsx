@@ -33,7 +33,7 @@ const App = () => {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider defaultTheme="dark">
         <JupiverseKitProvider
-          endpoint={HELIUS_RPC}
+          endpoint={RPC_PROXY}
           autoConnect={true}
           lang="en"
           env="mainnet-beta"
