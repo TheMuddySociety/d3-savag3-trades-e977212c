@@ -33,6 +33,19 @@ interface LiveHolding {
   value: number;
 }
 
+interface PendingTrade {
+  id: string;
+  token_mint: string;
+  token_symbol: string;
+  side: string;
+  amount_raw: string;
+  decimals: number;
+  strategy: string;
+  reason: string;
+  pnl_percent: number;
+  status: string;
+}
+
 const INITIAL_STRATEGIES: Strategy[] = [
   { id: "momentum", name: "Momentum Rider", description: "Buys tokens trending up with high volume, sells on reversal", icon: <TrendingUp className="h-4 w-4" />, risk: "Medium", enabled: false },
   { id: "dip_buy", name: "Dip Buyer", description: "Auto-buys when price drops >20% in 1h with recovery signals", icon: <TrendingDown className="h-4 w-4" />, risk: "High", enabled: false },
@@ -54,9 +67,6 @@ interface Props {
   killSignal?: number;
 }
 
-// Store entry prices per session (mint → price in SOL)
-const entryPrices = new Map<string, number>();
-
 export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) => {
   const { toast } = useToast();
   const wallet = useWallet();
@@ -68,11 +78,13 @@ export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) =
   const [pendingStrategyId, setPendingStrategyId] = useState<string | null>(null);
   const [statusLog, setStatusLog] = useState<string[]>([]);
   const [executingTrade, setExecutingTrade] = useState(false);
+  const [pendingTrades, setPendingTrades] = useState<PendingTrade[]>([]);
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
+  const pendingPollRef = useRef<NodeJS.Timeout | null>(null);
 
   const addLog = useCallback((msg: string) => {
     const time = new Date().toLocaleTimeString();
-    setStatusLog(prev => [`[${time}] ${msg}`, ...prev.slice(0, 19)]);
+    setStatusLog(prev => [`[${time}] ${msg}`, ...prev.slice(0, 29)]);
   }, []);
 
   // Kill switch
@@ -84,8 +96,9 @@ export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) =
       setPendingStrategyId(null);
       setStatusLog([]);
       setExecutingTrade(false);
-      entryPrices.clear();
+      setPendingTrades([]);
       if (pollingRef.current) { clearInterval(pollingRef.current); pollingRef.current = null; }
+      if (pendingPollRef.current) { clearInterval(pendingPollRef.current); pendingPollRef.current = null; }
     }
   }, [killSignal]);
 
@@ -113,7 +126,7 @@ export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) =
 
   // Execute a sell via Jupiter Ultra (token → SOL)
   const executeLiveSell = useCallback(async (
-    holding: LiveHolding,
+    holding: LiveHolding | { mint: string; symbol: string; amount: number; decimals: number },
     reason: string
   ): Promise<boolean> => {
     if (!wallet.publicKey || !wallet.signTransaction || executingTrade) return false;
@@ -122,7 +135,6 @@ export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) =
       setExecutingTrade(true);
       addLog(`🔄 ${reason}: Selling ${holding.symbol}...`);
 
-      // Calculate raw amount (amount * 10^decimals)
       const rawAmount = Math.floor(holding.amount * Math.pow(10, holding.decimals));
       
       const result = await JupiterUltraService.swap(
@@ -135,7 +147,14 @@ export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) =
 
       if (result?.status === 'Success') {
         addLog(`✅ ${reason}: Sold ${holding.amount.toFixed(4)} ${holding.symbol} — tx: ${result.signature?.slice(0, 8)}...`);
-        entryPrices.delete(holding.mint);
+        
+        // Clean up entry price
+        if (wallet.publicKey) {
+          await supabase.from('auto_trade_entry_prices' as any)
+            .delete()
+            .eq('wallet_address', wallet.publicKey.toBase58())
+            .eq('token_mint', holding.mint);
+        }
         return true;
       } else {
         addLog(`❌ ${reason}: Sell failed for ${holding.symbol} — ${result?.error || 'Unknown error'}`);
@@ -149,12 +168,107 @@ export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) =
     }
   }, [wallet, executingTrade, addLog]);
 
+  // Poll for pending trades from Beach Mode (auto-trader edge function)
+  const executePendingTrades = useCallback(async () => {
+    if (!wallet.publicKey || executingTrade) return;
+
+    try {
+      const { data: pending, error } = await (supabase
+        .from('pending_auto_trades' as any)
+        .select('*') as any)
+        .eq('wallet_address', wallet.publicKey.toBase58())
+        .eq('status', 'pending')
+        .order('created_at', { ascending: true })
+        .limit(5);
+
+      if (error || !pending || pending.length === 0) return;
+
+      setPendingTrades(pending as any);
+      addLog(`📋 Found ${pending.length} pending Beach Mode trade(s)`);
+
+      for (const trade of pending as PendingTrade[]) {
+        if (executingTrade) break;
+
+        const amount = parseInt(trade.amount_raw) / Math.pow(10, trade.decimals);
+        const success = await executeLiveSell(
+          {
+            mint: trade.token_mint,
+            symbol: trade.token_symbol || trade.token_mint.slice(0, 6),
+            amount,
+            decimals: trade.decimals,
+          },
+          `🏖️ Beach: ${trade.reason || trade.strategy}`
+        );
+
+        // Update status
+        await supabase
+          .from('pending_auto_trades' as any)
+          .update({
+            status: success ? 'executed' : 'failed',
+            executed_at: new Date().toISOString(),
+          })
+          .eq('id', trade.id);
+
+        if (success) {
+          toast({
+            title: `🏖️ Beach Mode Trade Executed`,
+            description: `${trade.reason}: Sold ${trade.token_symbol}`,
+          });
+        }
+      }
+
+      // Refresh pending list
+      const { data: remaining } = await supabase
+        .from('pending_auto_trades' as any)
+        .select('*')
+        .eq('wallet_address', wallet.publicKey!.toBase58())
+        .eq('status', 'pending');
+      setPendingTrades((remaining || []) as any);
+    } catch (e: any) {
+      console.error('executePendingTrades error:', e);
+    }
+  }, [wallet.publicKey, executingTrade, executeLiveSell, addLog, toast]);
+
+  // Start polling for pending Beach Mode trades
+  useEffect(() => {
+    if (!wallet.publicKey) return;
+    
+    // Check immediately on mount
+    executePendingTrades();
+    
+    // Then poll every 30 seconds
+    pendingPollRef.current = setInterval(executePendingTrades, 30000);
+    return () => {
+      if (pendingPollRef.current) { clearInterval(pendingPollRef.current); pendingPollRef.current = null; }
+    };
+  }, [wallet.publicKey, executePendingTrades]);
+
+  // Record entry prices to DB when we first see tokens
+  const recordEntryPrices = useCallback(async (holdings: LiveHolding[]) => {
+    if (!wallet.publicKey) return;
+    const walletAddr = wallet.publicKey.toBase58();
+
+    for (const h of holdings) {
+      if (h.price > 0) {
+        try {
+          await supabase.from('auto_trade_entry_prices' as any).upsert({
+            wallet_address: walletAddr,
+            token_mint: h.mint,
+            entry_price: h.price,
+          }, { onConflict: 'wallet_address,token_mint' });
+        } catch {
+          // ignore duplicates
+        }
+      }
+    }
+  }, [wallet.publicKey]);
+
   // Stable key for active strategies
   const activeStrategyKey = strategies.filter(s => s.enabled).map(s => s.id).join(',');
   const strategiesRef = useRef(strategies);
   strategiesRef.current = strategies;
 
-  // Polling loop for active strategies
+  // Polling loop for active strategies (real-time when browser open)
   useEffect(() => {
     if (!activeStrategyKey) {
       if (pollingRef.current) { clearInterval(pollingRef.current); pollingRef.current = null; }
@@ -181,10 +295,24 @@ export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) =
 
       addLog(`Found ${holdings.length} token(s) in wallet`);
 
-      // Track entry prices — first time we see a token, record its price
+      // Record entry prices to DB for Beach Mode persistence
+      await recordEntryPrices(holdings);
+
+      // Get entry prices from DB
+      const { data: entryRows } = await supabase
+        .from('auto_trade_entry_prices' as any)
+        .select('*')
+        .eq('wallet_address', wallet.publicKey.toBase58());
+
+      const entryPriceMap = new Map<string, number>();
+      for (const ep of (entryRows || [])) {
+        entryPriceMap.set((ep as any).token_mint, Number((ep as any).entry_price));
+      }
+
+      // Track new tokens
       for (const h of holdings) {
-        if (!entryPrices.has(h.mint) && h.price > 0) {
-          entryPrices.set(h.mint, h.price);
+        if (!entryPriceMap.has(h.mint) && h.price > 0) {
+          entryPriceMap.set(h.mint, h.price);
           addLog(`📌 Tracking ${h.symbol} entry: $${h.price.toFixed(8)}`);
         }
       }
@@ -194,7 +322,7 @@ export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) =
           switch (strategy.id) {
             case "safe_exit": {
               for (const h of holdings) {
-                const entryPrice = entryPrices.get(h.mint);
+                const entryPrice = entryPriceMap.get(h.mint);
                 if (!entryPrice || h.price <= 0) continue;
 
                 const pnl = ((h.price - entryPrice) / entryPrice) * 100;
@@ -213,7 +341,7 @@ export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) =
             }
             case "scalper": {
               for (const h of holdings) {
-                const entryPrice = entryPrices.get(h.mint);
+                const entryPrice = entryPriceMap.get(h.mint);
                 if (!entryPrice || h.price <= 0) continue;
 
                 const pnl = ((h.price - entryPrice) / entryPrice) * 100;
@@ -256,7 +384,7 @@ export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) =
     evaluateStrategies();
     pollingRef.current = setInterval(evaluateStrategies, 15000);
     return () => { if (pollingRef.current) { clearInterval(pollingRef.current); pollingRef.current = null; } };
-  }, [activeStrategyKey, wallet.publicKey, fetchLiveHoldings, executeLiveSell, addLog]);
+  }, [activeStrategyKey, wallet.publicKey, fetchLiveHoldings, executeLiveSell, addLog, recordEntryPrices]);
 
   const proceedToggle = (id: string) => {
     setStrategies((prev) => {
@@ -270,7 +398,6 @@ export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) =
         beachMode,
       }, activeIds.length > 0);
 
-      // Defer toast/log out of the setState callback to avoid render-phase conflicts
       setTimeout(() => {
         if (target) {
           if (target.enabled) {
@@ -311,7 +438,9 @@ export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) =
     }, activeIds.length > 0);
     toast({
       title: checked ? "🏖️ Beach Mode ON" : "Beach Mode OFF",
-      description: checked ? "Strategies will run in the background even when you close the app" : "Background execution disabled",
+      description: checked
+        ? "Auto-trader will scan your real wallet every minute & queue trades for execution"
+        : "Background execution disabled",
     });
   };
 
@@ -354,14 +483,28 @@ export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) =
           <Palmtree className={`h-4 w-4 ${beachMode ? "text-accent" : "text-muted-foreground"}`} />
           <div>
             <span className="text-xs font-medium text-foreground">🏖️ Beach Mode</span>
-            <p className="text-[10px] text-muted-foreground">Run strategies in background 24/7</p>
+            <p className="text-[10px] text-muted-foreground">Server scans every 60s & queues trades for auto-execution</p>
           </div>
         </div>
         <Switch checked={beachMode} onCheckedChange={handleBeachMode} />
       </div>
       {beachMode && activeCount > 0 && (
         <div className="p-2 rounded-lg bg-accent/10 border border-accent/30">
-          <p className="text-[11px] text-accent font-medium">✅ {activeCount} strateg{activeCount > 1 ? "ies" : "y"} running in background — close your browser and earn!</p>
+          <p className="text-[11px] text-accent font-medium">✅ {activeCount} strateg{activeCount > 1 ? "ies" : "y"} running server-side — trades queue while you're away & execute when you open the app!</p>
+        </div>
+      )}
+
+      {/* Pending Beach Mode Trades */}
+      {pendingTrades.length > 0 && (
+        <div className="p-2 rounded-lg bg-[hsl(var(--fun-yellow))]/10 border border-[hsl(var(--fun-yellow))]/30">
+          <p className="text-[11px] text-[hsl(var(--fun-yellow))] font-medium mb-1">
+            📋 {pendingTrades.length} pending Beach Mode trade(s) — executing now...
+          </p>
+          {pendingTrades.map(t => (
+            <p key={t.id} className="text-[10px] text-muted-foreground font-mono">
+              {t.token_symbol}: {t.reason} ({t.pnl_percent?.toFixed(1)}%)
+            </p>
+          ))}
         </div>
       )}
 
@@ -380,7 +523,7 @@ export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) =
       </div>
 
       <div className="p-2 rounded-lg bg-destructive/10 border border-destructive/30">
-        <p className="text-[11px] text-destructive font-medium">⚠️ LIVE MODE — Safe Exit & Scalper will auto-sell via Jupiter Ultra (gasless). Your wallet must approve each trade.</p>
+        <p className="text-[11px] text-destructive font-medium">⚠️ LIVE MODE — Safe Exit & Scalper auto-sell via Jupiter Ultra (gasless). Beach Mode queues trades server-side for execution when app opens.</p>
       </div>
 
       {/* Status Log */}
@@ -391,7 +534,7 @@ export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) =
             <p key={i} className={`text-[10px] font-mono leading-tight ${
               log.includes('✅') || log.includes('Sold') ? 'text-accent' :
               log.includes('❌') ? 'text-destructive' :
-              log.includes('🔄') ? 'text-[hsl(var(--fun-yellow))]' :
+              log.includes('🔄') || log.includes('🏖️') ? 'text-[hsl(var(--fun-yellow))]' :
               'text-muted-foreground'
             }`}>{log}</p>
           ))}
