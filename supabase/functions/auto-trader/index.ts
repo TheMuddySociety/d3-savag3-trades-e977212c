@@ -39,6 +39,8 @@ serve(async (req) => {
       const strategies: string[] = (config.config as any)?.strategies || [];
       const isBeachMode = (config.config as any)?.beachMode === true;
       const maxBudget = (config.config as any)?.maxBudget || 1.0;
+      const launchMinLiquidity = (config.config as any)?.launchMinLiquidity || 100;
+      const launchMaxAge = (config.config as any)?.launchMaxAge || 30;
 
       if (!isBeachMode) {
         console.log(`Skipping ${walletAddress} — beachMode not enabled`);
@@ -217,7 +219,7 @@ serve(async (req) => {
 
             const candidates = launches.filter((t: any) => {
               const ageSeconds = t.pairCreatedAt ? Math.floor((now - t.pairCreatedAt) / 1000) : 999;
-              return ageSeconds <= 60 && (t.liquidity || 0) > 100 && !ownedMints.has(t.address);
+              return ageSeconds <= launchMaxAge && (t.liquidity || 0) >= launchMinLiquidity && !ownedMints.has(t.address);
             });
 
             if (candidates.length > 0) {

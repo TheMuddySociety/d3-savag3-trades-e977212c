@@ -85,6 +85,18 @@ export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) =
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
   const pendingPollRef = useRef<NodeJS.Timeout | null>(null);
 
+  // New Launch Hunter configurable parameters
+  const [launchMinLiquidity, setLaunchMinLiquidity] = useState("100");
+  const [launchMaxAge, setLaunchMaxAge] = useState("30");
+  const [launchAutoSellTimer, setLaunchAutoSellTimer] = useState("0");
+  const launchAutoSellTimers = useRef<Map<string, NodeJS.Timeout>>(new Map());
+  const launchMinLiqRef = useRef(launchMinLiquidity);
+  const launchMaxAgeRef = useRef(launchMaxAge);
+  const launchAutoSellTimerRef = useRef(launchAutoSellTimer);
+  launchMinLiqRef.current = launchMinLiquidity;
+  launchMaxAgeRef.current = launchMaxAge;
+  launchAutoSellTimerRef.current = launchAutoSellTimer;
+
   const addLog = useCallback((msg: string) => {
     const time = new Date().toLocaleTimeString();
     setStatusLog(prev => [`[${time}] ${msg}`, ...prev.slice(0, 39)]);
@@ -101,6 +113,9 @@ export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) =
       setExecutingTrade(false);
       setPendingTrades([]);
       peakPrices.clear();
+      // Clear auto-sell timers
+      for (const timer of launchAutoSellTimers.current.values()) clearTimeout(timer);
+      launchAutoSellTimers.current.clear();
       if (pollingRef.current) { clearInterval(pollingRef.current); pollingRef.current = null; }
       if (pendingPollRef.current) { clearInterval(pendingPollRef.current); pendingPollRef.current = null; }
     }
@@ -567,7 +582,10 @@ export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) =
             // ═══════════════════════════════════════
             case "new_launch": {
               const budget = parseFloat(maxBudgetRef.current) || 1.0;
-              addLog(`🔥 New Launch Hunter: Scanning for fresh Pump.fun launches (budget: ${budget} SOL)`);
+              const minLiq = parseFloat(launchMinLiqRef.current) || 100;
+              const maxAge = parseInt(launchMaxAgeRef.current) || 30;
+              const autoSellSec = parseInt(launchAutoSellTimerRef.current) || 0;
+              addLog(`🔥 Launch Hunter: Scanning (budget: ${budget} SOL, liq≥$${minLiq}, age≤${maxAge}s${autoSellSec > 0 ? `, auto-sell: ${autoSellSec}s` : ''})`);
 
               try {
                 const launches = await fetchNewLaunches();
@@ -576,22 +594,19 @@ export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) =
                   break;
                 }
 
-                // Filter: must be <30s old, have some liquidity, not already owned
                 const snipeCandidates = launches.filter(t => {
-                  const isFresh = t.ageSeconds <= 30;
-                  const hasLiquidity = t.liquidity > 100; // At least $100 liquidity
+                  const isFresh = t.ageSeconds <= maxAge;
+                  const hasLiquidity = t.liquidity >= minLiq;
                   const notOwned = !holdings.some(h => h.mint === t.mint);
                   return isFresh && hasLiquidity && notOwned;
                 });
 
                 if (snipeCandidates.length === 0) {
-                  // Log what we found even if too old
                   const newest = launches[0];
-                  addLog(`🔥 Newest: ${newest.symbol} (${newest.ageSeconds}s old, $${newest.liquidity.toFixed(0)} liq) — waiting for <30s`);
+                  addLog(`🔥 Newest: ${newest.symbol} (${newest.ageSeconds}s old, $${newest.liquidity.toFixed(0)} liq) — waiting for ≤${maxAge}s & ≥$${minLiq}`);
                   break;
                 }
 
-                // Snipe the freshest token
                 const target = snipeCandidates[0];
                 addLog(`🔥🎯 SNIPING: ${target.symbol} (${target.name}) — ${target.ageSeconds}s old, $${target.liquidity.toFixed(0)} liq, ${budget} SOL`);
                 
@@ -604,6 +619,23 @@ export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) =
 
                 if (success) {
                   addLog(`🔥✅ Sniped ${target.symbol} for ${budget} SOL!`);
+                  
+                  // Schedule auto-sell timer if configured
+                  if (autoSellSec > 0 && !launchAutoSellTimers.current.has(target.mint)) {
+                    addLog(`⏱️ Auto-sell timer set: ${target.symbol} in ${autoSellSec}s`);
+                    const timer = setTimeout(async () => {
+                      launchAutoSellTimers.current.delete(target.mint);
+                      addLog(`⏱️ Auto-sell timer fired for ${target.symbol} — fetching position...`);
+                      const currentHoldings = await fetchLiveHoldings();
+                      const position = currentHoldings.find(h => h.mint === target.mint);
+                      if (position && position.amount > 0) {
+                        await executeLiveSell(position, `⏱️ Auto-Sell Timer (${autoSellSec}s)`);
+                      } else {
+                        addLog(`⏱️ ${target.symbol} no longer in wallet — skipping auto-sell`);
+                      }
+                    }, autoSellSec * 1000);
+                    launchAutoSellTimers.current.set(target.mint, timer);
+                  }
                 }
               } catch (e: any) {
                 addLog(`🔥 Launch Hunter error: ${e.message}`);
@@ -641,6 +673,9 @@ export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) =
         strategies: activeIds,
         maxBudget: parseFloat(maxBudget),
         beachMode,
+        launchMinLiquidity: parseFloat(launchMinLiquidity),
+        launchMaxAge: parseInt(launchMaxAge),
+        launchAutoSellTimer: parseInt(launchAutoSellTimer),
       }, activeIds.length > 0);
 
       setTimeout(() => {
@@ -680,6 +715,9 @@ export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) =
       strategies: activeIds,
       maxBudget: parseFloat(maxBudget),
       beachMode: checked,
+      launchMinLiquidity: parseFloat(launchMinLiquidity),
+      launchMaxAge: parseInt(launchMaxAge),
+      launchAutoSellTimer: parseInt(launchAutoSellTimer),
     }, activeIds.length > 0);
     toast({
       title: checked ? "🏖️ Beach Mode ON" : "Beach Mode OFF",
@@ -813,6 +851,53 @@ export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) =
               />
             </div>
             <p className="text-xs text-muted-foreground pl-6">{strategy.description}</p>
+
+            {/* New Launch Hunter configurable parameters */}
+            {strategy.id === "new_launch" && (
+              <div className="mt-2 pl-6 space-y-2">
+                <div className="grid grid-cols-3 gap-2">
+                  <div>
+                    <Label className="text-[10px] text-muted-foreground">Min Liquidity ($)</Label>
+                    <Input
+                      type="number"
+                      value={launchMinLiquidity}
+                      onChange={(e) => setLaunchMinLiquidity(e.target.value)}
+                      className="bg-muted/30 border-border text-xs h-7 mt-0.5"
+                      min="0"
+                      step="50"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-[10px] text-muted-foreground">Max Age (sec)</Label>
+                    <Input
+                      type="number"
+                      value={launchMaxAge}
+                      onChange={(e) => setLaunchMaxAge(e.target.value)}
+                      className="bg-muted/30 border-border text-xs h-7 mt-0.5"
+                      min="5"
+                      step="5"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-[10px] text-muted-foreground">Auto-Sell (sec)</Label>
+                    <Input
+                      type="number"
+                      value={launchAutoSellTimer}
+                      onChange={(e) => setLaunchAutoSellTimer(e.target.value)}
+                      className="bg-muted/30 border-border text-xs h-7 mt-0.5"
+                      min="0"
+                      step="10"
+                      placeholder="0 = off"
+                    />
+                  </div>
+                </div>
+                <p className="text-[10px] text-muted-foreground">
+                  {parseInt(launchAutoSellTimer) > 0
+                    ? `⏱️ Auto-sells ${launchAutoSellTimer}s after each snipe`
+                    : "Auto-sell disabled — relies on other strategies to exit"}
+                </p>
+              </div>
+            )}
           </div>
         ))}
       </div>
