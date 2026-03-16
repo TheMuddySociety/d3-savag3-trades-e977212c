@@ -113,6 +113,9 @@ export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) =
       setExecutingTrade(false);
       setPendingTrades([]);
       peakPrices.clear();
+      // Clear auto-sell timers
+      for (const timer of launchAutoSellTimers.current.values()) clearTimeout(timer);
+      launchAutoSellTimers.current.clear();
       if (pollingRef.current) { clearInterval(pollingRef.current); pollingRef.current = null; }
       if (pendingPollRef.current) { clearInterval(pendingPollRef.current); pendingPollRef.current = null; }
     }
