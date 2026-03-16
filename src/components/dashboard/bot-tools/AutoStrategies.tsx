@@ -97,6 +97,14 @@ export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) =
   launchMaxAgeRef.current = launchMaxAge;
   launchAutoSellTimerRef.current = launchAutoSellTimer;
 
+  // Safe Exit configurable parameters
+  const [safeExitStopLoss, setSafeExitStopLoss] = useState("15");
+  const [safeExitTakeProfit, setSafeExitTakeProfit] = useState("50");
+  const safeExitStopLossRef = useRef(safeExitStopLoss);
+  const safeExitTakeProfitRef = useRef(safeExitTakeProfit);
+  safeExitStopLossRef.current = safeExitStopLoss;
+  safeExitTakeProfitRef.current = safeExitTakeProfit;
+
   const addLog = useCallback((msg: string) => {
     const time = new Date().toLocaleTimeString();
     setStatusLog(prev => [`[${time}] ${msg}`, ...prev.slice(0, 39)]);
@@ -466,10 +474,13 @@ export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) =
                 if (!entryPrice || h.price <= 0) continue;
                 const pnl = ((h.price - entryPrice) / entryPrice) * 100;
 
-                if (pnl <= -15) {
+                const stopLossThreshold = -parseFloat(safeExitStopLossRef.current || "15");
+                const takeProfitThreshold = parseFloat(safeExitTakeProfitRef.current || "50");
+
+                if (pnl <= stopLossThreshold) {
                   addLog(`🛡️ Stop-Loss triggered: ${h.symbol} at ${pnl.toFixed(1)}%`);
                   await executeLiveSell(h, "Stop-Loss");
-                } else if (pnl >= 50) {
+                } else if (pnl >= takeProfitThreshold) {
                   addLog(`🛡️ Take-Profit triggered: ${h.symbol} at +${pnl.toFixed(1)}%`);
                   await executeLiveSell(h, "Take-Profit");
                 } else {
@@ -676,6 +687,8 @@ export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) =
         launchMinLiquidity: parseFloat(launchMinLiquidity),
         launchMaxAge: parseInt(launchMaxAge),
         launchAutoSellTimer: parseInt(launchAutoSellTimer),
+        safeExitStopLoss: parseFloat(safeExitStopLoss),
+        safeExitTakeProfit: parseFloat(safeExitTakeProfit),
       }, activeIds.length > 0);
 
       setTimeout(() => {
@@ -851,6 +864,41 @@ export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) =
               />
             </div>
             <p className="text-xs text-muted-foreground pl-6">{strategy.description}</p>
+
+            {/* Safe Exit configurable parameters */}
+            {strategy.id === "safe_exit" && (
+              <div className="mt-2 pl-6 space-y-2">
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <Label className="text-[10px] text-muted-foreground">Stop-Loss %</Label>
+                    <Input
+                      type="number"
+                      value={safeExitStopLoss}
+                      onChange={(e) => setSafeExitStopLoss(e.target.value)}
+                      className="bg-muted/30 border-border text-xs h-7 mt-0.5"
+                      min="1"
+                      max="100"
+                      step="1"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-[10px] text-muted-foreground">Take-Profit %</Label>
+                    <Input
+                      type="number"
+                      value={safeExitTakeProfit}
+                      onChange={(e) => setSafeExitTakeProfit(e.target.value)}
+                      className="bg-muted/30 border-border text-xs h-7 mt-0.5"
+                      min="1"
+                      max="1000"
+                      step="5"
+                    />
+                  </div>
+                </div>
+                <p className="text-[10px] text-muted-foreground">
+                  Auto-sells on -{safeExitStopLoss}% loss or +{safeExitTakeProfit}% gain
+                </p>
+              </div>
+            )}
 
             {/* New Launch Hunter configurable parameters */}
             {strategy.id === "new_launch" && (

@@ -41,6 +41,10 @@ serve(async (req) => {
       const maxBudget = (config.config as any)?.maxBudget || 1.0;
       const launchMinLiquidity = (config.config as any)?.launchMinLiquidity || 100;
       const launchMaxAge = (config.config as any)?.launchMaxAge || 30;
+      const safeExitStopLoss = (config.config as any)?.safeExitStopLoss || 15;
+      const safeExitTakeProfit = (config.config as any)?.safeExitTakeProfit || 50;
+      const safeExitStopLoss = (config.config as any)?.safeExitStopLoss || 15;
+      const safeExitTakeProfit = (config.config as any)?.safeExitTakeProfit || 50;
 
       if (!isBeachMode) {
         console.log(`Skipping ${walletAddress} — beachMode not enabled`);
