@@ -39,6 +39,8 @@ serve(async (req) => {
       const strategies: string[] = (config.config as any)?.strategies || [];
       const isBeachMode = (config.config as any)?.beachMode === true;
       const maxBudget = (config.config as any)?.maxBudget || 1.0;
+      const launchMinLiquidity = (config.config as any)?.launchMinLiquidity || 100;
+      const launchMaxAge = (config.config as any)?.launchMaxAge || 30;
 
       if (!isBeachMode) {
         console.log(`Skipping ${walletAddress} — beachMode not enabled`);
