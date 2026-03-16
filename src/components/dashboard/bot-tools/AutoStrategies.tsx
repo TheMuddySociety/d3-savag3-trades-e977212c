@@ -687,6 +687,8 @@ export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) =
         launchMinLiquidity: parseFloat(launchMinLiquidity),
         launchMaxAge: parseInt(launchMaxAge),
         launchAutoSellTimer: parseInt(launchAutoSellTimer),
+        safeExitStopLoss: parseFloat(safeExitStopLoss),
+        safeExitTakeProfit: parseFloat(safeExitTakeProfit),
       }, activeIds.length > 0);
 
       setTimeout(() => {
