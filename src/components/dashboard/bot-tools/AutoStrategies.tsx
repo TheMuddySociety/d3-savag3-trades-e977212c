@@ -85,6 +85,18 @@ export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) =
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
   const pendingPollRef = useRef<NodeJS.Timeout | null>(null);
 
+  // New Launch Hunter configurable parameters
+  const [launchMinLiquidity, setLaunchMinLiquidity] = useState("100");
+  const [launchMaxAge, setLaunchMaxAge] = useState("30");
+  const [launchAutoSellTimer, setLaunchAutoSellTimer] = useState("0");
+  const launchAutoSellTimers = useRef<Map<string, NodeJS.Timeout>>(new Map());
+  const launchMinLiqRef = useRef(launchMinLiquidity);
+  const launchMaxAgeRef = useRef(launchMaxAge);
+  const launchAutoSellTimerRef = useRef(launchAutoSellTimer);
+  launchMinLiqRef.current = launchMinLiquidity;
+  launchMaxAgeRef.current = launchMaxAge;
+  launchAutoSellTimerRef.current = launchAutoSellTimer;
+
   const addLog = useCallback((msg: string) => {
     const time = new Date().toLocaleTimeString();
     setStatusLog(prev => [`[${time}] ${msg}`, ...prev.slice(0, 39)]);
