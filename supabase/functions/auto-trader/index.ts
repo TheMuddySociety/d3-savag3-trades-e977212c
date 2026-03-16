@@ -219,7 +219,7 @@ serve(async (req) => {
 
             const candidates = launches.filter((t: any) => {
               const ageSeconds = t.pairCreatedAt ? Math.floor((now - t.pairCreatedAt) / 1000) : 999;
-              return ageSeconds <= 60 && (t.liquidity || 0) > 100 && !ownedMints.has(t.address);
+              return ageSeconds <= launchMaxAge && (t.liquidity || 0) >= launchMinLiquidity && !ownedMints.has(t.address);
             });
 
             if (candidates.length > 0) {

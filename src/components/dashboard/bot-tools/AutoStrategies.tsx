@@ -848,6 +848,53 @@ export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) =
               />
             </div>
             <p className="text-xs text-muted-foreground pl-6">{strategy.description}</p>
+
+            {/* New Launch Hunter configurable parameters */}
+            {strategy.id === "new_launch" && (
+              <div className="mt-2 pl-6 space-y-2">
+                <div className="grid grid-cols-3 gap-2">
+                  <div>
+                    <Label className="text-[10px] text-muted-foreground">Min Liquidity ($)</Label>
+                    <Input
+                      type="number"
+                      value={launchMinLiquidity}
+                      onChange={(e) => setLaunchMinLiquidity(e.target.value)}
+                      className="bg-muted/30 border-border text-xs h-7 mt-0.5"
+                      min="0"
+                      step="50"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-[10px] text-muted-foreground">Max Age (sec)</Label>
+                    <Input
+                      type="number"
+                      value={launchMaxAge}
+                      onChange={(e) => setLaunchMaxAge(e.target.value)}
+                      className="bg-muted/30 border-border text-xs h-7 mt-0.5"
+                      min="5"
+                      step="5"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-[10px] text-muted-foreground">Auto-Sell (sec)</Label>
+                    <Input
+                      type="number"
+                      value={launchAutoSellTimer}
+                      onChange={(e) => setLaunchAutoSellTimer(e.target.value)}
+                      className="bg-muted/30 border-border text-xs h-7 mt-0.5"
+                      min="0"
+                      step="10"
+                      placeholder="0 = off"
+                    />
+                  </div>
+                </div>
+                <p className="text-[10px] text-muted-foreground">
+                  {parseInt(launchAutoSellTimer) > 0
+                    ? `⏱️ Auto-sells ${launchAutoSellTimer}s after each snipe`
+                    : "Auto-sell disabled — relies on other strategies to exit"}
+                </p>
+              </div>
+            )}
           </div>
         ))}
       </div>
