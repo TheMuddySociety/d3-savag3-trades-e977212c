@@ -712,6 +712,9 @@ export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) =
       strategies: activeIds,
       maxBudget: parseFloat(maxBudget),
       beachMode: checked,
+      launchMinLiquidity: parseFloat(launchMinLiquidity),
+      launchMaxAge: parseInt(launchMaxAge),
+      launchAutoSellTimer: parseInt(launchAutoSellTimer),
     }, activeIds.length > 0);
     toast({
       title: checked ? "🏖️ Beach Mode ON" : "Beach Mode OFF",
