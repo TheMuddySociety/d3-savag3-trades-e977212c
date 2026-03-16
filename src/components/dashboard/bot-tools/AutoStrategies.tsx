@@ -474,10 +474,13 @@ export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) =
                 if (!entryPrice || h.price <= 0) continue;
                 const pnl = ((h.price - entryPrice) / entryPrice) * 100;
 
-                if (pnl <= -15) {
+                const stopLossThreshold = -parseFloat(safeExitStopLossRef.current || "15");
+                const takeProfitThreshold = parseFloat(safeExitTakeProfitRef.current || "50");
+
+                if (pnl <= stopLossThreshold) {
                   addLog(`🛡️ Stop-Loss triggered: ${h.symbol} at ${pnl.toFixed(1)}%`);
                   await executeLiveSell(h, "Stop-Loss");
-                } else if (pnl >= 50) {
+                } else if (pnl >= takeProfitThreshold) {
                   addLog(`🛡️ Take-Profit triggered: ${h.symbol} at +${pnl.toFixed(1)}%`);
                   await executeLiveSell(h, "Take-Profit");
                 } else {
