@@ -579,7 +579,10 @@ export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) =
             // ═══════════════════════════════════════
             case "new_launch": {
               const budget = parseFloat(maxBudgetRef.current) || 1.0;
-              addLog(`🔥 New Launch Hunter: Scanning for fresh Pump.fun launches (budget: ${budget} SOL)`);
+              const minLiq = parseFloat(launchMinLiqRef.current) || 100;
+              const maxAge = parseInt(launchMaxAgeRef.current) || 30;
+              const autoSellSec = parseInt(launchAutoSellTimerRef.current) || 0;
+              addLog(`🔥 Launch Hunter: Scanning (budget: ${budget} SOL, liq≥$${minLiq}, age≤${maxAge}s${autoSellSec > 0 ? `, auto-sell: ${autoSellSec}s` : ''})`);
 
               try {
                 const launches = await fetchNewLaunches();
@@ -588,22 +591,19 @@ export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) =
                   break;
                 }
 
-                // Filter: must be <30s old, have some liquidity, not already owned
                 const snipeCandidates = launches.filter(t => {
-                  const isFresh = t.ageSeconds <= 30;
-                  const hasLiquidity = t.liquidity > 100; // At least $100 liquidity
+                  const isFresh = t.ageSeconds <= maxAge;
+                  const hasLiquidity = t.liquidity >= minLiq;
                   const notOwned = !holdings.some(h => h.mint === t.mint);
                   return isFresh && hasLiquidity && notOwned;
                 });
 
                 if (snipeCandidates.length === 0) {
-                  // Log what we found even if too old
                   const newest = launches[0];
-                  addLog(`🔥 Newest: ${newest.symbol} (${newest.ageSeconds}s old, $${newest.liquidity.toFixed(0)} liq) — waiting for <30s`);
+                  addLog(`🔥 Newest: ${newest.symbol} (${newest.ageSeconds}s old, $${newest.liquidity.toFixed(0)} liq) — waiting for ≤${maxAge}s & ≥$${minLiq}`);
                   break;
                 }
 
-                // Snipe the freshest token
                 const target = snipeCandidates[0];
                 addLog(`🔥🎯 SNIPING: ${target.symbol} (${target.name}) — ${target.ageSeconds}s old, $${target.liquidity.toFixed(0)} liq, ${budget} SOL`);
                 
@@ -616,6 +616,23 @@ export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) =
 
                 if (success) {
                   addLog(`🔥✅ Sniped ${target.symbol} for ${budget} SOL!`);
+                  
+                  // Schedule auto-sell timer if configured
+                  if (autoSellSec > 0 && !launchAutoSellTimers.current.has(target.mint)) {
+                    addLog(`⏱️ Auto-sell timer set: ${target.symbol} in ${autoSellSec}s`);
+                    const timer = setTimeout(async () => {
+                      launchAutoSellTimers.current.delete(target.mint);
+                      addLog(`⏱️ Auto-sell timer fired for ${target.symbol} — fetching position...`);
+                      const currentHoldings = await fetchLiveHoldings();
+                      const position = currentHoldings.find(h => h.mint === target.mint);
+                      if (position && position.amount > 0) {
+                        await executeLiveSell(position, `⏱️ Auto-Sell Timer (${autoSellSec}s)`);
+                      } else {
+                        addLog(`⏱️ ${target.symbol} no longer in wallet — skipping auto-sell`);
+                      }
+                    }, autoSellSec * 1000);
+                    launchAutoSellTimers.current.set(target.mint, timer);
+                  }
                 }
               } catch (e: any) {
                 addLog(`🔥 Launch Hunter error: ${e.message}`);
