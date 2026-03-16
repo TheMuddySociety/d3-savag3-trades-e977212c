@@ -97,6 +97,14 @@ export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) =
   launchMaxAgeRef.current = launchMaxAge;
   launchAutoSellTimerRef.current = launchAutoSellTimer;
 
+  // Safe Exit configurable parameters
+  const [safeExitStopLoss, setSafeExitStopLoss] = useState("15");
+  const [safeExitTakeProfit, setSafeExitTakeProfit] = useState("50");
+  const safeExitStopLossRef = useRef(safeExitStopLoss);
+  const safeExitTakeProfitRef = useRef(safeExitTakeProfit);
+  safeExitStopLossRef.current = safeExitStopLoss;
+  safeExitTakeProfitRef.current = safeExitTakeProfit;
+
   const addLog = useCallback((msg: string) => {
     const time = new Date().toLocaleTimeString();
     setStatusLog(prev => [`[${time}] ${msg}`, ...prev.slice(0, 39)]);
