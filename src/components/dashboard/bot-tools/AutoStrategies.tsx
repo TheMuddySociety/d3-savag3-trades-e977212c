@@ -865,6 +865,41 @@ export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) =
             </div>
             <p className="text-xs text-muted-foreground pl-6">{strategy.description}</p>
 
+            {/* Safe Exit configurable parameters */}
+            {strategy.id === "safe_exit" && (
+              <div className="mt-2 pl-6 space-y-2">
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <Label className="text-[10px] text-muted-foreground">Stop-Loss %</Label>
+                    <Input
+                      type="number"
+                      value={safeExitStopLoss}
+                      onChange={(e) => setSafeExitStopLoss(e.target.value)}
+                      className="bg-muted/30 border-border text-xs h-7 mt-0.5"
+                      min="1"
+                      max="100"
+                      step="1"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-[10px] text-muted-foreground">Take-Profit %</Label>
+                    <Input
+                      type="number"
+                      value={safeExitTakeProfit}
+                      onChange={(e) => setSafeExitTakeProfit(e.target.value)}
+                      className="bg-muted/30 border-border text-xs h-7 mt-0.5"
+                      min="1"
+                      max="1000"
+                      step="5"
+                    />
+                  </div>
+                </div>
+                <p className="text-[10px] text-muted-foreground">
+                  Auto-sells on -{safeExitStopLoss}% loss or +{safeExitTakeProfit}% gain
+                </p>
+              </div>
+            )}
+
             {/* New Launch Hunter configurable parameters */}
             {strategy.id === "new_launch" && (
               <div className="mt-2 pl-6 space-y-2">
