@@ -51,7 +51,7 @@ const INITIAL_STRATEGIES: Strategy[] = [
   { id: "dip_buy", name: "Dip Buyer", description: "Auto-buys tokens that dip >20% then recover >3% from low", icon: <TrendingDown className="h-4 w-4" />, risk: "High", enabled: false },
   { id: "safe_exit", name: "Safe Exit", description: "Auto stop-loss at -15% and trailing take-profit at +50%", icon: <ShieldCheck className="h-4 w-4" />, risk: "Low", enabled: false },
   { id: "new_launch", name: "New Launch Hunter", description: "Snipes new tokens on Pump.fun within first 30s of launch", icon: <Flame className="h-4 w-4" />, risk: "High", enabled: false },
-  { id: "scalper", name: "Scalper", description: "Sell on 3% gain — auto-sells positions at target", icon: <Zap className="h-4 w-4" />, risk: "Medium", enabled: false },
+  { id: "scalper", name: "Scalper", description: "Auto-sells positions at custom profit target", icon: <Zap className="h-4 w-4" />, risk: "Medium", enabled: false },
   { id: "whale_follow", name: "Whale Follow", description: "Auto-copies top leaderboard wallets' trades", icon: <Users className="h-4 w-4" />, risk: "Medium", enabled: false },
 ];
 
