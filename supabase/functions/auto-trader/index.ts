@@ -130,7 +130,7 @@ serve(async (req) => {
             if (pnl <= -15) { shouldSell = true; reason = `Stop-Loss: ${h.symbol} at ${pnl.toFixed(1)}%`; }
             else if (pnl >= 50) { shouldSell = true; reason = `Take-Profit: ${h.symbol} at +${pnl.toFixed(1)}%`; }
           } else if (strategy === 'scalper') {
-            if (pnl >= 3) { shouldSell = true; reason = `Scalper: ${h.symbol} at +${pnl.toFixed(1)}%`; }
+            if (pnl >= scalperTarget) { shouldSell = true; reason = `Scalper: ${h.symbol} at +${pnl.toFixed(1)}% (target: +${scalperTarget}%)`; }
           } else if (strategy === 'momentum') {
             const peak = peakPriceMap.get(h.mint) || livePrice;
             const dropFromPeak = peak > 0 ? ((livePrice - peak) / peak) * 100 : 0;
