@@ -499,16 +499,17 @@ export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) =
             // SCALPER: sell on +3% gain
             // ═══════════════════════════════════════
             case "scalper": {
+              const scalperThreshold = parseFloat(scalperTargetRef.current || "3");
               for (const h of holdings) {
                 const entryPrice = entryPriceMap.get(h.mint);
                 if (!entryPrice || h.price <= 0) continue;
                 const pnl = ((h.price - entryPrice) / entryPrice) * 100;
 
-                if (pnl >= 3) {
+                if (pnl >= scalperThreshold) {
                   addLog(`⚡ Scalper triggered: ${h.symbol} at +${pnl.toFixed(1)}%`);
                   await executeLiveSell(h, "Scalper");
                 } else {
-                  addLog(`⚡ ${h.symbol}: ${pnl >= 0 ? '+' : ''}${pnl.toFixed(1)}% (target: +3%)`);
+                  addLog(`⚡ ${h.symbol}: ${pnl >= 0 ? '+' : ''}${pnl.toFixed(1)}% (target: +${scalperThreshold}%)`);
                 }
               }
               break;
