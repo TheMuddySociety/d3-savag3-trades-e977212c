@@ -698,7 +698,7 @@ export const AutoStrategies = ({ killSignal = 0 }: Props) => {
     }
   }, [wallet.publicKey]);
 
-
+  const proceedToggle = (id: string) => {
     setStrategies((prev) => {
       const updated = prev.map((s) => s.id === id ? { ...s, enabled: !s.enabled } : s);
       const target = updated.find(s => s.id === id);
