@@ -68,7 +68,7 @@ interface Props {
 // In-memory peak price tracking (updated each cycle)
 const peakPrices = new Map<string, number>();
 
-export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) => {
+export const AutoStrategies = ({ killSignal = 0 }: Props) => {
   const { toast } = useToast();
   const wallet = useWallet();
   const { connection } = useConnection();
