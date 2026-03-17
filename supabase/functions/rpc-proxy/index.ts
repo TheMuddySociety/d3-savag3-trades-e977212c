@@ -11,15 +11,19 @@ serve(async (req) => {
   }
 
   try {
-    const heliusKey = Deno.env.get("HELIUS_API_KEY");
-    if (!heliusKey) {
-      return new Response(JSON.stringify({ error: "RPC not configured" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    let heliusKey = Deno.env.get("HELIUS_API_KEY");
+    
+    // Check if key is missing or is the placeholder from template
+    const isInvalidKey = !heliusKey || heliusKey.includes("REPLACE") || heliusKey.length < 10;
+    
+    let rpcUrl: string;
+    if (isInvalidKey) {
+      console.warn("HELIUS_API_KEY is missing or invalid. Falling back to public RPC.");
+      rpcUrl = "https://api.mainnet-beta.solana.com";
+    } else {
+      rpcUrl = `https://mainnet.helius-rpc.com/?api-key=${heliusKey}`;
     }
 
-    const rpcUrl = `https://mainnet.helius-rpc.com/?api-key=${heliusKey}`;
     const body = await req.text();
 
     const rpcRes = await fetch(rpcUrl, {
@@ -27,6 +31,21 @@ serve(async (req) => {
       headers: { "Content-Type": "application/json" },
       body,
     });
+
+    // If Helius returns 403/401, try falling back to public RPC as a last resort
+    if ((rpcRes.status === 403 || rpcRes.status === 401) && !isInvalidKey) {
+      console.error(`Helius returned ${rpcRes.status}. Attempting public RPC fallback.`);
+      const fallbackRes = await fetch("https://api.mainnet-beta.solana.com", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body,
+      });
+      const fallbackData = await fallbackRes.text();
+      return new Response(fallbackData, {
+        status: fallbackRes.status,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     const data = await rpcRes.text();
 

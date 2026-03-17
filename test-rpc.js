@@ -1,16 +1,19 @@
+
 import { Connection } from '@solana/web3.js';
 
-async function testRPC() {
-  const rpc = 'https://beta.helius-rpc.com/?api-key=251ce93e-be5b-4d6e-9c96-a9805fae66de';
-  const connection = new Connection(rpc);
-  
+async function testRpc() {
+  const RPC_URL = "https://api.mainnet-beta.solana.com";
+  console.log(`Testing RPC: ${RPC_URL}`);
+  const connection = new Connection(RPC_URL);
   try {
-    console.log(`Testing RPC: ${rpc}`);
-    const slot = await connection.getSlot();
-    console.log(`Successfully connected! Current slot: ${slot}`);
-  } catch (err) {
-    console.error(`RPC Connection FAILED: ${err.message}`);
+    const { blockhash } = await connection.getLatestBlockhash();
+    console.log(`Success! Blockhash: ${blockhash}`);
+  } catch (e) {
+    console.error(`Error: ${e.message}`);
+    if (e.response) {
+      console.error(`Response: ${JSON.stringify(e.response)}`);
+    }
   }
 }
 
-testRPC();
+testRpc();

@@ -12,15 +12,31 @@ serve(async (req: Request) => {
 
   try {
     const heliusKey = (globalThis as any).Deno.env.get("HELIUS_API_KEY");
+    const isInvalidKey = !heliusKey || heliusKey.includes("REPLACE") || heliusKey.length < 10;
     const body = await req.json();
     const { action } = body;
 
     if (action === "rpc") {
-      const resp = await fetch(`https://beta.helius-rpc.com/?api-key=${heliusKey}`, {
+      let rpcUrl = `https://beta.helius-rpc.com/?api-key=${heliusKey}`;
+      if (isInvalidKey) {
+        rpcUrl = "https://api.mainnet-beta.solana.com";
+      }
+
+      let resp = await fetch(rpcUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body.rpcBody),
       });
+
+      // Fallback if Helius fails
+      if ((resp.status === 403 || resp.status === 401) && !isInvalidKey) {
+        resp = await fetch("https://api.mainnet-beta.solana.com", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body.rpcBody),
+        });
+      }
+
       const data = await resp.json();
       return new Response(JSON.stringify(data), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
