@@ -62,8 +62,6 @@ const riskColors: Record<string, string> = {
 };
 
 interface Props {
-  sim: any;
-  isLive?: boolean;
   killSignal?: number;
 }
 
