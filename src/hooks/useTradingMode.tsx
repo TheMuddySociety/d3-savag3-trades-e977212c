@@ -4,10 +4,11 @@ import { useToast } from "@/hooks/use-toast";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Connection, PublicKey, SystemProgram, Transaction } from "@solana/web3.js";
+import { PLATFORM_CONFIG } from "@/config/platform";
 
-const PLATFORM_WALLET = "ETz1CboRkEJZDZcstd6bjHtjhRsydHQNHPEYMuhcYK2Z";
+const PLATFORM_WALLET = PLATFORM_CONFIG.WALLET_ADDRESS;
 const FEE_FREE_COST = 0.1; // SOL
-const RPC_URL = "https://api.mainnet-beta.solana.com";
+const RPC_URL = PLATFORM_CONFIG.RPC_URL;
 
 interface TradingModeContextType {
   isLive: boolean;

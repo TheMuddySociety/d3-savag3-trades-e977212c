@@ -11,10 +11,11 @@ import { useToast } from "@/hooks/use-toast";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { Connection, PublicKey, SystemProgram, Transaction } from "@solana/web3.js";
 import { supabase } from "@/integrations/supabase/client";
+import { PLATFORM_CONFIG } from "@/config/platform";
 
-const PLATFORM_WALLET = "ETz1CboRkEJZDZcstd6bjHtjhRsydHQNHPEYMuhcYK2Z";
-const RPC_URL = "https://api.mainnet-beta.solana.com";
-const USDC_MINT = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
+const PLATFORM_WALLET = PLATFORM_CONFIG.WALLET_ADDRESS;
+const RPC_URL = PLATFORM_CONFIG.RPC_URL;
+const USDC_MINT = PLATFORM_CONFIG.USDC_MINT;
 
 interface Budget {
   id: string;

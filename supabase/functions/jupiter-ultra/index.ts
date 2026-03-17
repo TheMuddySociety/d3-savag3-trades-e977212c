@@ -7,13 +7,13 @@ const corsHeaders = {
 
 const ULTRA_API_BASE = "https://api.jup.ag/ultra/v1";
 
-serve(async (req) => {
+serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const jupiterApiKey = Deno.env.get("JUPITER_API_KEY");
+    const jupiterApiKey = (globalThis as any).Deno.env.get("JUPITER_API_KEY");
     const body = await req.json();
     const { action } = body;
 
@@ -64,7 +64,7 @@ serve(async (req) => {
 
       if (useHelius) {
         console.log("Executing via Helius Sender, requestId:", requestId);
-        const heliusKey = Deno.env.get("HELIUS_API_KEY") || "251ce93e-be5b-4d6e-9c96-a9805fae66de";
+        const heliusKey = (globalThis as any).Deno.env.get("HELIUS_API_KEY");
         const res = await fetch(`https://sender.helius-rpc.com/fast?api-key=${heliusKey}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -147,7 +147,7 @@ serve(async (req) => {
       status: 400,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-  } catch (err) {
+  } catch (err: any) {
     console.error("jupiter-ultra error:", err);
     return new Response(JSON.stringify({ error: err.message }), {
       status: 500,

@@ -5,8 +5,7 @@ import { Wallet } from '@project-serum/anchor';
 import bs58 from 'bs58';
 
 // It is recommended that you use your own RPC endpoint.
-// This RPC endpoint is only for demonstration purposes so that this example will run.
-const connection = new Connection('https://beta.helius-rpc.com/?api-key=251ce93e-be5b-4d6e-9c96-a9805fae66de');
+const connection = new Connection('https://mainnet.helius-rpc.com/?api-key=REPLACE_WITH_YOUR_KEY');
 
 // Create a Solana wallet from a private key (for demo purposes)
 // In production, you'd use a real wallet adapter
@@ -17,7 +16,7 @@ const createKeypairFromPrivateKey = (privateKey) => {
 // WARNING: Never hardcode private keys in production code or share them!
 // This is only for demonstration purposes. Use environment variables for safety.
 const DEMO_WALLET = {
-  privateKey: "3mwvJ4MoANBCM8L8ANbXk26UnrAyyzjr9vTduUjnQe9pXWevM593CF8e7X7nFVt9Bcj4ksANCFkdEjq1BEqk6rbG",
+  privateKey: "REPLACE_WITH_YOUR_PRIVATE_KEY",
 };
 
 // Jupiter API routes

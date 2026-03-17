@@ -10,9 +10,7 @@ import {
   LAMPORTS_PER_SOL
 } from '@solana/web3.js';
 
-const API_KEY = '251ce93e-be5b-4d6e-9c96-a9805fae66de';
-const RPC_URL = `https://beta.helius-rpc.com/?api-key=${API_KEY}`;
-const SENDER_URL = 'https://sender.helius-rpc.com/fast';
+import { supabase } from '@/integrations/supabase/client';
 
 const TIP_ACCOUNTS = [
   "4ACfpUFoaSD9bfPdeu6DBt89gB6ENTeHBXCAi87NhDEE",
@@ -38,22 +36,23 @@ export class HeliusSender {
     accountKeys?: string[]
   ): Promise<number> {
     try {
-      const response = await fetch(RPC_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          jsonrpc: '2.0',
-          id: 'helius-fee',
-          method: 'getPriorityFeeEstimate',
-          params: [{
-            ...(accountKeys ? { accountKeys } : {}),
-            options: { priorityLevel }
-          }]
-        })
+      const { data, error } = await supabase.functions.invoke('helius-proxy', {
+        body: { 
+          action: 'rpc', 
+          rpcBody: {
+            jsonrpc: '2.0',
+            id: 'helius-fee',
+            method: 'getPriorityFeeEstimate',
+            params: [{
+              ...(accountKeys ? { accountKeys } : {}),
+              options: { priorityLevel }
+            }]
+          }
+        }
       });
 
-      const { result } = await response.json();
-      return result?.priorityFeeEstimate || 0;
+      if (error) throw new Error(error.message);
+      return data?.result?.priorityFeeEstimate || 0;
     } catch (error) {
       console.error('Error fetching priority fee:', error);
       return 0;
@@ -68,29 +67,28 @@ export class HeliusSender {
     encoding: 'base64' | 'base58' = 'base64'
   ): Promise<string | null> {
     try {
-      const response = await fetch(SENDER_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          jsonrpc: '2.0',
-          id: `helius-send-${Date.now()}`,
-          method: 'sendTransaction',
-          params: [
-            serializedTx,
-            {
-              encoding,
-              skipPreflight: true,
-              maxRetries: 0
-            }
-          ]
-        })
+      const { data, error } = await supabase.functions.invoke('helius-proxy', {
+        body: {
+          action: 'send',
+          rpcBody: {
+            jsonrpc: '2.0',
+            id: `helius-send-${Date.now()}`,
+            method: 'sendTransaction',
+            params: [
+              serializedTx,
+              {
+                encoding,
+                skipPreflight: true,
+                maxRetries: 0
+              }
+            ]
+          }
+        }
       });
 
-      const json = await response.json();
-      if (json.error) {
-        throw new Error(json.error.message);
-      }
-      return json.result;
+      if (error) throw new Error(error.message);
+      if (data?.error) throw new Error(data.error.message);
+      return data?.result;
     } catch (error) {
       console.error('Error sending transaction via Helius Sender:', error);
       return null;

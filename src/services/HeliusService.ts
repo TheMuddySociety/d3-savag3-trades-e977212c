@@ -1,8 +1,7 @@
 
 import { toast } from 'sonner';
 
-const API_KEY = '251ce93e-be5b-4d6e-9c96-a9805fae66de';
-const BASE_URL = 'https://api.helius.xyz/v0'; // Standard Helius base
+import { supabase } from '@/integrations/supabase/client';
 
 export interface HeliusTransaction {
   description: string;
@@ -36,15 +35,11 @@ export class HeliusService {
    */
   static async getTransactionHistory(address: string, limit: number = 20): Promise<HeliusTransaction[]> {
     try {
-      console.log(`Fetching history for ${address} from Helius...`);
-      const url = `${BASE_URL}/addresses/${address}/transactions?api-key=${API_KEY}`;
+      const { data, error } = await supabase.functions.invoke('helius-proxy', {
+        body: { action: 'history', address, limit }
+      });
       
-      const response = await fetch(url);
-      if (!response.ok) {
-        throw new Error(`Helius API error: ${response.status} ${response.statusText}`);
-      }
-
-      const data = await response.json();
+      if (error) throw new Error(error.message);
       return data as HeliusTransaction[];
     } catch (error) {
       console.error('Error fetching Helius history:', error);
@@ -58,18 +53,11 @@ export class HeliusService {
    */
   static async parseTransactions(signatures: string[]): Promise<HeliusTransaction[]> {
     try {
-      const url = `${BASE_URL}/transactions?api-key=${API_KEY}`;
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ transactions: signatures }),
+      const { data, error } = await supabase.functions.invoke('helius-proxy', {
+        body: { action: 'parse', transactions: signatures }
       });
 
-      if (!response.ok) {
-        throw new Error(`Helius API error: ${response.status} ${response.statusText}`);
-      }
-
-      const data = await response.json();
+      if (error) throw new Error(error.message);
       return data as HeliusTransaction[];
     } catch (error) {
       console.error('Error parsing transactions with Helius:', error);

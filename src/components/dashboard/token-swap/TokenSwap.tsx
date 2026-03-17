@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 // @ts-ignore - CSS module lacks type declarations
 import "@jup-ag/plugin/css";
 import { loadJupiterPluginScript } from '@/utils/loadJupiterPlugin';
+import { PLATFORM_CONFIG } from "@/config/platform";
 
 export function TokenSwap() {
   useEffect(() => {
@@ -18,9 +19,9 @@ export function TokenSwap() {
           formProps: {
             initialAmount: "100",
             swapMode: "ExactInOrOut",
-            initialInputMint: "So11111111111111111111111111111111111111112",
-            initialOutputMint: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
-            referralAccount: "ETz1CboRkEJZDZcstd6bjHtjhRsydHQNHPEYMuhcYK2Z",
+            initialInputMint: PLATFORM_CONFIG.SOL_MINT,
+            initialOutputMint: PLATFORM_CONFIG.USDC_MINT,
+            referralAccount: PLATFORM_CONFIG.WALLET_ADDRESS,
             referralFee: 50,
           },
           branding: {
