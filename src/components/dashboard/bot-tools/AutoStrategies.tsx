@@ -105,6 +105,11 @@ export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) =
   safeExitStopLossRef.current = safeExitStopLoss;
   safeExitTakeProfitRef.current = safeExitTakeProfit;
 
+  // Scalper configurable parameters
+  const [scalperTarget, setScalperTarget] = useState("3");
+  const scalperTargetRef = useRef(scalperTarget);
+  scalperTargetRef.current = scalperTarget;
+
   const addLog = useCallback((msg: string) => {
     const time = new Date().toLocaleTimeString();
     setStatusLog(prev => [`[${time}] ${msg}`, ...prev.slice(0, 39)]);
