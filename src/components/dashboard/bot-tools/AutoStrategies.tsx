@@ -704,7 +704,7 @@ export const AutoStrategies = ({ killSignal = 0 }: Props) => {
       const target = updated.find(s => s.id === id);
       const activeIds = updated.filter(s => s.enabled).map(s => s.id);
 
-      sim.saveBotConfig('auto', {
+      saveBotConfig('auto', {
         strategies: activeIds,
         maxBudget: parseFloat(maxBudget),
         beachMode,
