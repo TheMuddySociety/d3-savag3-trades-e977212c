@@ -677,8 +677,28 @@ export const AutoStrategies = ({ killSignal = 0 }: Props) => {
     pollingRef.current = setInterval(evaluateStrategies, hasLaunchHunter ? 10000 : 15000);
     return () => { if (pollingRef.current) { clearInterval(pollingRef.current); pollingRef.current = null; } };
   }, [activeStrategyKey, wallet.publicKey, fetchLiveHoldings, executeLiveSell, executeLiveBuy, addLog, recordEntryPrices, updatePeakPrices, fetchTrendingForDips, fetchNewLaunches]);
+  const saveBotConfig = useCallback(async (botType: string, config: Record<string, unknown>, isActive: boolean) => {
+    if (!wallet.publicKey) return;
+    const walletAddr = wallet.publicKey.toBase58();
+    try {
+      const { data: existing } = await (supabase.from('sim_bot_configs' as any).select('id') as any)
+        .eq('wallet_address', walletAddr)
+        .eq('bot_type', botType)
+        .maybeSingle();
+      if (existing) {
+        await (supabase.from('sim_bot_configs' as any) as any)
+          .update({ config, is_active: isActive, updated_at: new Date().toISOString() })
+          .eq('id', existing.id);
+      } else {
+        await (supabase.from('sim_bot_configs' as any) as any)
+          .insert({ wallet_address: walletAddr, bot_type: botType, config, is_active: isActive });
+      }
+    } catch (err: any) {
+      console.error('Save bot config error:', err);
+    }
+  }, [wallet.publicKey]);
 
-  const proceedToggle = (id: string) => {
+
     setStrategies((prev) => {
       const updated = prev.map((s) => s.id === id ? { ...s, enabled: !s.enabled } : s);
       const target = updated.find(s => s.id === id);
