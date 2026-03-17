@@ -62,15 +62,13 @@ const riskColors: Record<string, string> = {
 };
 
 interface Props {
-  sim: any;
-  isLive?: boolean;
   killSignal?: number;
 }
 
 // In-memory peak price tracking (updated each cycle)
 const peakPrices = new Map<string, number>();
 
-export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) => {
+export const AutoStrategies = ({ killSignal = 0 }: Props) => {
   const { toast } = useToast();
   const wallet = useWallet();
   const { connection } = useConnection();
@@ -679,6 +677,26 @@ export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) =
     pollingRef.current = setInterval(evaluateStrategies, hasLaunchHunter ? 10000 : 15000);
     return () => { if (pollingRef.current) { clearInterval(pollingRef.current); pollingRef.current = null; } };
   }, [activeStrategyKey, wallet.publicKey, fetchLiveHoldings, executeLiveSell, executeLiveBuy, addLog, recordEntryPrices, updatePeakPrices, fetchTrendingForDips, fetchNewLaunches]);
+  const saveBotConfig = useCallback(async (botType: string, config: Record<string, unknown>, isActive: boolean) => {
+    if (!wallet.publicKey) return;
+    const walletAddr = wallet.publicKey.toBase58();
+    try {
+      const { data: existing } = await (supabase.from('sim_bot_configs' as any).select('id') as any)
+        .eq('wallet_address', walletAddr)
+        .eq('bot_type', botType)
+        .maybeSingle();
+      if (existing) {
+        await (supabase.from('sim_bot_configs' as any) as any)
+          .update({ config, is_active: isActive, updated_at: new Date().toISOString() })
+          .eq('id', existing.id);
+      } else {
+        await (supabase.from('sim_bot_configs' as any) as any)
+          .insert({ wallet_address: walletAddr, bot_type: botType, config, is_active: isActive });
+      }
+    } catch (err: any) {
+      console.error('Save bot config error:', err);
+    }
+  }, [wallet.publicKey]);
 
   const proceedToggle = (id: string) => {
     setStrategies((prev) => {
@@ -686,7 +704,7 @@ export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) =
       const target = updated.find(s => s.id === id);
       const activeIds = updated.filter(s => s.enabled).map(s => s.id);
 
-      sim.saveBotConfig('auto', {
+      saveBotConfig('auto', {
         strategies: activeIds,
         maxBudget: parseFloat(maxBudget),
         beachMode,
@@ -731,7 +749,7 @@ export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) =
   const handleBeachMode = (checked: boolean) => {
     setBeachMode(checked);
     const activeIds = strategies.filter(s => s.enabled).map(s => s.id);
-    sim.saveBotConfig('auto', {
+    saveBotConfig('auto', {
       strategies: activeIds,
       maxBudget: parseFloat(maxBudget),
       beachMode: checked,

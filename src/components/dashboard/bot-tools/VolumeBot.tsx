@@ -15,12 +15,10 @@ import { isValidSolanaAddress } from "@/utils/validateSolanaAddress";
 const SOL_MINT = "So11111111111111111111111111111111111111112";
 
 interface Props {
-  sim: any;
-  isLive?: boolean;
   killSignal?: number;
 }
 
-export const VolumeBot = ({ sim, isLive = false, killSignal = 0 }: Props) => {
+export const VolumeBot = ({ killSignal = 0 }: Props) => {
   const { toast } = useToast();
   const wallet = useWallet();
   const { connection } = useConnection();
@@ -31,6 +29,7 @@ export const VolumeBot = ({ sim, isLive = false, killSignal = 0 }: Props) => {
   const [txPerMinute, setTxPerMinute] = useState([3]);
   const [txCount, setTxCount] = useState(0);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const volumeInterval = useRef<NodeJS.Timeout | null>(null);
   const isExecutingRef = useRef(false);
   const countRef = useRef(0);
@@ -39,7 +38,6 @@ export const VolumeBot = ({ sim, isLive = false, killSignal = 0 }: Props) => {
     return () => { if (volumeInterval.current) clearInterval(volumeInterval.current); };
   }, []);
 
-  // Kill switch listener
   useEffect(() => {
     if (killSignal > 0) {
       setIsRunning(false);
@@ -60,20 +58,11 @@ export const VolumeBot = ({ sim, isLive = false, killSignal = 0 }: Props) => {
 
       try {
         const isBuy = countRef.current % 2 === 0;
-
-        if (isLive) {
-          const lamports = Math.round(parseFloat(solPerTx) * 1e9);
-          if (isBuy) {
-            await JupiterTransactionService.swapTokens(connection, wallet, SOL_MINT, tokenAddress, lamports, 300);
-          } else {
-            await JupiterTransactionService.swapTokens(connection, wallet, tokenAddress, SOL_MINT, lamports, 300);
-          }
+        const lamports = Math.round(parseFloat(solPerTx) * 1e9);
+        if (isBuy) {
+          await JupiterTransactionService.swapTokens(connection, wallet, SOL_MINT, tokenAddress, lamports, 300);
         } else {
-          if (isBuy) {
-            await sim.simulateBuy(tokenAddress, tokenSymbol || tokenAddress.slice(0, 6), parseFloat(solPerTx), 'volume');
-          } else {
-            await sim.simulateSell(tokenAddress, tokenSymbol || tokenAddress.slice(0, 6), 50, 'volume');
-          }
+          await JupiterTransactionService.swapTokens(connection, wallet, tokenAddress, SOL_MINT, lamports, 300);
         }
 
         countRef.current++;
@@ -85,7 +74,7 @@ export const VolumeBot = ({ sim, isLive = false, killSignal = 0 }: Props) => {
 
     executeVolumeTx();
     volumeInterval.current = setInterval(executeVolumeTx, intervalMs);
-    toast({ title: "Volume Bot Started", description: `${isLive ? "LIVE" : "Paper"} — Running on ${tokenSymbol || tokenAddress.slice(0, 8)}` });
+    toast({ title: "Volume Bot Started", description: `LIVE — Running on ${tokenSymbol || tokenAddress.slice(0, 8)}` });
   };
 
   const startVolumeBot = () => {
@@ -97,16 +86,11 @@ export const VolumeBot = ({ sim, isLive = false, killSignal = 0 }: Props) => {
       toast({ title: "Invalid address", description: "Enter a valid Solana token mint address", variant: "destructive" });
       return;
     }
-    if (isLive && !wallet.publicKey) {
+    if (!wallet.publicKey) {
       toast({ title: "Wallet not connected", description: "Connect wallet for live trading", variant: "destructive" });
       return;
     }
-
-    if (isLive) {
-      setShowConfirm(true);
-    } else {
-      proceedStart();
-    }
+    setShowConfirm(true);
   };
 
   const stopVolumeBot = () => {
@@ -139,8 +123,8 @@ export const VolumeBot = ({ sim, isLive = false, killSignal = 0 }: Props) => {
           <span className="text-sm font-medium text-foreground">Volume Bot</span>
         </div>
         {isRunning && (
-          <Badge className={`${isLive ? "bg-destructive/20 text-destructive border-destructive/30" : "bg-accent/20 text-accent border-accent/30"} animate-pulse`}>
-            {isLive ? `🔴 ${txCount} txs` : `${txCount} txs`}
+          <Badge className="bg-destructive/20 text-destructive border-destructive/30 animate-pulse">
+            🔴 {txCount} txs
           </Badge>
         )}
       </div>
@@ -177,24 +161,22 @@ export const VolumeBot = ({ sim, isLive = false, killSignal = 0 }: Props) => {
           </div>
         </div>
 
-        {isLive && !isRunning && (
-          <div className="p-2 rounded-lg bg-destructive/10 border border-destructive/30">
-            <p className="text-[11px] text-destructive font-medium">⚠️ LIVE MODE — Real SOL will be spent. Transactions are irreversible.</p>
-          </div>
-        )}
+        <div className="p-2 rounded-lg bg-destructive/10 border border-destructive/30">
+          <p className="text-[11px] text-destructive font-medium">⚠️ LIVE MODE — Real SOL will be spent. Transactions are irreversible.</p>
+        </div>
 
         <Button
           onClick={handleToggle}
-          disabled={sim.isLoading}
-          className={`w-full ${isRunning ? 'bg-destructive hover:bg-destructive/90 text-destructive-foreground' : isLive ? 'bg-destructive hover:bg-destructive/90 text-destructive-foreground' : 'bg-accent hover:bg-accent/90 text-accent-foreground'}`}
+          disabled={isLoading}
+          className={`w-full ${isRunning ? 'bg-destructive hover:bg-destructive/90' : 'bg-destructive hover:bg-destructive/90'} text-destructive-foreground`}
           size="sm"
         >
-          {sim.isLoading ? (
+          {isLoading ? (
             <><div className="animate-spin rounded-full h-3 w-3 border-b-2 border-current mr-2" /> Processing...</>
           ) : isRunning ? (
             <><Pause className="h-4 w-4 mr-2" /> Stop Volume Bot</>
           ) : (
-            <><Play className="h-4 w-4 mr-2" /> Start Volume Bot {isLive ? "(LIVE)" : "(Paper)"}</>
+            <><Play className="h-4 w-4 mr-2" /> Start Volume Bot (LIVE)</>
           )}
         </Button>
       </div>

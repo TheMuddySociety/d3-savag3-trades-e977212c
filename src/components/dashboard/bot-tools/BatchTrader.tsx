@@ -5,12 +5,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
-import { Layers, Play, DollarSign, X, Loader2 } from "lucide-react";
+import { Layers, Play, DollarSign, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { isValidSolanaAddress } from "@/utils/validateSolanaAddress";
 import { LiveTradeConfirmDialog } from "./LiveTradeConfirmDialog";
 import { JupiterTransactionService } from "@/services/jupiter/transactions";
 import { useWallet } from "@solana/wallet-adapter-react";
+import { useWalletPortfolio } from "@/hooks/useWalletPortfolio";
 import { Connection } from "@solana/web3.js";
 
 const SOL_MINT = "So11111111111111111111111111111111111111112";
@@ -18,8 +19,6 @@ const RPC_URL = "https://api.mainnet-beta.solana.com";
 const BATCH_SIZE = 5;
 
 interface Props {
-  sim: any;
-  isLive?: boolean;
   killSignal?: number;
 }
 
@@ -29,9 +28,11 @@ interface TokenResult {
   message?: string;
 }
 
-export const BatchTrader = ({ sim, isLive = false, killSignal = 0 }: Props) => {
+export const BatchTrader = ({ killSignal = 0 }: Props) => {
   const { toast } = useToast();
   const wallet = useWallet();
+  const walletAddress = wallet.publicKey?.toBase58() || null;
+  const { portfolio } = useWalletPortfolio(walletAddress);
   const [addresses, setAddresses] = useState("");
   const [solPerToken, setSolPerToken] = useState("0.1");
   const [isRunning, setIsRunning] = useState(false);
@@ -76,6 +77,11 @@ export const BatchTrader = ({ sim, isLive = false, killSignal = 0 }: Props) => {
       return;
     }
 
+    if (!wallet.publicKey || !wallet.signTransaction) {
+      toast({ title: "Wallet not connected", variant: "destructive" });
+      return;
+    }
+
     killedRef.current = false;
     setIsRunning(true);
     setProgress(0);
@@ -92,19 +98,13 @@ export const BatchTrader = ({ sim, isLive = false, killSignal = 0 }: Props) => {
         batch.map(async (tokenAddress) => {
           if (killedRef.current) return;
           try {
-            if (isLive && wallet.publicKey && wallet.signTransaction) {
-              const connection = new Connection(RPC_URL);
-              const lamports = Math.floor(sol * 1e9);
-              const txid = await JupiterTransactionService.swapTokens(
-                connection, wallet, SOL_MINT, tokenAddress, lamports, 300, undefined, "high"
-              );
-              if (!txid) throw new Error("Swap failed");
-              setResults(prev => prev.map(r => r.address === tokenAddress ? { ...r, status: "success", message: txid.slice(0, 8) } : r));
-            } else {
-              const result = await sim.simulateBuy(tokenAddress, tokenAddress.slice(0, 6), sol, "batch");
-              if (!result) throw new Error("Sim buy failed");
-              setResults(prev => prev.map(r => r.address === tokenAddress ? { ...r, status: "success", message: `${result.token_amount.toFixed(2)} tokens` } : r));
-            }
+            const connection = new Connection(RPC_URL);
+            const lamports = Math.floor(sol * 1e9);
+            const txid = await JupiterTransactionService.swapTokens(
+              connection, wallet, SOL_MINT, tokenAddress, lamports, 300, undefined, "high"
+            );
+            if (!txid) throw new Error("Swap failed");
+            setResults(prev => prev.map(r => r.address === tokenAddress ? { ...r, status: "success", message: txid.slice(0, 8) } : r));
           } catch (e: any) {
             setResults(prev => prev.map(r => r.address === tokenAddress ? { ...r, status: "error", message: e.message } : r));
           }
@@ -115,63 +115,64 @@ export const BatchTrader = ({ sim, isLive = false, killSignal = 0 }: Props) => {
     }
 
     setIsRunning(false);
-    const successCount = validTokens.length - results.filter(r => r.status === "error").length;
     toast({ title: `🎯 Batch Buy Complete`, description: `${completed}/${validTokens.length} tokens processed` });
-  }, [parseAddresses, solPerToken, isLive, wallet, sim, toast]);
+  }, [parseAddresses, solPerToken, wallet, toast]);
 
   const executeBatchSell = useCallback(async () => {
-    if (!sim.holdings || sim.holdings.length === 0) {
+    const holdings = portfolio?.tokens || [];
+    if (holdings.length === 0) {
       toast({ title: "No holdings to sell", variant: "destructive" });
+      return;
+    }
+
+    if (!wallet.publicKey || !wallet.signTransaction) {
+      toast({ title: "Wallet not connected", variant: "destructive" });
       return;
     }
 
     killedRef.current = false;
     setIsRunning(true);
     setProgress(0);
-    const holdingsToSell = sim.holdings;
     let completed = 0;
 
-    for (let i = 0; i < holdingsToSell.length; i += BATCH_SIZE) {
+    for (let i = 0; i < holdings.length; i += BATCH_SIZE) {
       if (killedRef.current) break;
-      const batch = holdingsToSell.slice(i, i + BATCH_SIZE);
+      const batch = holdings.slice(i, i + BATCH_SIZE);
 
       await Promise.allSettled(
-        batch.map(async (holding: any) => {
+        batch.map(async (holding) => {
           if (killedRef.current) return;
           try {
-            if (isLive && wallet.publicKey && wallet.signTransaction) {
-              const connection = new Connection(RPC_URL);
-              const lamports = Math.floor(holding.amount * 1e9);
-              await JupiterTransactionService.swapTokens(
-                connection, wallet, holding.token_address, SOL_MINT, lamports, 300, undefined, "high"
-              );
-            } else {
-              await sim.simulateSell(holding.token_address, holding.token_symbol || "UNK", 100, "batch");
-            }
+            const connection = new Connection(RPC_URL);
+            const lamports = Math.floor(holding.amount * Math.pow(10, holding.decimals));
+            await JupiterTransactionService.swapTokens(
+              connection, wallet, holding.mint, SOL_MINT, lamports, 300, undefined, "high"
+            );
           } catch (e) {
             console.error("Batch sell error:", e);
           }
           completed++;
-          setProgress((completed / holdingsToSell.length) * 100);
+          setProgress((completed / holdings.length) * 100);
         })
       );
     }
 
     setIsRunning(false);
     toast({ title: "💰 Batch Sell Complete", description: `Sold ${completed} positions` });
-  }, [sim, isLive, wallet, toast]);
+  }, [portfolio, wallet, toast]);
 
   const handleAction = (action: "buy" | "sell") => {
-    if (isLive) {
-      setPendingAction(action);
-      setShowConfirm(true);
-    } else {
-      action === "buy" ? executeBatchBuy() : executeBatchSell();
+    if (!wallet.publicKey) {
+      toast({ title: "Wallet not connected", description: "Connect wallet for live trading", variant: "destructive" });
+      return;
     }
+    setPendingAction(action);
+    setShowConfirm(true);
   };
 
   const tokens = parseAddresses();
   const totalSol = tokens.length * parseFloat(solPerToken || "0");
+  const holdingsCount = portfolio?.tokens?.length || 0;
 
   return (
     <div className="space-y-4">
@@ -185,7 +186,7 @@ export const BatchTrader = ({ sim, isLive = false, killSignal = 0 }: Props) => {
         }}
         onCancel={() => { setShowConfirm(false); setPendingAction(null); }}
         action={pendingAction === "buy" ? "Batch Buy" : "Batch Sell All"}
-        tokenSymbol={`${tokens.length} tokens`}
+        tokenSymbol={pendingAction === "buy" ? `${tokens.length} tokens` : `${holdingsCount} holdings`}
         solAmount={totalSol}
       />
 
@@ -224,11 +225,9 @@ export const BatchTrader = ({ sim, isLive = false, killSignal = 0 }: Props) => {
         <span className="text-[10px] text-muted-foreground">Total: {isNaN(totalSol) ? 0 : totalSol.toFixed(4)} SOL</span>
       </div>
 
-      {isLive && (
-        <div className="p-2 rounded-lg bg-destructive/10 border border-destructive/30">
-          <p className="text-[11px] text-destructive font-medium">⚠️ LIVE — Real SOL will be spent on each token swap.</p>
-        </div>
-      )}
+      <div className="p-2 rounded-lg bg-destructive/10 border border-destructive/30">
+        <p className="text-[11px] text-destructive font-medium">⚠️ LIVE — Real SOL will be spent on each token swap.</p>
+      </div>
 
       {isRunning && (
         <div className="space-y-2">
@@ -255,19 +254,19 @@ export const BatchTrader = ({ sim, isLive = false, killSignal = 0 }: Props) => {
           onClick={() => handleAction("buy")}
           disabled={isRunning || tokens.length === 0 || tokens.length > 50}
           className="text-xs h-8"
-          variant={isLive ? "destructive" : "default"}
+          variant="destructive"
         >
           {isRunning ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Play className="h-3 w-3 mr-1" />}
           Buy All ({tokens.length})
         </Button>
         <Button
           onClick={() => handleAction("sell")}
-          disabled={isRunning || !sim.holdings?.length}
+          disabled={isRunning || holdingsCount === 0}
           variant="outline"
           className="text-xs h-8"
         >
           <DollarSign className="h-3 w-3 mr-1" />
-          Sell All Holdings
+          Sell All ({holdingsCount})
         </Button>
       </div>
     </div>
