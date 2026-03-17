@@ -94,13 +94,14 @@ export class JupiterUltraService {
    */
   static async execute(
     signedTransaction: string,
-    requestId: string
+    requestId: string,
+    useHelius: boolean = false
   ): Promise<UltraExecuteResponse | null> {
     try {
-      console.log('Executing Ultra swap via proxy, requestId:', requestId);
+      console.log('Executing Ultra swap via proxy, requestId:', requestId, 'useHelius:', useHelius);
       
       const { data, error } = await supabase.functions.invoke('jupiter-ultra', {
-        body: { action: 'execute', signedTransaction, requestId },
+        body: { action: 'execute', signedTransaction, requestId, useHelius },
       });
 
       if (error) throw new Error(error.message);
@@ -125,7 +126,8 @@ export class JupiterUltraService {
     inputMint: string,
     outputMint: string,
     amount: string,
-    swapMode: 'ExactIn' | 'ExactOut' = 'ExactIn'
+    swapMode: 'ExactIn' | 'ExactOut' = 'ExactIn',
+    useHelius: boolean = false
   ): Promise<UltraExecuteResponse | null> {
     try {
       if (!wallet.publicKey || !wallet.signTransaction) {
@@ -161,7 +163,7 @@ export class JupiterUltraService {
       const signedTxBase64 = Buffer.from(signedTx.serialize()).toString('base64');
 
       // 4. Execute via proxy
-      const result = await this.execute(signedTxBase64, order.requestId);
+      const result = await this.execute(signedTxBase64, order.requestId, useHelius);
       
       if (!result) return null;
 

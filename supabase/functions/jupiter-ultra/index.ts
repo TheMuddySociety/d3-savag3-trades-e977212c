@@ -54,10 +54,42 @@ serve(async (req) => {
     }
 
     if (action === "execute") {
-      const { signedTransaction, requestId } = body;
+      const { signedTransaction, requestId, useHelius } = body;
       if (!signedTransaction || !requestId) {
         return new Response(JSON.stringify({ error: "Missing signedTransaction or requestId" }), {
           status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      if (useHelius) {
+        console.log("Executing via Helius Sender, requestId:", requestId);
+        const heliusKey = Deno.env.get("HELIUS_API_KEY") || "251ce93e-be5b-4d6e-9c96-a9805fae66de";
+        const res = await fetch(`https://sender.helius-rpc.com/fast?api-key=${heliusKey}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            jsonrpc: "2.0",
+            id: requestId,
+            method: "sendTransaction",
+            params: [
+              signedTransaction,
+              { encoding: "base64", skipPreflight: true, maxRetries: 0 }
+            ]
+          }),
+        });
+
+        if (!res.ok) {
+          const errorText = await res.text();
+          console.error("Helius Sender error:", res.status, errorText);
+          return new Response(JSON.stringify({ error: `Helius Sender failed: ${res.status}` }), {
+            status: res.status,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        const data = await res.json();
+        return new Response(JSON.stringify({ success: true, data: { status: 'Success', signature: data.result } }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }

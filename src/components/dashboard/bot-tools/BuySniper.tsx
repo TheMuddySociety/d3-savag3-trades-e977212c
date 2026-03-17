@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { Crosshair, Zap, Shield } from "lucide-react";
+import { Crosshair, Zap, Shield, Rocket } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { JupiterUltraService } from "@/services/jupiter/ultra";
@@ -31,6 +31,7 @@ export const BuySniper = ({ killSignal = 0 }: Props) => {
   const [showConfirm, setShowConfirm] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
+  const [useHighPerformance, setUseHighPerformance] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const sniperInterval = useRef<ReturnType<typeof setInterval> | null>(null);
   const isArmedRef = useRef(false);
@@ -47,7 +48,7 @@ export const BuySniper = ({ killSignal = 0 }: Props) => {
     try {
       const lamports = Math.round(parseFloat(buyAmount) * 1e9);
       const result = await JupiterUltraService.swap(
-        wallet, SOL_MINT, tokenAddress, String(lamports), 'ExactIn'
+        wallet, SOL_MINT, tokenAddress, String(lamports), 'ExactIn', useHighPerformance
       );
 
       if (result?.status === 'Success' && result.signature) {
@@ -196,16 +197,33 @@ export const BuySniper = ({ killSignal = 0 }: Props) => {
             <Input type="number" value={maxSlippage} onChange={(e) => setMaxSlippage(e.target.value)} className="bg-muted/30 border-border text-sm" disabled={isArmed} min="1" max="50" />
           </div>
         </div>
-        <div>
-          <Label className="text-xs text-muted-foreground">Priority Fee (SOL)</Label>
-          <div className="flex gap-1 mt-1">
-            {["0.001", "0.005", "0.01", "0.05"].map((fee) => (
-              <Button key={fee} variant={priorityFee === fee ? "default" : "outline"} size="sm" className="flex-1 text-xs h-7" onClick={() => setPriorityFee(fee)} disabled={isArmed}>
-                {fee}
-              </Button>
-            ))}
+        <div className="flex items-center justify-between p-3 rounded-lg border border-primary/20 bg-primary/5">
+          <div className="flex items-center gap-2">
+            <Rocket className="h-4 w-4 text-primary" />
+            <div className="flex flex-col">
+              <Label className="text-xs font-semibold">High Performance</Label>
+              <p className="text-[10px] text-muted-foreground">Staked connections + Helius Sender</p>
+            </div>
           </div>
+          <Switch 
+            checked={useHighPerformance}
+            onCheckedChange={setUseHighPerformance}
+            disabled={isArmed}
+          />
         </div>
+
+        {!useHighPerformance && (
+          <div>
+            <Label className="text-xs text-muted-foreground">Priority Fee (SOL)</Label>
+            <div className="flex gap-1 mt-1">
+              {["0.001", "0.005", "0.01", "0.05"].map((fee) => (
+                <Button key={fee} variant={priorityFee === fee ? "default" : "outline"} size="sm" className="flex-1 text-xs h-7" onClick={() => setPriorityFee(fee)} disabled={isArmed}>
+                  {fee}
+                </Button>
+              ))}
+            </div>
+          </div>
+        )}
         <div className="p-2 rounded-lg bg-muted/20 border border-border space-y-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">

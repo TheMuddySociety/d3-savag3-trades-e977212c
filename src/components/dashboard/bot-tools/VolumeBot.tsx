@@ -4,7 +4,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Slider } from "@/components/ui/slider";
-import { BarChart3, Play, Pause } from "lucide-react";
+import { BarChart3, Play, Pause, Rocket } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { useConnection } from "@solana/wallet-adapter-react";
@@ -28,6 +29,7 @@ export const VolumeBot = ({ killSignal = 0 }: Props) => {
   const [solPerTx, setSolPerTx] = useState("0.05");
   const [txPerMinute, setTxPerMinute] = useState([3]);
   const [txCount, setTxCount] = useState(0);
+  const [useHighPerformance, setUseHighPerformance] = useState(true);
   const [showConfirm, setShowConfirm] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const volumeInterval = useRef<NodeJS.Timeout | null>(null);
@@ -60,9 +62,9 @@ export const VolumeBot = ({ killSignal = 0 }: Props) => {
         const isBuy = countRef.current % 2 === 0;
         const lamports = Math.round(parseFloat(solPerTx) * 1e9);
         if (isBuy) {
-          await JupiterTransactionService.swapTokens(connection, wallet, SOL_MINT, tokenAddress, lamports, 300);
+          await JupiterTransactionService.swapTokens(connection, wallet, SOL_MINT, tokenAddress, lamports, 300, undefined, 'Medium', false, useHighPerformance);
         } else {
-          await JupiterTransactionService.swapTokens(connection, wallet, tokenAddress, SOL_MINT, lamports, 300);
+          await JupiterTransactionService.swapTokens(connection, wallet, tokenAddress, SOL_MINT, lamports, 300, undefined, 'Medium', false, useHighPerformance);
         }
 
         countRef.current++;
@@ -148,6 +150,21 @@ export const VolumeBot = ({ killSignal = 0 }: Props) => {
             <span className="text-xs font-mono text-foreground">{txPerMinute[0]}</span>
           </div>
           <Slider value={txPerMinute} onValueChange={setTxPerMinute} min={1} max={10} step={1} disabled={isRunning} />
+        </div>
+
+        <div className="flex items-center justify-between p-3 rounded-lg border border-primary/20 bg-primary/5">
+          <div className="flex items-center gap-2">
+            <Rocket className="h-4 w-4 text-primary" />
+            <div className="flex flex-col">
+              <Label className="text-xs font-semibold">High Performance</Label>
+              <p className="text-[10px] text-muted-foreground">Staked connections + Helius Sender</p>
+            </div>
+          </div>
+          <Switch 
+            checked={useHighPerformance}
+            onCheckedChange={setUseHighPerformance}
+            disabled={isRunning}
+          />
         </div>
 
         <div className="p-2 rounded-lg bg-muted/20 border border-border">

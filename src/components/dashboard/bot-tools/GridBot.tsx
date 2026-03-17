@@ -3,7 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Grid, Zap } from "lucide-react";
+import { Grid, Zap, Rocket } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { JupiterUltraService } from "@/services/jupiter/ultra";
@@ -29,6 +30,7 @@ export const GridBot = ({ killSignal = 0 }: Props) => {
   const [showConfirm, setShowConfirm] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [activeGrids, setActiveGrids] = useState(0);
+  const [useHighPerformance, setUseHighPerformance] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const gridInterval = useRef<ReturnType<typeof setInterval> | null>(null);
   const isArmedRef = useRef(false);
@@ -181,6 +183,21 @@ export const GridBot = ({ killSignal = 0 }: Props) => {
             <p className="text-[11px] text-foreground font-mono">{statusMessage}</p>
           </div>
         )}
+
+        <div className="flex items-center justify-between p-3 rounded-lg border border-primary/20 bg-primary/5">
+          <div className="flex items-center gap-2">
+            <Rocket className="h-4 w-4 text-primary" />
+            <div className="flex flex-col">
+              <Label className="text-xs font-semibold">High Performance</Label>
+              <p className="text-[10px] text-muted-foreground">Staked connections + Helius Sender</p>
+            </div>
+          </div>
+          <Switch 
+            checked={useHighPerformance}
+            onCheckedChange={setUseHighPerformance}
+            disabled={isArmed}
+          />
+        </div>
 
         <div className="p-2 rounded-lg bg-destructive/10 border border-destructive/30">
           <p className="text-[11px] text-destructive font-medium">⚠️ LIVE MODE — Real SOL will be used to place limit orders. Transactions are irreversible.</p>

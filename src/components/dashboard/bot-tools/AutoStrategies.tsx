@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Brain, TrendingUp, TrendingDown, ShieldCheck, Flame, Palmtree, Zap, Users, Wallet } from "lucide-react";
+import { Brain, TrendingUp, TrendingDown, ShieldCheck, Flame, Palmtree, Zap, Users, Wallet, Rocket } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { useConnection } from "@solana/wallet-adapter-react";
@@ -79,6 +79,7 @@ export const AutoStrategies = ({ killSignal = 0 }: Props) => {
   const [pendingStrategyId, setPendingStrategyId] = useState<string | null>(null);
   const [statusLog, setStatusLog] = useState<string[]>([]);
   const [executingTrade, setExecutingTrade] = useState(false);
+  const [useHighPerformance, setUseHighPerformance] = useState(true);
   const [pendingTrades, setPendingTrades] = useState<PendingTrade[]>([]);
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
   const pendingPollRef = useRef<NodeJS.Timeout | null>(null);
@@ -166,14 +167,14 @@ export const AutoStrategies = ({ killSignal = 0 }: Props) => {
       addLog(`🔄 ${reason}: Selling ${holding.symbol}...`);
 
       const rawAmount = Math.floor(holding.amount * Math.pow(10, holding.decimals));
-      
-      const result = await JupiterUltraService.swap(
-        wallet,
-        holding.mint,
-        SOL_MINT,
-        rawAmount.toString(),
-        'ExactIn'
-      );
+            const result = await JupiterUltraService.swap(
+          wallet,
+          holding.mint,
+          SOL_MINT,
+          rawAmount.toString(),
+          'ExactIn',
+          useHighPerformance
+        );
 
       if (result?.status === 'Success') {
         addLog(`✅ ${reason}: Sold ${holding.amount.toFixed(4)} ${holding.symbol} — tx: ${result.signature?.slice(0, 8)}...`);
@@ -197,7 +198,7 @@ export const AutoStrategies = ({ killSignal = 0 }: Props) => {
     } finally {
       setExecutingTrade(false);
     }
-  }, [wallet, executingTrade, addLog]);
+  }, [wallet, executingTrade, addLog, useHighPerformance]);
 
   // Execute a BUY via Jupiter Ultra (SOL → token)
   const executeLiveBuy = useCallback(async (
@@ -215,13 +216,14 @@ export const AutoStrategies = ({ killSignal = 0 }: Props) => {
       // SOL has 9 decimals
       const rawAmount = Math.floor(solAmount * 1e9).toString();
 
-      const result = await JupiterUltraService.swap(
-        wallet,
-        SOL_MINT,
-        tokenMint,
-        rawAmount,
-        'ExactIn'
-      );
+        const result = await JupiterUltraService.swap(
+          wallet,
+          SOL_MINT,
+          tokenMint,
+          rawAmount,
+          'ExactIn',
+          useHighPerformance
+        );
 
       if (result?.status === 'Success') {
         addLog(`✅ ${reason}: Bought ${tokenSymbol} for ${solAmount} SOL — tx: ${result.signature?.slice(0, 8)}...`);
@@ -831,6 +833,22 @@ export const AutoStrategies = ({ killSignal = 0 }: Props) => {
           ))}
         </div>
       )}
+
+      {/* High Performance Toggle */}
+      <div className="flex items-center justify-between p-3 rounded-lg border border-primary/20 bg-primary/5">
+        <div className="flex items-center gap-2">
+          <Rocket className="h-4 w-4 text-primary" />
+          <div className="flex flex-col">
+            <span className="text-xs font-semibold text-foreground">High Performance</span>
+            <p className="text-[10px] text-muted-foreground">Staked connections + Helius Sender</p>
+          </div>
+        </div>
+        <Switch 
+          checked={useHighPerformance}
+          onCheckedChange={setUseHighPerformance}
+          disabled={activeCount > 0}
+        />
+      </div>
 
       {/* Budget Management */}
       <div className="p-3 rounded-lg border border-primary/20 bg-primary/5">
