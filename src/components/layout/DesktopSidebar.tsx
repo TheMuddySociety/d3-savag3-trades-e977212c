@@ -34,15 +34,15 @@ export function DesktopSidebar({ activePanel, onPanelChange, collapsed, onCollap
 
   return (
     <aside className={cn(
-      "fixed left-0 top-0 bottom-0 z-40 flex flex-col bg-card border-r border-border transition-all duration-300",
+      "fixed left-0 top-0 bottom-0 z-40 flex flex-col bg-background border-r border-accent/10 transition-all duration-300",
       collapsed ? "w-[56px]" : "w-[200px]"
     )}>
       {/* Logo */}
-      <div className="h-14 flex items-center gap-2 px-3 border-b border-border shrink-0">
-        <Activity className="h-5 w-5 text-primary shrink-0" />
+      <div className="h-14 flex items-center gap-2 px-3 border-b border-accent/10 shrink-0">
+        <Activity className="h-5 w-5 text-accent shrink-0" />
         {!collapsed && (
-          <span className="text-sm font-bold tracking-tight text-foreground whitespace-nowrap">
-            SAVAG3<span className="text-primary">BOT</span>
+          <span className="text-sm font-bold tracking-tight text-foreground whitespace-nowrap group">
+            SAVAG3<span className="text-accent">BOT</span>
           </span>
         )}
       </div>
@@ -64,8 +64,8 @@ export function DesktopSidebar({ activePanel, onPanelChange, collapsed, onCollap
                   className={cn(
                     "w-full flex items-center gap-3 rounded-md px-2.5 py-2 text-sm transition-all",
                     activePanel === item.id
-                      ? "bg-primary/10 text-primary font-medium"
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                      ? "bg-accent/10 text-accent font-medium"
+                      : "text-muted-foreground hover:text-foreground hover:bg-accent/5"
                   )}
                 >
                   <item.icon className="h-4 w-4 shrink-0" />
@@ -82,8 +82,8 @@ export function DesktopSidebar({ activePanel, onPanelChange, collapsed, onCollap
         {isAdmin && (
           <Link to="/admin">
             <button className={cn(
-              "w-full flex items-center gap-3 rounded-md px-2.5 py-2 text-sm text-primary hover:bg-primary/10 transition-all",
-              location.pathname === '/admin' && "bg-primary/10 font-medium"
+              "w-full flex items-center gap-3 rounded-md px-2.5 py-2 text-sm text-accent hover:bg-accent/10 transition-all",
+              location.pathname === '/admin' && "bg-accent/10 font-medium"
             )}>
               <Shield className="h-4 w-4 shrink-0" />
               {!collapsed && <span>Admin</span>}

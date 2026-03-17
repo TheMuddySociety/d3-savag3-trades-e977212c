@@ -208,8 +208,8 @@ export function TrendingCoins() {
                   <TableRow 
                     key={coin.id} 
                     className={cn(
-                      "hover:bg-muted/20 transition-colors",
-                      coin.tokenAddress ? "cursor-pointer hover:bg-solana/10" : ""
+                      "trading-row-hover border-t border-t-accent/10 whitespace-nowrap",
+                      favorites.includes(coin.id) && "bg-accent/5"
                     )}
                     onClick={() => coin.tokenAddress && handleTokenClick(coin.tokenAddress)}
                   >

@@ -8,67 +8,60 @@
 @layer base {
   :root {
     /* Jupiter Plugin Theme */
-    --jupiter-plugin-primary: 152, 42, 42;
+    --jupiter-plugin-primary: 255, 255, 255;
     --jupiter-plugin-background: 0, 0, 0;
-    --jupiter-plugin-primary-text: 232, 249, 255;
-    --jupiter-plugin-warning: 251, 191, 36;
-    --jupiter-plugin-interactive: 33, 42, 54;
-    --jupiter-plugin-module: 16, 23, 31;
+    --jupiter-plugin-primary-text: 255, 255, 255;
+    --jupiter-plugin-warning: 239, 68, 68;
+    --jupiter-plugin-interactive: 28, 28, 28;
+    --jupiter-plugin-module: 12, 12, 12;
 
-    --background: 0 0% 4%;
-    --foreground: 0 0% 93%;
+    --background: 0 0% 0%;
+    --foreground: 0 0% 98%;
 
-    --card: 0 0% 7%;
-    --card-foreground: 0 0% 93%;
+    --card: 0 0% 4%;
+    --card-foreground: 0 0% 98%;
 
-    --popover: 0 0% 7%;
-    --popover-foreground: 0 0% 93%;
+    --popover: 0 0% 4%;
+    --popover-foreground: 0 0% 98%;
 
-    --primary: 0 72% 51%;
-    --primary-foreground: 0 0% 100%;
+    --primary: 0 0% 98%;
+    --primary-foreground: 0 0% 2%;
 
     --secondary: 0 0% 12%;
-    --secondary-foreground: 0 0% 93%;
+    --secondary-foreground: 0 0% 98%;
 
-    --muted: 0 0% 10%;
-    --muted-foreground: 0 0% 45%;
+    --muted: 0 0% 8%;
+    --muted-foreground: 0 0% 60%;
 
-    --accent: 0 72% 51%;
+    --accent: 0 84% 50%;
     --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 98%;
+    --destructive: 0 84% 50%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 0 0% 14%;
-    --input: 0 0% 10%;
-    --ring: 0 72% 51%;
+    --border: 0 0% 12%;
+    --input: 0 0% 8%;
+    --ring: 0 84% 50%;
 
     --radius: 0.5rem;
 
     --chart-green: 142 71% 45%;
-    --chart-red: 0 84% 60%;
+    --chart-red: 0 84% 50%;
   }
 
   .dark {
-    --background: 0 0% 4%;
-    --foreground: 0 0% 93%;
-    --card: 0 0% 7%;
-    --card-foreground: 0 0% 93%;
-    --popover: 0 0% 7%;
-    --popover-foreground: 0 0% 93%;
-    --primary: 0 72% 51%;
-    --primary-foreground: 0 0% 100%;
+    --background: 0 0% 0%;
+    --foreground: 0 0% 98%;
+    --card: 0 0% 4%;
+    --card-foreground: 0 0% 98%;
+    --primary: 0 0% 98%;
+    --primary-foreground: 0 0% 2%;
     --secondary: 0 0% 12%;
-    --secondary-foreground: 0 0% 93%;
-    --muted: 0 0% 10%;
-    --muted-foreground: 0 0% 45%;
-    --accent: 0 72% 51%;
-    --accent-foreground: 0 0% 100%;
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 14%;
-    --input: 0 0% 10%;
-    --ring: 0 72% 51%;
+    --muted: 0 0% 8%;
+    --muted-foreground: 0 0% 60%;
+    --accent: 0 84% 50%;
+    --border: 0 0% 12%;
+    --ring: 0 84% 50%;
   }
 }
 
@@ -94,17 +87,18 @@
   }
 
   .glass-card-elevated {
-    background: linear-gradient(180deg, hsl(0 0% 8%) 0%, hsl(0 0% 6%) 100%);
-    border: 1px solid hsl(0 0% 14%);
+    background: linear-gradient(180deg, hsl(0 0% 6%) 0%, hsl(0 0% 2%) 100%);
+    border: 1px solid hsl(0 0% 12%);
+    border-top: 1px solid hsl(0 84% 50% / 0.4);
     border-radius: var(--radius);
-    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.6);
   }
 
   /* Status Indicators */
   .status-live {
-    background: hsl(var(--primary) / 0.15);
-    border: 1px solid hsl(var(--primary) / 0.3);
-    color: hsl(var(--primary));
+    background: hsl(0 84% 50% / 0.1);
+    border: 1px solid hsl(0 84% 50% / 0.3);
+    color: hsl(0 84% 50%);
   }
 
   .status-paper {
@@ -131,7 +125,7 @@
   }
 
   .trading-row-hover:hover {
-    background: hsl(var(--primary) / 0.05);
+    background: hsl(0 0% 10%);
   }
 
   /* Red Accent Glow */
@@ -228,10 +222,10 @@
 /* Animations */
 @keyframes pulse-glow {
   0%, 100% {
-    box-shadow: 0 0 10px hsl(var(--primary) / 0.3);
+    box-shadow: 0 0 10px hsl(0 84% 50% / 0.2);
   }
   50% {
-    box-shadow: 0 0 20px hsl(var(--primary) / 0.5), 0 0 40px hsl(var(--primary) / 0.2);
+    box-shadow: 0 0 20px hsl(0 84% 50% / 0.4), 0 0 40px hsl(0 84% 50% / 0.1);
   }
 }
 

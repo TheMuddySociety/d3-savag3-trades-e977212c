@@ -53,11 +53,11 @@ export const PortfolioTracker = () => {
   }
 
   return (
-    <Card className="w-full">
+    <Card className="w-full glass-card-elevated border-t border-t-accent/30">
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Briefcase className="h-5 w-5 text-primary" />
+            <Briefcase className="h-5 w-5 text-accent" />
             <CardTitle className="text-sm">Portfolio</CardTitle>
             <Badge variant="outline" className="text-[10px] bg-accent/10 text-accent border-accent/20 flex items-center gap-1 px-1.5 py-0">
               <span className="relative flex h-1.5 w-1.5">
@@ -143,7 +143,7 @@ export const PortfolioTracker = () => {
                     {formatUsd(portfolio.totalTokenValueUsd)}
                   </span>
                 </div>
-                <div className="space-y-1 max-h-[300px] overflow-y-auto hide-scrollbar">
+                <div className="h-[280px] pr-2 overflow-y-auto custom-scrollbar border-t border-border/50 pt-3 space-y-1.5">
                   {portfolio.tokens.map((token) => (
                     <div
                       key={token.mint}

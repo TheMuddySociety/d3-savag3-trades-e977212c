@@ -21,9 +21,9 @@ interface LeaderboardEntry {
 }
 
 const RANK_STYLES = [
-  { bg: "bg-[hsl(var(--fun-yellow))]/10", border: "border-[hsl(var(--fun-yellow))]/40", icon: "🥇" },
-  { bg: "bg-muted/20", border: "border-muted-foreground/30", icon: "🥈" },
-  { bg: "bg-[hsl(var(--fun-yellow))]/5", border: "border-[hsl(var(--fun-yellow))]/20", icon: "🥉" },
+  { bg: "bg-accent/10", border: "border-accent/40", icon: "🥇" },
+  { bg: "bg-muted/30", border: "border-muted-foreground/30", icon: "🥈" },
+  { bg: "bg-muted/10", border: "border-muted/40", icon: "🥉" },
 ];
 
 const BOT_TYPE_LABELS: Record<string, string> = {
@@ -69,11 +69,11 @@ export const Leaderboard = () => {
     : 0;
 
   return (
-    <Card className="w-full">
+    <Card className="w-full glass-card-elevated border-t border-t-accent/30">
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Trophy className="h-5 w-5 text-[hsl(var(--fun-yellow))]" />
+            <Trophy className="h-5 w-5 text-accent" />
             <CardTitle className="text-sm">Global Trading Leaderboard</CardTitle>
           </div>
           <Button
@@ -127,7 +127,7 @@ export const Leaderboard = () => {
                   key={entry.wallet_address}
                   className={`flex items-center gap-2 p-2.5 rounded-lg border transition-all ${
                     isMe
-                      ? "bg-primary/10 border-primary/40 ring-1 ring-primary/20"
+                      ? "bg-foreground/5 border-foreground/30 ring-1 ring-foreground/10"
                       : rankStyle
                       ? `${rankStyle.bg} ${rankStyle.border}`
                       : "bg-muted/10 border-border"
@@ -149,7 +149,7 @@ export const Leaderboard = () => {
                         {entry.display_address}
                       </span>
                       {isMe && (
-                        <Badge variant="outline" className="text-[9px] px-1 py-0 bg-primary/20 text-primary border-primary/30">
+                        <Badge variant="outline" className="text-[9px] px-1 py-0 bg-accent/20 text-accent border-accent/30">
                           YOU
                         </Badge>
                       )}

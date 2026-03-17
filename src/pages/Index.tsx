@@ -197,7 +197,7 @@ function DesktopDashboard() {
 
       {/* Top bar */}
       <div
-        className="fixed top-0 right-0 z-30 h-14 bg-background/80 backdrop-blur-xl border-b border-border flex items-center justify-between px-4 transition-all duration-300"
+        className="fixed top-0 right-0 z-30 h-14 bg-background/95 backdrop-blur-md border-b border-accent/20 flex items-center justify-between px-4 transition-all duration-300 shadow-[0_1px_10px_rgba(239,68,68,0.05)]"
         style={{ left: sidebarWidth }}
       >
         <div className="flex items-center gap-3">

@@ -33,12 +33,12 @@ const Landing = () => {
   return (
     <div className="min-h-screen flex flex-col bg-background">
       {/* Header */}
-      <header className="border-b border-border/50 px-6 py-4">
+      <header className="border-b border-accent/20 px-6 py-4 bg-background/95 backdrop-blur-md">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Activity className="h-5 w-5 text-primary" />
-            <span className="text-lg font-bold tracking-tight">
-              SAVAG3<span className="text-primary">BOT</span>
+            <Activity className="h-5 w-5 text-accent" />
+            <span className="text-lg font-bold tracking-tight text-foreground">
+              SAVAG3<span className="text-accent">BOT</span>
             </span>
           </div>
           <div className="flex items-center gap-3">
@@ -56,14 +56,14 @@ const Landing = () => {
           {/* Left - Copy */}
           <div className="space-y-8">
             <div className="space-y-4">
-              <div className="inline-flex items-center gap-2 bg-primary/10 text-primary text-xs font-medium px-3 py-1.5 rounded-md border border-primary/20">
+              <div className="inline-flex items-center gap-2 bg-accent/10 text-accent text-xs font-medium px-3 py-1.5 rounded-md border border-accent/20">
                 <Zap className="h-3 w-3" />
                 Professional Trading Suite
               </div>
               <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-foreground leading-[1.1]">
                 Automated Solana
                 <br />
-                <span className="text-primary">Trading Bot</span>
+                <span className="text-accent underline decoration-red-500/30 underline-offset-8">Trading Bot</span>
               </h1>
               <p className="text-muted-foreground text-base leading-relaxed max-w-md">
                 Sniper, DCA, volume bots and AI-powered strategies. 
@@ -90,8 +90,8 @@ const Landing = () => {
                 { icon: <BarChart3 className="h-3.5 w-3.5" />, label: "Volume Bot" },
                 { icon: <Shield className="h-3.5 w-3.5" />, label: "Auto Strategies" },
               ].map((feat) => (
-                <div key={feat.label} className="flex items-center gap-2 bg-secondary/50 border border-border rounded-md px-3 py-2">
-                  <span className="text-primary">{feat.icon}</span>
+                <div key={feat.label} className="flex items-center gap-2 bg-secondary/30 border border-accent/10 rounded-md px-3 py-2 hover:border-accent/30 transition-colors">
+                  <span className="text-accent">{feat.icon}</span>
                   <span className="text-xs text-muted-foreground">{feat.label}</span>
                 </div>
               ))}
@@ -109,7 +109,7 @@ const Landing = () => {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-border/50 py-4 px-6">
+      <footer className="border-t border-accent/10 py-4 px-6">
         <div className="max-w-6xl mx-auto flex items-center justify-between text-xs text-muted-foreground">
           <span>&copy; {new Date().getFullYear()} SAVAG3BOT</span>
           <span className="font-mono">Solana Mainnet</span>
