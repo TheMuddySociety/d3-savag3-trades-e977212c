@@ -11,6 +11,7 @@ import { AutoStrategies } from "./bot-tools/AutoStrategies";
 import { BatchTrader } from "./bot-tools/BatchTrader";
 import { CopyTradeBot } from "./bot-tools/CopyTradeBot";
 import { LiveTradeHistory } from "./bot-tools/LiveTradeHistory";
+import { GridBot } from "./bot-tools/GridBot";
 import { ProfitSimulator } from "./ProfitSimulator";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { useToast } from "@/hooks/use-toast";
@@ -82,6 +83,10 @@ export const BotAccess = () => {
               <Layers className="h-3 w-3" />
               <span className="hidden sm:inline">Batch</span>
             </TabsTrigger>
+            <TabsTrigger value="grid" className="text-[10px] gap-0.5 data-[state=active]:bg-primary/20 px-2 shrink-0 snap-start">
+              <Bot className="h-3 w-3" />
+              <span className="hidden sm:inline">Grid</span>
+            </TabsTrigger>
             <TabsTrigger value="copy" className="text-[10px] gap-0.5 data-[state=active]:bg-[hsl(var(--fun-purple))]/20 px-2 shrink-0 snap-start">
               <Eye className="h-3 w-3" />
               <span className="hidden sm:inline">Copy</span>
@@ -111,6 +116,9 @@ export const BotAccess = () => {
           </TabsContent>
           <TabsContent value="batch" className="mt-0">
             <BatchTrader killSignal={killSignal} />
+          </TabsContent>
+          <TabsContent value="grid" className="mt-0">
+            <GridBot killSignal={killSignal} />
           </TabsContent>
           <TabsContent value="copy" className="mt-0">
             <CopyTradeBot killSignal={killSignal} />
