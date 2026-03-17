@@ -19,6 +19,10 @@ export function TrendingCoins() {
   } = useMemecoins();
   
   const [favorites, setFavorites] = useState<string[]>([]);
+  const [minMarketCap, setMinMarketCap] = useState<number>(0);
+  const [minVolume, setMinVolume] = useState<number>(0);
+  const [maxAge, setMaxAge] = useState<string>("all");
+  const [showFilters, setShowFilters] = useState(false);
   
   const toggleFavorite = (id: string) => {
     setFavorites(prevFavorites => 
@@ -35,35 +39,102 @@ export function TrendingCoins() {
     }
   };
 
+  const filteredCoins = memecoins.filter(coin => {
+    if (minMarketCap > 0 && coin.marketCap < minMarketCap) return false;
+    if (minVolume > 0 && coin.volume24h < minVolume) return false;
+    if (maxAge !== "all") {
+      const ageStr = coin.age || "0m";
+      if (maxAge === "1h") return !ageStr.includes('h') && !ageStr.includes('d');
+      if (maxAge === "24h") return !ageStr.includes('d');
+    }
+    return true;
+  });
+
   return (
     <Card className="memecoin-card">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-xl">
             <BarChart2 className="h-5 w-5 text-solana" /> 
-            Trending Memecoins
+            Trending Pump.Fun Tokens
           </div>
-          <div className="flex items-center gap-2">
-            <Button 
-              variant="outline" 
-              size="sm"
-              className="h-8 gap-1"
-            >
-              <Filter className="h-4 w-4" />
-              Filter
-            </Button>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={refreshData}
-              disabled={isRefreshing}
-              className="h-8 gap-1"
-            >
-              <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-              {isRefreshing ? 'Refreshing...' : 'Refresh'}
-            </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-2">
+              <Button 
+                variant={showFilters ? "secondary" : "outline"}
+                size="sm"
+                className="h-8 gap-1"
+                onClick={() => setShowFilters(!showFilters)}
+              >
+                <Filter className="h-4 w-4" />
+                {showFilters ? 'Hide Filters' : 'Filter'}
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={refreshData}
+                disabled={isRefreshing}
+                className="h-8 gap-1"
+              >
+                <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                {isRefreshing ? 'Refreshing...' : 'Refresh'}
+              </Button>
+            </div>
           </div>
         </CardTitle>
+        
+        {showFilters && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4 p-4 rounded-xl bg-secondary/20 border border-border/50 animate-in fade-in slide-in-from-top-2">
+            <div className="space-y-2">
+              <label className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">Min Market Cap</label>
+              <div className="flex gap-2">
+                {[0, 50000, 100000, 500000].map(val => (
+                  <Button 
+                    key={val}
+                    variant={minMarketCap === val ? "default" : "outline"} 
+                    size="sm" 
+                    className="h-7 text-[10px] px-2"
+                    onClick={() => setMinMarketCap(val)}
+                  >
+                    {val === 0 ? "Any" : `$${val/1000}k+`}
+                  </Button>
+                ))}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">Min 24h Volume</label>
+              <div className="flex gap-2">
+                {[0, 10000, 50000, 200000].map(val => (
+                  <Button 
+                    key={val}
+                    variant={minVolume === val ? "default" : "outline"} 
+                    size="sm" 
+                    className="h-7 text-[10px] px-2"
+                    onClick={() => setMinVolume(val)}
+                  >
+                    {val === 0 ? "Any" : `$${val/1000}k+`}
+                  </Button>
+                ))}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">Max Age</label>
+              <div className="flex gap-2">
+                {["all", "1h", "24h"].map(val => (
+                  <Button 
+                    key={val}
+                    variant={maxAge === val ? "default" : "outline"} 
+                    size="sm" 
+                    className="h-7 text-[10px] px-2"
+                    onClick={() => setMaxAge(val)}
+                  >
+                    {val === "all" ? "Any" : `<${val}`}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
       </CardHeader>
       <CardContent>
         <div className="w-full overflow-auto">
@@ -133,7 +204,7 @@ export function TrendingCoins() {
                   </TableRow>
                 ))
               ) : (
-                memecoins.map((coin) => (
+                filteredCoins.map((coin) => (
                   <TableRow 
                     key={coin.id} 
                     className={cn(

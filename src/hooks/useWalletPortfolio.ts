@@ -51,8 +51,8 @@ export function useWalletPortfolio(walletAddress: string | null) {
 
   useEffect(() => {
     fetchPortfolio();
-    // Refresh every 30s
-    const interval = setInterval(() => fetchPortfolio(true), 30000);
+    // Refresh every 12s
+    const interval = setInterval(() => fetchPortfolio(true), 12000);
     return () => clearInterval(interval);
   }, [fetchPortfolio]);
 

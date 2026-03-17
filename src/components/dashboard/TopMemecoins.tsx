@@ -14,7 +14,7 @@ import { CreateAlertDialog } from './CreateAlertDialog';
 import { usePriceAlerts } from '@/hooks/usePriceAlerts';
 import { useWallet } from '@solana/wallet-adapter-react';
 
-type DataSource = 'trending' | 'new_launches' | 'moonshot' | 'graduated';
+type DataSource = 'trending' | 'new_launches' | 'graduated';
 
 const formatValue = (value: number, type: 'currency' | 'percent' = 'currency'): string => {
   if (type === 'percent') {
@@ -78,11 +78,7 @@ export function TopMemecoins() {
   const [sortField, setSortField] = useState<string>('volume24h');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [dataSource, setDataSource] = useState<DataSource>('trending');
-  const [trendingTokens, setTrendingTokens] = useState<MemeToken[]>([]);
-  const [moonshotTokens, setMoonshotTokens] = useState<MemeToken[]>([]);
-  const [graduatedTokens, setGraduatedTokens] = useState<MemeToken[]>([]);
   const [trendingLoading, setTrendingLoading] = useState(false);
-  const [moonshotLoading, setMoonshotLoading] = useState(false);
   const [graduatedLoading, setGraduatedLoading] = useState(false);
   const [selectedToken, setSelectedToken] = useState<MemeToken | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
@@ -99,6 +95,9 @@ export function TopMemecoins() {
   const walletAddress = publicKey?.toBase58() || null;
   const { createAlert } = usePriceAlerts(walletAddress);
 
+  const [trendingTokens, setTrendingTokens] = useState<MemeToken[]>([]);
+  const [graduatedTokens, setGraduatedTokens] = useState<MemeToken[]>([]);
+
   const handleSetAlert = (token: MemeToken) => {
     setAlertToken(token);
     setAlertDialogOpen(true);
@@ -109,7 +108,7 @@ export function TopMemecoins() {
     setModalOpen(true);
   };
   
-  const { tokens: launchTokens, loading: launchLoading, error: launchError, isConnected, lastUpdate } = useRealtimeTokens('all', 30);
+  const { tokens: launchTokens, loading: launchLoading, error: launchError, isConnected, lastUpdate } = useRealtimeTokens('pumpfun', 30);
 
   useEffect(() => {
     if (dataSource === 'trending') {
@@ -125,20 +124,6 @@ export function TopMemecoins() {
       };
       fetchTrending();
       const interval = setInterval(fetchTrending, 30000);
-      return () => { cancelled = true; clearInterval(interval); };
-    } else if (dataSource === 'moonshot') {
-      let cancelled = false;
-      const fetchMoonshot = async () => {
-        setMoonshotLoading(true);
-        try {
-          const tokens = await LaunchpadService.getTokensByLaunchpad('moonshot', 30);
-          if (!cancelled) setMoonshotTokens(tokens);
-        } catch {} finally {
-          if (!cancelled) setMoonshotLoading(false);
-        }
-      };
-      fetchMoonshot();
-      const interval = setInterval(fetchMoonshot, 30000);
       return () => { cancelled = true; clearInterval(interval); };
     } else if (dataSource === 'graduated') {
       let cancelled = false;
@@ -157,9 +142,9 @@ export function TopMemecoins() {
     }
   }, [dataSource]);
 
-  const tokens = dataSource === 'trending' ? trendingTokens : dataSource === 'moonshot' ? moonshotTokens : dataSource === 'graduated' ? graduatedTokens : launchTokens;
-  const loading = dataSource === 'trending' ? trendingLoading : dataSource === 'moonshot' ? moonshotLoading : dataSource === 'graduated' ? graduatedLoading : launchLoading;
-  const error = dataSource === 'moonshot' || dataSource === 'graduated' ? null : launchError;
+  const tokens = dataSource === 'trending' ? trendingTokens : dataSource === 'graduated' ? graduatedTokens : launchTokens;
+  const loading = dataSource === 'trending' ? trendingLoading : dataSource === 'graduated' ? graduatedLoading : launchLoading;
+  const error = dataSource === 'graduated' ? null : launchError;
 
   const handleSort = (field: string) => {
     if (sortField === field) {
@@ -299,20 +284,6 @@ export function TopMemecoins() {
           >
             <GraduationCap className="h-3.5 w-3.5" />
             Graduated
-          </Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            className={cn(
-              "rounded-full gap-1.5 h-7 text-xs px-3 transition-all",
-              dataSource === 'moonshot'
-                ? "bg-primary text-primary-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground"
-            )}
-            onClick={() => setDataSource('moonshot')}
-          >
-            <Moon className="h-3.5 w-3.5" />
-            Moonshot
           </Button>
         </div>
 

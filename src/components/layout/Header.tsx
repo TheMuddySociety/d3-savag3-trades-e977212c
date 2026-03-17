@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Shield, LogOut, Activity, Sparkles } from "lucide-react";
+import { Shield, LogOut, Activity, Sparkles, Settings as SettingsIcon } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import { useWallet } from '@solana/wallet-adapter-react';
@@ -9,6 +9,7 @@ import { UnifiedWalletButton } from '@jup-ag/wallet-adapter';
 import { useTradingMode } from '@/hooks/useTradingMode';
 import { useAdminCheck } from '@/hooks/useAdminCheck';
 import { useWalletAuth } from '@/hooks/useWalletAuth';
+import { SettingsDialog } from '@/components/dashboard/SettingsDialog';
 
 export function Header() {
   const { toast } = useToast();
@@ -16,6 +17,7 @@ export function Header() {
   const { publicKey, connected, disconnect } = useWallet();
   const { hasFreePass, buyFreePass, isPaymentPending } = useTradingMode();
   const { signOut } = useWalletAuth();
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const handleDisconnect = async () => {
     await signOut();
@@ -58,6 +60,15 @@ export function Header() {
             </span>
           </div>
           <Button 
+            onClick={() => setSettingsOpen(true)}
+            variant="ghost"
+            size="sm"
+            className="text-xs h-8 text-muted-foreground hover:text-foreground"
+          >
+            <SettingsIcon className="h-3.5 w-3.5" />
+          </Button>
+
+          <Button 
             onClick={handleDisconnect}
             variant="ghost"
             size="sm"
@@ -65,6 +76,7 @@ export function Header() {
           >
             <LogOut className="h-3.5 w-3.5" />
           </Button>
+          <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
         </div>
       )}
       

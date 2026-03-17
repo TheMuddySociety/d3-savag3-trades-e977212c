@@ -435,28 +435,54 @@ async function getLeaderboard(supabase: any, limit: number) {
     holdingsByWallet.set(h.wallet_address, current + (h.total_invested || 0));
   });
 
+  // Fetch live trades for combined stats
+  const { data: liveTrades } = await supabase
+    .from('live_trades')
+    .select('wallet_address, trade_type, input_usd_value, output_usd_value, bot_type, created_at');
+
+  const liveTradesByWallet = new Map<string, any[]>();
+  (liveTrades || []).forEach((t: any) => {
+    const list = liveTradesByWallet.get(t.wallet_address) || [];
+    list.push(t);
+    liveTradesByWallet.set(t.wallet_address, list);
+  });
+
   const leaderboard = wallets.map((w: any) => {
     const orders = ordersByWallet.get(w.wallet_address) || [];
-    const totalTrades = orders.length;
+    const lTrades = liveTradesByWallet.get(w.wallet_address) || [];
+    const totalTrades = orders.length + lTrades.length;
+    
+    // Sim stats
     const sells = orders.filter((o: any) => o.side === 'sell');
     const buys = orders.filter((o: any) => o.side === 'buy');
-
-    const totalSolSpent = buys.reduce((sum: number, o: any) => sum + (o.sol_amount || 0), 0);
-    const totalSolReceived = sells.reduce((sum: number, o: any) => sum + (o.sol_amount || 0), 0);
     const unrealizedInvested = holdingsByWallet.get(w.wallet_address) || 0;
+    const simPnl = (w.sol_balance || 0) + unrealizedInvested - 10;
 
-    // P&L = current SOL balance + value still in holdings - initial 10 SOL
-    const totalPnl = (w.sol_balance || 0) + unrealizedInvested - 10;
+    // Live stats (Realized P&L in USD converted to SOL roughly)
+    // For simplicity, we aggregate the USD difference of completed trades
+    let livePnlUsd = 0;
+    lTrades.forEach((t: any) => {
+      if (t.trade_type === 'sell' && t.output_usd_value && t.input_usd_value) {
+        livePnlUsd += (t.output_usd_value - t.input_usd_value);
+      }
+    });
+    const solPrice = 150; // Fallback or fetch live
+    const livePnlSol = livePnlUsd / solPrice;
 
+    const totalPnl = simPnl + livePnlSol;
+
+    const simWinningTrades = sells.filter((o: any) => (o.pnl_percent || 0) > 0).length;
     const avgPnlPercent = sells.length > 0
       ? sells.reduce((sum: number, o: any) => sum + (o.pnl_percent || 0), 0) / sells.length
       : 0;
 
-    const winningTrades = sells.filter((o: any) => (o.pnl_percent || 0) > 0).length;
-    const winRate = sells.length > 0 ? (winningTrades / sells.length) * 100 : 0;
+    const liveWinningTrades = lTrades.filter((t: any) => t.trade_type === 'sell' && (t.output_usd_value || 0) > (t.input_usd_value || 0)).length;
+    const totalSells = sells.length + lTrades.filter((t: any) => t.trade_type === 'sell').length;
+    
+    const winRate = totalSells > 0 ? ((simWinningTrades + liveWinningTrades) / totalSells) * 100 : 0;
 
     // Get unique bot types used
-    const botTypes = [...new Set(orders.map((o: any) => o.bot_type))];
+    const botTypes = [...new Set([...orders.map((o: any) => o.bot_type), ...lTrades.map((t: any) => t.bot_type)])];
 
     return {
       wallet_address: w.wallet_address,

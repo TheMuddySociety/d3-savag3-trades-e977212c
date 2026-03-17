@@ -74,7 +74,7 @@ export const Leaderboard = () => {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Trophy className="h-5 w-5 text-[hsl(var(--fun-yellow))]" />
-            <CardTitle className="text-sm">Paper Trading Leaderboard</CardTitle>
+            <CardTitle className="text-sm">Global Trading Leaderboard</CardTitle>
           </div>
           <Button
             variant="ghost"

@@ -59,7 +59,11 @@ export const PortfolioTracker = () => {
           <div className="flex items-center gap-2">
             <Briefcase className="h-5 w-5 text-primary" />
             <CardTitle className="text-sm">Portfolio</CardTitle>
-            <Badge variant="outline" className="text-[10px] bg-accent/20 text-accent border-accent/30">
+            <Badge variant="outline" className="text-[10px] bg-accent/10 text-accent border-accent/20 flex items-center gap-1 px-1.5 py-0">
+              <span className="relative flex h-1.5 w-1.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-accent"></span>
+              </span>
               LIVE
             </Badge>
           </div>

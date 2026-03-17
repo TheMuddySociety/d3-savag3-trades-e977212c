@@ -30,30 +30,32 @@ export const useMemecoins = () => {
       const bullmeTokens = await BullmeService.getNewTokens();
       
       // Transform Bullme tokens to our MemeToken format
-      const transformedTokens = bullmeTokens.map((token, index) => ({
-        id: token.address,
-        name: token.name,
-        symbol: token.symbol,
-        price: token.marketCap / token.totalSupply,
-        marketCap: token.marketCap,
-        volume24h: token.tradeVolume24h,
-        change24h: (token.buyVolume24h + token.sellVolume24h) > 0
-          ? ((token.buyVolume24h - token.sellVolume24h) / (token.buyVolume24h + token.sellVolume24h)) * 100
-          : 0,
-        change1h: (token.buyCount24h + token.sellCount24h) > 0
-          ? ((token.buyCount24h - token.sellCount24h) / (token.buyCount24h + token.sellCount24h)) * 50
-          : 0,
-        logoUrl: token.logo,
-        tokenAddress: token.address,
-        liquidity: token.liquidity,
-        holders: token.tradeCount,
-        age: getAgeDisplay(token.timestamp),
-        onChainHolders: token.tradeCount,
-        onChainLiquidity: token.liquidity,
-        tags: token.status === "NEW" ? ["New"] : ["Listed"],
-        timestamp: token.timestamp,
-        status: token.status
-      }));
+      const transformedTokens = bullmeTokens
+        .filter(token => token.address.endsWith('pump'))
+        .map((token, index) => ({
+          id: token.address,
+          name: token.name,
+          symbol: token.symbol,
+          price: token.marketCap / token.totalSupply,
+          marketCap: token.marketCap,
+          volume24h: token.tradeVolume24h,
+          change24h: (token.buyVolume24h + token.sellVolume24h) > 0
+            ? ((token.buyVolume24h - token.sellVolume24h) / (token.buyVolume24h + token.sellVolume24h)) * 100
+            : 0,
+          change1h: (token.buyCount24h + token.sellCount24h) > 0
+            ? ((token.buyCount24h - token.sellCount24h) / (token.buyCount24h + token.sellCount24h)) * 50
+            : 0,
+          logoUrl: token.logo,
+          tokenAddress: token.address,
+          liquidity: token.liquidity,
+          holders: token.tradeCount,
+          age: getAgeDisplay(token.timestamp),
+          onChainHolders: token.tradeCount,
+          onChainLiquidity: token.liquidity,
+          tags: ["Pump.Fun", token.status === "NEW" ? "New" : "Listed"],
+          timestamp: token.timestamp,
+          status: token.status
+        }));
 
       setMemecoins(transformedTokens);
     } catch (error) {

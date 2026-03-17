@@ -11,12 +11,7 @@ export interface LaunchpadConfig {
 }
 
 export const LAUNCHPADS: LaunchpadConfig[] = [
-  { id: 'all', name: 'All Launchpads', displayName: 'All', color: 'bg-primary', icon: '🚀' },
   { id: 'pumpfun', name: 'Pump.Fun', displayName: 'Pump.Fun', color: 'bg-green-500', icon: '💎' },
-  { id: 'bullme', name: 'Bullme.one', displayName: 'Bullme', color: 'bg-blue-500', icon: '🐂' },
-  { id: 'moonshot', name: 'Moonshot', displayName: 'Moonshot', color: 'bg-yellow-500', icon: '🌙' },
-  { id: 'raydium', name: 'Raydium', displayName: 'Raydium', color: 'bg-purple-500', icon: '⚡' },
-  { id: 'jupiter', name: 'Jupiter', displayName: 'Jupiter', color: 'bg-orange-500', icon: '🪐' },
 ];
 
 export class LaunchpadService {
@@ -34,29 +29,10 @@ export class LaunchpadService {
     let tokens: MemeToken[] = [];
 
     try {
-      switch (launchpadId) {
-        case 'all':
-          tokens = await this.getAllTokens(limit);
-          break;
-        case 'pumpfun':
-          tokens = await pumpFunService.getTrendingTokens(limit);
-          break;
-        case 'bullme':
-          const bullmeTokens = await BullmeService.getNewTokens();
-          tokens = this.mapBullmeToMemeTokens(bullmeTokens.slice(0, limit));
-          break;
-        case 'moonshot':
-          tokens = await this.fetchDexScreenerTokens('moonshot', limit);
-          break;
-        case 'raydium':
-          tokens = await this.fetchDexScreenerTokens('raydium', limit);
-          break;
-        case 'jupiter':
-          tokens = await this.fetchDexScreenerTokens('jupiter', limit);
-          break;
-        default:
-          tokens = await pumpFunService.getTrendingTokens(limit);
-      }
+      tokens = await pumpFunService.getTrendingTokens(limit);
+      
+      // Safety filter for Pump.Fun tokens
+      tokens = tokens.filter(t => t.tokenAddress?.endsWith('pump'));
 
       this.cache.set(cacheKey, { data: tokens, timestamp: Date.now() });
       return tokens;
@@ -67,28 +43,7 @@ export class LaunchpadService {
   }
 
   private static async getAllTokens(limit: number): Promise<MemeToken[]> {
-    try {
-      const [pumpFunTokens, bullmeTokens, moonshotTokens, raydiumTokens] = await Promise.allSettled([
-        pumpFunService.getTrendingTokens(Math.ceil(limit * 0.3)),
-        BullmeService.getNewTokens(),
-        this.fetchDexScreenerTokens('moonshot', Math.ceil(limit * 0.2)),
-        this.fetchDexScreenerTokens('raydium', Math.ceil(limit * 0.2)),
-      ]);
-
-      const pf = pumpFunTokens.status === 'fulfilled' ? pumpFunTokens.value : [];
-      const bm = bullmeTokens.status === 'fulfilled'
-        ? this.mapBullmeToMemeTokens(bullmeTokens.value.slice(0, Math.ceil(limit * 0.2)))
-        : [];
-      const ms = moonshotTokens.status === 'fulfilled' ? moonshotTokens.value : [];
-      const ry = raydiumTokens.status === 'fulfilled' ? raydiumTokens.value : [];
-
-      return [...pf, ...bm, ...ms, ...ry]
-        .sort((a, b) => b.volume24h - a.volume24h)
-        .slice(0, limit);
-    } catch (error) {
-      console.error('Error fetching all tokens:', error);
-      return [];
-    }
+    return pumpFunService.getTrendingTokens(limit);
   }
 
   private static mapBullmeToMemeTokens(bullmeTokens: BullmeToken[]): MemeToken[] {
