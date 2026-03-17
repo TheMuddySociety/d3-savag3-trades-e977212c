@@ -43,8 +43,7 @@ serve(async (req) => {
       const launchMaxAge = (config.config as any)?.launchMaxAge || 30;
       const safeExitStopLoss = (config.config as any)?.safeExitStopLoss || 15;
       const safeExitTakeProfit = (config.config as any)?.safeExitTakeProfit || 50;
-      const safeExitStopLoss = (config.config as any)?.safeExitStopLoss || 15;
-      const safeExitTakeProfit = (config.config as any)?.safeExitTakeProfit || 50;
+      const scalperTarget = (config.config as any)?.scalperTarget || 3;
 
       if (!isBeachMode) {
         console.log(`Skipping ${walletAddress} — beachMode not enabled`);
