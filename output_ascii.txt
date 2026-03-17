@@ -1,0 +1,4 @@
+=== Jupiter API Example ===
+Getting Jupiter quote...
+Example failed. See error logs above.
+Script execution completed

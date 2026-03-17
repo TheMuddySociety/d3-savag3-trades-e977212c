@@ -1,0 +1,12 @@
+=== Jupiter API Example ===
+Getting Jupiter quote...
+Quote received! Output amount: 467339
+Preparing Jupiter swap transaction...
+Transaction prepared successfully!
+Sending transaction...
+Error executing Jupiter swap: 401 Unauthorized: {"jsonrpc":"2.0","error":{"code":-32401,"message":"Unauthorized"}}
+Error: 401 Unauthorized: {"jsonrpc":"2.0","error":{"code":-32401,"message":"Unauthorized"}}
+    at ClientBrowser.callServer (C:\Users\kamee\D3 SAVAG3 Trades\d3-savag3-trades-e977212c\node_modules\@solana\web3.js\lib\index.cjs.js:5081:18)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+Example failed. See error logs above.
+Script execution completed

@@ -1,0 +1,46 @@
+=== Jupiter API Example ===
+Getting Jupiter quote...
+Quote received! Output amount: 9326351
+Preparing Jupiter swap transaction...
+Transaction prepared successfully!
+Sending transaction...
+Error executing Jupiter swap: Simulation failed. 
+Message: Transaction simulation failed: Error processing Instruction 3: custom program error: 0x1. 
+Logs: 
+[
+  "Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA success",
+  "Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA invoke [2]",
+  "Program log: Instruction: InitializeAccount3",
+  "Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA consumed 3158 of 1381041 compute units",
+  "Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA success",
+  "Program ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL consumed 22100 of 1399700 compute units",
+  "Program ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL success",
+  "Program 11111111111111111111111111111111 invoke [1]",
+  "Transfer: insufficient lamports 10855720, need 100000000",
+  "Program 11111111111111111111111111111111 failed: custom program error: 0x1"
+]. 
+Catch the `SendTransactionError` and call `getLogs()` on it for full details.
+Error: Simulation failed. 
+Message: Transaction simulation failed: Error processing Instruction 3: custom program error: 0x1. 
+Logs: 
+[
+  "Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA success",
+  "Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA invoke [2]",
+  "Program log: Instruction: InitializeAccount3",
+  "Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA consumed 3158 of 1381041 compute units",
+  "Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA success",
+  "Program ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL consumed 22100 of 1399700 compute units",
+  "Program ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL success",
+  "Program 11111111111111111111111111111111 invoke [1]",
+  "Transfer: insufficient lamports 10855720, need 100000000",
+  "Program 11111111111111111111111111111111 failed: custom program error: 0x1"
+]. 
+Catch the `SendTransactionError` and call `getLogs()` on it for full details.
+    at Connection.sendEncodedTransaction (C:\Users\kamee\D3 SAVAG3 Trades\d3-savag3-trades-e977212c\node_modules\@solana\web3.js\lib\index.cjs.js:8208:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async Connection.sendRawTransaction (C:\Users\kamee\D3 SAVAG3 Trades\d3-savag3-trades-e977212c\node_modules\@solana\web3.js\lib\index.cjs.js:8173:20)
+    at async Connection.sendTransaction (C:\Users\kamee\D3 SAVAG3 Trades\d3-savag3-trades-e977212c\node_modules\@solana\web3.js\lib\index.cjs.js:8130:14)
+    at async executeJupiterSwap (file:///C:/Users/kamee/D3%20SAVAG3%20Trades/d3-savag3-trades-e977212c/jupiter-api-example.js:132:18)
+    at async runExample (file:///C:/Users/kamee/D3%20SAVAG3%20Trades/d3-savag3-trades-e977212c/jupiter-api-example.js:161:18)
+Example failed. See error logs above.
+Script execution completed

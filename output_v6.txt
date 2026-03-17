@@ -1,0 +1,22 @@
+=== Jupiter API Example ===
+Getting Jupiter quote...
+Quote received! Output amount: 467460
+Preparing Jupiter swap transaction...
+Transaction prepared successfully!
+Sending transaction...
+Error executing Jupiter swap: Simulation failed. 
+Message: Invalid Request: running preflight check is not supported. 
+
+Catch the `SendTransactionError` and call `getLogs()` on it for full details.
+Error: Simulation failed. 
+Message: Invalid Request: running preflight check is not supported. 
+
+Catch the `SendTransactionError` and call `getLogs()` on it for full details.
+    at Connection.sendEncodedTransaction (C:\Users\kamee\D3 SAVAG3 Trades\d3-savag3-trades-e977212c\node_modules\@solana\web3.js\lib\index.cjs.js:8208:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async Connection.sendRawTransaction (C:\Users\kamee\D3 SAVAG3 Trades\d3-savag3-trades-e977212c\node_modules\@solana\web3.js\lib\index.cjs.js:8173:20)
+    at async Connection.sendTransaction (C:\Users\kamee\D3 SAVAG3 Trades\d3-savag3-trades-e977212c\node_modules\@solana\web3.js\lib\index.cjs.js:8130:14)
+    at async executeJupiterSwap (file:///C:/Users/kamee/D3%20SAVAG3%20Trades/d3-savag3-trades-e977212c/jupiter-api-example.js:132:18)
+    at async runExample (file:///C:/Users/kamee/D3%20SAVAG3%20Trades/d3-savag3-trades-e977212c/jupiter-api-example.js:161:18)
+Example failed. See error logs above.
+Script execution completed

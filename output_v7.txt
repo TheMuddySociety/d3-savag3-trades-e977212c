@@ -1,0 +1,15 @@
+=== Jupiter API Example ===
+Getting Jupiter quote...
+Quote received! Output amount: 23365143965
+Preparing Jupiter swap transaction...
+Transaction prepared successfully!
+Sending transaction...
+Transaction sent! TxID: 4f586zL6awVAkNAkm8pd9VvVRCWtzCaMmMhTYnR4hbs7SbYxnkBcWhN95aqc8GtpmQJsFHwAJD1f31XtyQRFBZ74
+Confirming transaction...
+Transaction confirmed! {
+  context: { slot: 407020347 },
+  value: { err: { InstructionError: [Array] } }
+}
+Example completed successfully!
+Transaction ID: 4f586zL6awVAkNAkm8pd9VvVRCWtzCaMmMhTYnR4hbs7SbYxnkBcWhN95aqc8GtpmQJsFHwAJD1f31XtyQRFBZ74
+Script execution completed
