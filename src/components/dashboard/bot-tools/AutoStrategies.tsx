@@ -749,7 +749,7 @@ export const AutoStrategies = ({ killSignal = 0 }: Props) => {
   const handleBeachMode = (checked: boolean) => {
     setBeachMode(checked);
     const activeIds = strategies.filter(s => s.enabled).map(s => s.id);
-    sim.saveBotConfig('auto', {
+    saveBotConfig('auto', {
       strategies: activeIds,
       maxBudget: parseFloat(maxBudget),
       beachMode: checked,
