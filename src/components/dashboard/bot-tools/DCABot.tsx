@@ -16,19 +16,17 @@ import { isValidSolanaAddress } from "@/utils/validateSolanaAddress";
 const SOL_MINT = "So11111111111111111111111111111111111111112";
 
 const INTERVAL_OPTIONS = [
-  { value: "5000", label: "Every 5 sec (sim)" },
-  { value: "10000", label: "Every 10 sec (sim)" },
-  { value: "30000", label: "Every 30 sec (sim)" },
+  { value: "10000", label: "Every 10 sec" },
+  { value: "30000", label: "Every 30 sec" },
   { value: "60000", label: "Every 1 min" },
+  { value: "300000", label: "Every 5 min" },
 ];
 
 interface Props {
-  sim: any;
-  isLive?: boolean;
   killSignal?: number;
 }
 
-export const DCABot = ({ sim, isLive = false, killSignal = 0 }: Props) => {
+export const DCABot = ({ killSignal = 0 }: Props) => {
   const { toast } = useToast();
   const wallet = useWallet();
   const { connection } = useConnection();
@@ -41,6 +39,7 @@ export const DCABot = ({ sim, isLive = false, killSignal = 0 }: Props) => {
   const [ordersExecuted, setOrdersExecuted] = useState(0);
   const [useRandomDelay, setUseRandomDelay] = useState(true);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const dcaInterval = useRef<NodeJS.Timeout | null>(null);
   const countRef = useRef(0);
   const isExecutingRef = useRef(false);
@@ -49,7 +48,6 @@ export const DCABot = ({ sim, isLive = false, killSignal = 0 }: Props) => {
     return () => { if (dcaInterval.current) clearInterval(dcaInterval.current); };
   }, []);
 
-  // Kill switch listener
   useEffect(() => {
     if (killSignal > 0) {
       setIsRunning(false);
@@ -81,31 +79,20 @@ export const DCABot = ({ sim, isLive = false, killSignal = 0 }: Props) => {
       isExecutingRef.current = true;
 
       try {
-        if (isLive) {
-          const lamports = Math.round(parseFloat(amountPerOrder) * 1e9);
-          let txid = await JupiterTransactionService.swapTokens(connection, wallet, SOL_MINT, tokenAddress, lamports, 300);
-          
-          // Retry once on failure after 3 seconds
-          if (!txid) {
-            await new Promise(r => setTimeout(r, 3000));
-            txid = await JupiterTransactionService.swapTokens(connection, wallet, SOL_MINT, tokenAddress, lamports, 300);
-          }
-          
-          if (txid) {
-            countRef.current++;
-            setOrdersExecuted(countRef.current);
-          } else {
-            stopDCA();
-            toast({ title: "DCA Stopped", description: "Live trade failed after retry", variant: "destructive" });
-          }
+        const lamports = Math.round(parseFloat(amountPerOrder) * 1e9);
+        let txid = await JupiterTransactionService.swapTokens(connection, wallet, SOL_MINT, tokenAddress, lamports, 300);
+        
+        if (!txid) {
+          await new Promise(r => setTimeout(r, 3000));
+          txid = await JupiterTransactionService.swapTokens(connection, wallet, SOL_MINT, tokenAddress, lamports, 300);
+        }
+        
+        if (txid) {
+          countRef.current++;
+          setOrdersExecuted(countRef.current);
         } else {
-          const result = await sim.simulateBuy(tokenAddress, tokenSymbol || tokenAddress.slice(0, 6), parseFloat(amountPerOrder), 'dca');
-          if (result) {
-            countRef.current++;
-            setOrdersExecuted(countRef.current);
-          } else {
-            stopDCA();
-          }
+          stopDCA();
+          toast({ title: "DCA Stopped", description: "Live trade failed after retry", variant: "destructive" });
         }
       } finally {
         isExecutingRef.current = false;
@@ -128,15 +115,11 @@ export const DCABot = ({ sim, isLive = false, killSignal = 0 }: Props) => {
       toast({ title: "Invalid address", description: "Enter a valid Solana token mint address", variant: "destructive" });
       return;
     }
-    if (isLive && !wallet.publicKey) {
+    if (!wallet.publicKey) {
       toast({ title: "Wallet not connected", description: "Connect wallet for live trading", variant: "destructive" });
       return;
     }
-    if (isLive) {
-      setShowConfirm(true);
-    } else {
-      proceedStartDCA();
-    }
+    setShowConfirm(true);
   };
 
   const handleToggle = () => {
@@ -163,7 +146,7 @@ export const DCABot = ({ sim, isLive = false, killSignal = 0 }: Props) => {
           <span className="text-sm font-medium text-foreground">DCA Bot</span>
         </div>
         {isRunning && (
-          <Badge className={`${isLive ? "bg-destructive/20 text-destructive border-destructive/30" : "bg-accent/20 text-accent border-accent/30"} animate-pulse`}>
+          <Badge className="bg-destructive/20 text-destructive border-destructive/30 animate-pulse">
             {ordersExecuted}/{totalOrders}
           </Badge>
         )}
@@ -219,24 +202,22 @@ export const DCABot = ({ sim, isLive = false, killSignal = 0 }: Props) => {
           </div>
         </div>
 
-        {isLive && (
-          <div className="p-2 rounded-lg bg-destructive/10 border border-destructive/30">
-            <p className="text-[11px] text-destructive font-medium">⚠️ LIVE MODE — Real SOL will be spent. Transactions are irreversible.</p>
-          </div>
-        )}
+        <div className="p-2 rounded-lg bg-destructive/10 border border-destructive/30">
+          <p className="text-[11px] text-destructive font-medium">⚠️ LIVE MODE — Real SOL will be spent. Transactions are irreversible.</p>
+        </div>
 
         <Button
           onClick={handleToggle}
-          disabled={sim.isLoading}
-          className={`w-full ${isRunning ? 'bg-destructive hover:bg-destructive/90' : isLive ? 'bg-destructive hover:bg-destructive/90' : 'bg-accent hover:bg-accent/90'} text-accent-foreground`}
+          disabled={isLoading}
+          className={`w-full ${isRunning ? 'bg-destructive hover:bg-destructive/90' : 'bg-destructive hover:bg-destructive/90'} text-destructive-foreground`}
           size="sm"
         >
-          {sim.isLoading ? (
+          {isLoading ? (
             <><div className="animate-spin rounded-full h-3 w-3 border-b-2 border-current mr-2" /> Processing...</>
           ) : isRunning ? (
             <><Pause className="h-4 w-4 mr-2" /> Stop DCA</>
           ) : (
-            <><Play className="h-4 w-4 mr-2" /> Start DCA {isLive ? "(LIVE)" : "(Paper)"}</>
+            <><Play className="h-4 w-4 mr-2" /> Start DCA (LIVE)</>
           )}
         </Button>
       </div>
