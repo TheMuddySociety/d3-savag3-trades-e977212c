@@ -43,8 +43,7 @@ serve(async (req) => {
       const launchMaxAge = (config.config as any)?.launchMaxAge || 30;
       const safeExitStopLoss = (config.config as any)?.safeExitStopLoss || 15;
       const safeExitTakeProfit = (config.config as any)?.safeExitTakeProfit || 50;
-      const safeExitStopLoss = (config.config as any)?.safeExitStopLoss || 15;
-      const safeExitTakeProfit = (config.config as any)?.safeExitTakeProfit || 50;
+      const scalperTarget = (config.config as any)?.scalperTarget || 3;
 
       if (!isBeachMode) {
         console.log(`Skipping ${walletAddress} — beachMode not enabled`);
@@ -131,7 +130,7 @@ serve(async (req) => {
             if (pnl <= -15) { shouldSell = true; reason = `Stop-Loss: ${h.symbol} at ${pnl.toFixed(1)}%`; }
             else if (pnl >= 50) { shouldSell = true; reason = `Take-Profit: ${h.symbol} at +${pnl.toFixed(1)}%`; }
           } else if (strategy === 'scalper') {
-            if (pnl >= 3) { shouldSell = true; reason = `Scalper: ${h.symbol} at +${pnl.toFixed(1)}%`; }
+            if (pnl >= scalperTarget) { shouldSell = true; reason = `Scalper: ${h.symbol} at +${pnl.toFixed(1)}% (target: +${scalperTarget}%)`; }
           } else if (strategy === 'momentum') {
             const peak = peakPriceMap.get(h.mint) || livePrice;
             const dropFromPeak = peak > 0 ? ((livePrice - peak) / peak) * 100 : 0;

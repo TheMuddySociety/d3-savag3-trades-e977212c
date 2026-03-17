@@ -51,7 +51,7 @@ const INITIAL_STRATEGIES: Strategy[] = [
   { id: "dip_buy", name: "Dip Buyer", description: "Auto-buys tokens that dip >20% then recover >3% from low", icon: <TrendingDown className="h-4 w-4" />, risk: "High", enabled: false },
   { id: "safe_exit", name: "Safe Exit", description: "Auto stop-loss at -15% and trailing take-profit at +50%", icon: <ShieldCheck className="h-4 w-4" />, risk: "Low", enabled: false },
   { id: "new_launch", name: "New Launch Hunter", description: "Snipes new tokens on Pump.fun within first 30s of launch", icon: <Flame className="h-4 w-4" />, risk: "High", enabled: false },
-  { id: "scalper", name: "Scalper", description: "Sell on 3% gain — auto-sells positions at target", icon: <Zap className="h-4 w-4" />, risk: "Medium", enabled: false },
+  { id: "scalper", name: "Scalper", description: "Auto-sells positions at custom profit target", icon: <Zap className="h-4 w-4" />, risk: "Medium", enabled: false },
   { id: "whale_follow", name: "Whale Follow", description: "Auto-copies top leaderboard wallets' trades", icon: <Users className="h-4 w-4" />, risk: "Medium", enabled: false },
 ];
 
@@ -104,6 +104,11 @@ export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) =
   const safeExitTakeProfitRef = useRef(safeExitTakeProfit);
   safeExitStopLossRef.current = safeExitStopLoss;
   safeExitTakeProfitRef.current = safeExitTakeProfit;
+
+  // Scalper configurable parameters
+  const [scalperTarget, setScalperTarget] = useState("3");
+  const scalperTargetRef = useRef(scalperTarget);
+  scalperTargetRef.current = scalperTarget;
 
   const addLog = useCallback((msg: string) => {
     const time = new Date().toLocaleTimeString();
@@ -494,16 +499,17 @@ export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) =
             // SCALPER: sell on +3% gain
             // ═══════════════════════════════════════
             case "scalper": {
+              const scalperThreshold = parseFloat(scalperTargetRef.current || "3");
               for (const h of holdings) {
                 const entryPrice = entryPriceMap.get(h.mint);
                 if (!entryPrice || h.price <= 0) continue;
                 const pnl = ((h.price - entryPrice) / entryPrice) * 100;
 
-                if (pnl >= 3) {
+                if (pnl >= scalperThreshold) {
                   addLog(`⚡ Scalper triggered: ${h.symbol} at +${pnl.toFixed(1)}%`);
                   await executeLiveSell(h, "Scalper");
                 } else {
-                  addLog(`⚡ ${h.symbol}: ${pnl >= 0 ? '+' : ''}${pnl.toFixed(1)}% (target: +3%)`);
+                  addLog(`⚡ ${h.symbol}: ${pnl >= 0 ? '+' : ''}${pnl.toFixed(1)}% (target: +${scalperThreshold}%)`);
                 }
               }
               break;
@@ -689,6 +695,7 @@ export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) =
         launchAutoSellTimer: parseInt(launchAutoSellTimer),
         safeExitStopLoss: parseFloat(safeExitStopLoss),
         safeExitTakeProfit: parseFloat(safeExitTakeProfit),
+        scalperTarget: parseFloat(scalperTarget),
       }, activeIds.length > 0);
 
       setTimeout(() => {
@@ -731,6 +738,9 @@ export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) =
       launchMinLiquidity: parseFloat(launchMinLiquidity),
       launchMaxAge: parseInt(launchMaxAge),
       launchAutoSellTimer: parseInt(launchAutoSellTimer),
+      safeExitStopLoss: parseFloat(safeExitStopLoss),
+      safeExitTakeProfit: parseFloat(safeExitTakeProfit),
+      scalperTarget: parseFloat(scalperTarget),
     }, activeIds.length > 0);
     toast({
       title: checked ? "🏖️ Beach Mode ON" : "Beach Mode OFF",
@@ -896,6 +906,29 @@ export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) =
                 </div>
                 <p className="text-[10px] text-muted-foreground">
                   Auto-sells on -{safeExitStopLoss}% loss or +{safeExitTakeProfit}% gain
+                </p>
+              </div>
+            )}
+
+            {/* Scalper configurable parameters */}
+            {strategy.id === "scalper" && (
+              <div className="mt-2 pl-6 space-y-2">
+                <div className="grid grid-cols-1 gap-2 max-w-[140px]">
+                  <div>
+                    <Label className="text-[10px] text-muted-foreground">Profit Target %</Label>
+                    <Input
+                      type="number"
+                      value={scalperTarget}
+                      onChange={(e) => setScalperTarget(e.target.value)}
+                      className="bg-muted/30 border-border text-xs h-7 mt-0.5"
+                      min="0.5"
+                      max="100"
+                      step="0.5"
+                    />
+                  </div>
+                </div>
+                <p className="text-[10px] text-muted-foreground">
+                  Auto-sells on +{scalperTarget}% gain
                 </p>
               </div>
             )}

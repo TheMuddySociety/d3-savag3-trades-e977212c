@@ -313,7 +313,7 @@
 
     "@jup-ag/jup-mobile-adapter": ["@jup-ag/jup-mobile-adapter@0.0.2", "", { "peerDependencies": { "@reown/appkit": ">=1.6.0", "@reown/appkit-adapter-solana": ">=1.6.0", "@reown/appkit-wallet-button": ">=1.6.0", "@solana/wallet-adapter-base": ">=0.9.0", "@solana/web3.js": ">=1.95.0", "react": ">=18" } }, "sha512-1KSRELKHOji+p0wmSvfmw8r7AC/k5qPBCidK3qvIxQCgz073goSWQ6T/iNifL1oWVMDoeMbo3wQbER61XQC2Nw=="],
 
-    "@jup-ag/plugin": ["@jup-ag/plugin@1.0.13", "", { "dependencies": { "@jup-ag/wallet-adapter": "0.2.3", "@popperjs/core": "^2.11.8", "@solana/wallet-adapter-wallets": "0.19.33", "@tanstack/react-query": "5.85.5", "bn.js": "5.2.1", "clsx": "^2.1.1", "decimal.js": "10.4.3", "jotai": "^2.8.3", "jsbi": "4.3.0", "lodash.debounce": "^4.0.8", "next": "13.5.6", "next-seo": "5.15.0", "react-colorful": "^5.6.1", "react-hook-form": "7.42.1", "react-number-format": "5.1.3", "react-popper": "^2.3.0", "react-syntax-highlighter": "^15.5.0", "react-use": "^17.5.0", "react-virtualized-auto-sizer": "1.0.7", "react-window": "1.8.8", "superstruct": "1.0.3", "tailwind-merge": "^2.5.2", "tailwindcss-animate": "^1.0.7" }, "peerDependencies": { "@solana/spl-token": "^0.1.8", "@solana/web3.js": "^1.87.6", "react": "^18", "react-dom": "^18" } }, "sha512-apRW9GJTRgN8j2gfOvBcJGeAAaPKrnaYXcrOITcCA1iJe3XLzmHu+3Wr44TbhsNx+KUIfDmk4B27O2AYL6JVuQ=="],
+    "@jup-ag/plugin": ["@jup-ag/plugin@1.0.14", "", { "dependencies": { "@jup-ag/wallet-adapter": "0.2.3", "@popperjs/core": "^2.11.8", "@solana/wallet-adapter-wallets": "0.19.33", "@tanstack/react-query": "5.85.5", "bn.js": "5.2.1", "clsx": "^2.1.1", "decimal.js": "10.4.3", "jotai": "^2.8.3", "jsbi": "4.3.0", "lodash.debounce": "^4.0.8", "next": "13.5.6", "next-seo": "5.15.0", "react-colorful": "^5.6.1", "react-hook-form": "7.42.1", "react-number-format": "5.1.3", "react-popper": "^2.3.0", "react-syntax-highlighter": "^15.5.0", "react-use": "^17.5.0", "react-virtualized-auto-sizer": "1.0.7", "react-window": "1.8.8", "superstruct": "1.0.3", "tailwind-merge": "^2.5.2", "tailwindcss-animate": "^1.0.7" }, "peerDependencies": { "@solana/spl-token": "^0.1.8", "@solana/web3.js": "^1.87.6", "react": "^18", "react-dom": "^18" } }, "sha512-26l/cklQPZCOIz153y6kzFz2wfaXbbhxfydCqxSZ0QxwCwGMXXIjYq16YZXqEpKIJe6YwmBBDylql3jNwhxvmA=="],
 
     "@jup-ag/react-hook": ["@jup-ag/react-hook@6.2.0", "", { "dependencies": { "@jup-ag/api": "6.0.29", "@jup-ag/common": "6.1.0", "@mercurial-finance/optimist": "0.4.0", "@solana/spl-token": "0.1.8", "promise-retry": "2.0.1", "superstruct": "~1.0.3" }, "peerDependencies": { "@solana/web3.js": ">=1.15.0", "bn.js": ">=5.2.0", "react": ">=16" } }, "sha512-8LQoVfLnj1QPI2kzNPgoZiJWh2oGC81k0X0ZUuHux01qH3+xwnJrEPDsO7SKABzw7AV3Q0tP0lxiv2CaliQUFw=="],
 
@@ -2313,7 +2313,7 @@
 
     "salmon-adapter-sdk": ["salmon-adapter-sdk@1.1.1", "", { "dependencies": { "@project-serum/sol-wallet-adapter": "^0.2.6", "eventemitter3": "^4.0.7" }, "peerDependencies": { "@solana/web3.js": "^1.44.3" } }, "sha512-28ysSzmDjx2AbotxSggqdclh9MCwlPJUldKkCph48oS5Xtwu0QOg8T9ZRHS2Mben4Y8sTq6VvxXznKssCYFBJA=="],
 
-    "sax": ["sax@1.5.0", "", {}, "sha512-21IYA3Q5cQf089Z6tgaUTr7lDAyzoTPx5HRtbhsME8Udispad8dC/+sziTNugOEx54ilvatQ9YCzl4KQLPcRHA=="],
+    "sax": ["sax@1.6.0", "", {}, "sha512-6R3J5M4AcbtLUdZmRv2SygeVaM7IhrLXu9BmnOGmmACak8fiUtOsYNWUS4uK7upbmHIBbLBeFeI//477BKLBzA=="],
 
     "scheduler": ["scheduler@0.23.2", "", { "dependencies": { "loose-envify": "^1.1.0" } }, "sha512-UOShsPwz7NrMUqhR6t0hWjFduvOzbtv7toDH1/hIrfRNIDBnnBWd0CwJTGvTpngVlmwGCdP9/Zl/tVrDqcuYzQ=="],
 
@@ -2895,7 +2895,7 @@
 
     "@solana/rpc-transport-http/@solana/errors": ["@solana/errors@5.5.1", "", { "dependencies": { "chalk": "5.6.2", "commander": "14.0.2" }, "peerDependencies": { "typescript": "^5.0.0" }, "optionalPeers": ["typescript"], "bin": { "errors": "bin/cli.mjs" } }, "sha512-vFO3p+S7HoyyrcAectnXbdsMfwUzY2zYFUc2DEe5BwpiE9J1IAxPBGjOWO6hL1bbYdBrlmjNx8DXCslqS+Kcmg=="],
 
-    "@solana/rpc-transport-http/undici-types": ["undici-types@7.24.3", "", {}, "sha512-frL/LoWYV3AWaHtW+Oa3oNLX1k6fVDBd/4gspN4nkRwzO9tRj/R1HzDQpyXnt0H/5DKHbFpdn2BktNQl1tbFYA=="],
+    "@solana/rpc-transport-http/undici-types": ["undici-types@7.24.4", "", {}, "sha512-cRaY9PagdEZoRmcwzk3tUV3SVGrVQkR6bcSilav/A0vXsfpW4Lvd0BvgRMwTEDTLLGN+QdyBTG+nnvTgJhdt6w=="],
 
     "@solana/rpc-types/@solana/codecs-core": ["@solana/codecs-core@5.5.1", "", { "dependencies": { "@solana/errors": "5.5.1" }, "peerDependencies": { "typescript": "^5.0.0" }, "optionalPeers": ["typescript"] }, "sha512-TgBt//bbKBct0t6/MpA8ElaOA3sa8eYVvR7LGslCZ84WiAwwjCY0lW/lOYsFHJQzwREMdUyuEyy5YWBKtdh8Rw=="],
 
