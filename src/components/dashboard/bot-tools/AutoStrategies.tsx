@@ -910,6 +910,29 @@ export const AutoStrategies = ({ sim, isLive = false, killSignal = 0 }: Props) =
               </div>
             )}
 
+            {/* Scalper configurable parameters */}
+            {strategy.id === "scalper" && (
+              <div className="mt-2 pl-6 space-y-2">
+                <div className="grid grid-cols-1 gap-2 max-w-[140px]">
+                  <div>
+                    <Label className="text-[10px] text-muted-foreground">Profit Target %</Label>
+                    <Input
+                      type="number"
+                      value={scalperTarget}
+                      onChange={(e) => setScalperTarget(e.target.value)}
+                      className="bg-muted/30 border-border text-xs h-7 mt-0.5"
+                      min="0.5"
+                      max="100"
+                      step="0.5"
+                    />
+                  </div>
+                </div>
+                <p className="text-[10px] text-muted-foreground">
+                  Auto-sells on +{scalperTarget}% gain
+                </p>
+              </div>
+            )}
+
             {/* New Launch Hunter configurable parameters */}
             {strategy.id === "new_launch" && (
               <div className="mt-2 pl-6 space-y-2">
