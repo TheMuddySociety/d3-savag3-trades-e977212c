@@ -397,20 +397,12 @@ async function fetchTokenOverview(address: string, apiKey: string, jupiterApiKey
 // ── Token Trades via Helius ─────────────────────────────────────────
 
 async function fetchTokenTrades(address: string, apiKey: string, limit: number) {
-  const rpcUrl = `https://mainnet.helius-rpc.com/?api-key=${apiKey}`;
-  
-  const sigResponse = await fetch(rpcUrl, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      jsonrpc: '2.0', id: 1,
-      method: 'getSignaturesForAddress',
-      params: [address, { limit: Math.min(limit * 2, 40) }],
-    }),
+  const sigResult = await rpcFetchWithFallback(apiKey, {
+    jsonrpc: '2.0', id: 1,
+    method: 'getSignaturesForAddress',
+    params: [address, { limit: Math.min(limit * 2, 40) }],
   });
-
-  if (!sigResponse.ok) throw new Error(`Helius RPC failed [${sigResponse.status}]`);
-  const sigResult = await sigResponse.json();
+  const signatures = (sigResult?.result || []).map((s: any) => s.signature);
   const signatures = (sigResult?.result || []).map((s: any) => s.signature);
 
   if (signatures.length === 0) return [];
