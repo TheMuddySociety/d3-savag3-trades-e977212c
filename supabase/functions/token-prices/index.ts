@@ -566,14 +566,7 @@ async function fetchPriceHistory(address: string, _interval: string, _timeFrom?:
 // ── Token Holders ───────────────────────────────────────────────────
 
 async function fetchTokenHolders(address: string, apiKey: string) {
-  const rpcUrl = `https://mainnet.helius-rpc.com/?api-key=${apiKey}`;
-  const rpcResponse = await fetch(rpcUrl, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'getTokenLargestAccounts', params: [address] }),
-  });
-
-  if (!rpcResponse.ok) throw new Error(`Helius RPC failed [${rpcResponse.status}]: ${await rpcResponse.text()}`);
+  const rpcResult = await rpcFetchWithFallback(apiKey, { jsonrpc: '2.0', id: 1, method: 'getTokenLargestAccounts', params: [address] });
 
   const rpcResult = await rpcResponse.json();
   const accounts = rpcResult?.result?.value || [];
