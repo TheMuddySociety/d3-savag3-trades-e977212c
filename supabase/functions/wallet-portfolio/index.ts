@@ -15,7 +15,37 @@ serve(async (req) => {
   }
 
   try {
-    const { wallet_address } = await req.json();
+    const authHeader = req.headers.get('Authorization');
+    const body = await req.json().catch(() => ({}));
+    let { wallet_address } = body;
+
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+
+    // If authenticated, we can resolve the trusted wallet address
+    if (authHeader) {
+      const userClient = createClient(supabaseUrl, anonKey, {
+        global: { headers: { Authorization: authHeader } }
+      });
+      const { data: { user } } = await userClient.auth.getUser();
+      
+      if (user) {
+        // If no wallet_address provided, use the user's primary wallet
+        if (!wallet_address) {
+          const supabase = createClient(supabaseUrl, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('wallet_address')
+            .eq('id', user.id)
+            .single();
+          
+          if (profile) {
+            wallet_address = profile.wallet_address;
+          }
+        }
+      }
+    }
+
     if (!wallet_address) {
       return new Response(JSON.stringify({ error: "wallet_address required" }), {
         status: 400,

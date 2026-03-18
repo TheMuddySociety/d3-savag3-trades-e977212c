@@ -13,6 +13,7 @@ serve(async (req) => {
   }
 
   try {
+    const authHeader = req.headers.get('Authorization');
     const heliusKey = Deno.env.get('HELIUS_API_KEY');
     if (!heliusKey) {
       return new Response(JSON.stringify({ success: false, error: 'HELIUS_API_KEY not configured' }), {
@@ -22,6 +23,27 @@ serve(async (req) => {
 
     const body = await req.json();
     const { action } = body;
+
+    // Management actions require authentication
+    if (action === 'register_webhook' || action === 'delete_webhook') {
+      if (!authHeader) {
+        return new Response(JSON.stringify({ success: false, error: 'Authorization header required for this action' }), {
+          status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      
+      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+      const userClient = createClient(supabaseUrl, Deno.env.get('SUPABASE_ANON_KEY')!, {
+        global: { headers: { Authorization: authHeader } }
+      });
+      const { data: { user }, error: authError } = await userClient.auth.getUser();
+      
+      if (authError || !user) {
+        return new Response(JSON.stringify({ success: false, error: 'Invalid or expired token' }), {
+          status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+    }
 
     // === WEBHOOK REGISTRATION ===
     if (action === 'register_webhook') {

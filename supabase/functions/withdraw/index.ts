@@ -12,20 +12,56 @@ serve(async (req: Request) => {
   }
 
   try {
-    const { budget_id, wallet_address } = await req.json();
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: 'Authorization header is required' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
-    if (!budget_id || !wallet_address) {
-      return new Response(JSON.stringify({ error: 'Missing budget_id or wallet_address' }), {
+    const { budget_id } = await req.json();
+
+    if (!budget_id) {
+      return new Response(JSON.stringify({ error: 'Missing budget_id' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
     const supabaseUrl = (globalThis as any).Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = (globalThis as any).Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const anonKey = (globalThis as any).Deno.env.get('SUPABASE_ANON_KEY')!;
     const platformPrivateKey = (globalThis as any).Deno.env.get('PLATFORM_WALLET_PRIVATE_KEY');
+    
+    // Create a user client to verify the JWT
+    const userClient = createClient(supabaseUrl, anonKey, {
+      global: { headers: { Authorization: authHeader } }
+    });
+    const { data: { user }, error: authError } = await userClient.auth.getUser();
+
+    if (authError || !user) {
+      return new Response(JSON.stringify({ error: 'Invalid or expired token' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Fetch budget
+    // Get the trusted wallet address from profiles
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('wallet_address')
+      .eq('id', user.id)
+      .single();
+
+    if (profileError || !profile) {
+      return new Response(JSON.stringify({ error: 'User profile not found' }), {
+        status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const wallet_address = profile.wallet_address;
+
+    // Fetch budget and verify ownership
     const { data: budget, error: budgetError } = await supabase
       .from('auto_trade_budgets')
       .select('*')

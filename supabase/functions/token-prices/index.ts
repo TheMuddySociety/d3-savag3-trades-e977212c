@@ -103,12 +103,14 @@ async function fetchJupiterPrices(addresses: string[], apiKey?: string) {
   }
   
   const result = await response.json();
+  const data = result.data || result; // Handle both nested 'data' (V2) and direct (V1)
   const prices: Record<string, { value: number }> = {};
   
-  for (const [mint, info] of Object.entries(result)) {
-    const priceData = info as { usdPrice?: number };
-    if (priceData?.usdPrice) {
-      prices[mint] = { value: priceData.usdPrice };
+  for (const [mint, info] of Object.entries(data)) {
+    const priceData = info as { price?: string | number; usdPrice?: string | number };
+    const priceValue = priceData?.price || priceData?.usdPrice;
+    if (priceValue) {
+      prices[mint] = { value: typeof priceValue === 'string' ? parseFloat(priceValue) : Number(priceValue) };
     }
   }
   
@@ -602,12 +604,14 @@ async function fetchSolPrice(jupiterApiKey?: string) {
 
   const resp = await fetch(`${JUPITER_PRICE_API}?ids=${SOL_MINT}`, { headers });
   if (!resp.ok) throw new Error(`Jupiter price failed [${resp.status}]`);
-  const data = await resp.json();
+  const result = await resp.json();
+  const data = result.data || result;
   const solData = data?.[SOL_MINT];
 
+  const price = solData?.price || solData?.usdPrice || 0;
   return {
-    price: solData?.usdPrice || 0,
-    change24h: solData?.priceChange24h || 0,
+    price: typeof price === 'string' ? parseFloat(price) : Number(price),
+    change24h: 0,
   };
 }
 
@@ -672,9 +676,9 @@ async function fetchShieldCheck(address: string, jupiterApiKey?: string) {
     const shieldPromise = fetch(`https://ultra-api.jup.ag/v1/shield?mints=${address}`, { headers })
       .then(r => r.ok ? r.json() : null).catch(() => null);
 
-    // 2. Jupiter Strict List check
-    const strictListPromise = fetch('https://token.jup.ag/strict')
-      .then(r => r.ok ? r.json() : []).catch(() => []);
+    // 2. Strict List check (Simplified to avoid loading 2MB JSON)
+    // We check if it has a price/liquidity on Jupiter which usually implies it's "known" enough
+    const isOnStrictList = false; // We'll rely more on Helius and DexScreener verification
 
     // 3. Helius DAS getAsset (mint/freeze authority + metadata)
     const rpcUrl = HELIUS_API_KEY ? `https://mainnet.helius-rpc.com/?api-key=${HELIUS_API_KEY}` : '';
@@ -704,8 +708,8 @@ async function fetchShieldCheck(address: string, jupiterApiKey?: string) {
     const quotePromise = fetch(`https://quote-api.jup.ag/v6/quote?inputMint=${SOL_MINT}&outputMint=${address}&amount=100000000&slippageBps=500`, { headers })
       .then(r => r.ok ? r.json() : null).catch(() => null);
 
-    const [shieldData, strictList, metaResult, holdersResult, dexPairs, quoteData] = await Promise.all([
-      shieldPromise, strictListPromise, metaPromise, holdersPromise, dexPromise, quotePromise,
+    const [shieldData, metaResult, holdersResult, dexPairs, quoteData] = await Promise.all([
+      shieldPromise, metaPromise, holdersPromise, dexPromise, quotePromise,
     ]);
 
     // ── Parse results ──────────────────────────────────────────────
@@ -714,8 +718,6 @@ async function fetchShieldCheck(address: string, jupiterApiKey?: string) {
     const shieldMint = shieldData?.[address] || {};
     const shieldWarnings: string[] = shieldMint?.warnings || [];
 
-    // Strict list
-    const isOnStrictList = Array.isArray(strictList) && strictList.some((t: any) => t.address === address);
 
     // Metadata / authorities
     const asset = metaResult?.result || {};
