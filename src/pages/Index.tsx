@@ -9,7 +9,6 @@ import { JupiterAIChat } from "@/components/dashboard/JupiterAIChat";
 import { PriceAlerts } from "@/components/dashboard/PriceAlerts";
 import { Leaderboard } from "@/components/dashboard/Leaderboard";
 import { PortfolioTracker } from "@/components/dashboard/PortfolioTracker";
-import { TrendingGlobe } from "@/components/dashboard/TrendingGlobe";
 import { MemeScanner } from "@/components/dashboard/MemeScanner";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useWallet } from "@solana/wallet-adapter-react";
@@ -81,12 +80,7 @@ function DesktopDashboard() {
       case 'swap':
         return (
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <TokenSwap />
-              <div className="bg-card border border-border rounded-lg p-0 flex items-center justify-center overflow-hidden min-h-[340px]">
-                <TrendingGlobe />
-              </div>
-            </div>
+            <TokenSwap />
             <PortfolioTracker />
           </div>
         );
