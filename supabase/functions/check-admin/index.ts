@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.93.3";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -15,15 +16,48 @@ serve(async (req) => {
   }
 
   try {
-    const { wallet_address } = await req.json();
-    if (!wallet_address || typeof wallet_address !== "string" || wallet_address.length < 30) {
-      return new Response(
-        JSON.stringify({ isAdmin: false }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      return new Response(JSON.stringify({ isAdmin: false, error: "Missing Authorization header" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
+      });
     }
 
-    const isAdmin = ADMIN_WALLETS.includes(wallet_address);
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+
+    // Create a user client to verify the JWT
+    const userClient = createClient(supabaseUrl, anonKey, {
+      global: { headers: { Authorization: authHeader } }
+    });
+    const { data: { user }, error: authError } = await userClient.auth.getUser();
+
+    if (authError || !user) {
+      return new Response(JSON.stringify({ isAdmin: false, error: "Invalid token" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
+      });
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // Get the trusted wallet address from profiles
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("wallet_address")
+      .eq("id", user.id)
+      .single();
+
+    if (profileError || !profile || !profile.wallet_address) {
+      return new Response(JSON.stringify({ isAdmin: false, error: "Profile or wallet not found" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
+      });
+    }
+
+    const isAdmin = ADMIN_WALLETS.includes(profile.wallet_address);
+    if (isAdmin) {
+      console.log(`✅ Admin access granted for: ${profile.wallet_address}`);
+    }
 
     return new Response(
       JSON.stringify({ isAdmin }),
