@@ -567,8 +567,6 @@ async function fetchPriceHistory(address: string, _interval: string, _timeFrom?:
 
 async function fetchTokenHolders(address: string, apiKey: string) {
   const rpcResult = await rpcFetchWithFallback(apiKey, { jsonrpc: '2.0', id: 1, method: 'getTokenLargestAccounts', params: [address] });
-
-  const rpcResult = await rpcResponse.json();
   const accounts = rpcResult?.result?.value || [];
 
   const totalInTop = accounts.reduce((sum: number, acc: { uiAmount: number }) => sum + (acc.uiAmount || 0), 0);
