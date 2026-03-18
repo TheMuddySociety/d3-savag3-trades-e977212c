@@ -31,19 +31,23 @@ serve(async (req) => {
   const birdeyeKey = Deno.env.get('BIRDEYE_API_KEY');
 
   try {
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader && req.method !== 'OPTIONS') {
-      // Check if it's leaderboard, which is public
-      const tempBody = await req.clone().json().catch(() => ({}));
-      if (tempBody.action !== 'leaderboard') {
-        return err('Authorization header is required', 401);
-      }
+    const body = await req.json();
+    const { action } = body;
+
+    // Leaderboard is public — skip auth entirely
+    if (action === 'leaderboard') {
+      // handle leaderboard below without auth
     }
 
+    const authHeader = req.headers.get('Authorization');
     let authenticatedUserId: string | null = null;
     let trustedWallet: string | null = null;
 
-    if (authHeader) {
+    if (action !== 'leaderboard') {
+      if (!authHeader) {
+        return err('Authorization header is required', 401);
+      }
+
       const userClient = createClient(supabaseUrl, Deno.env.get('SUPABASE_ANON_KEY')!, {
         global: { headers: { Authorization: authHeader } }
       });
