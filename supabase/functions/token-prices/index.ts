@@ -8,6 +8,27 @@ const corsHeaders = {
 const JUPITER_PRICE_API = 'https://api.jup.ag/price/v3';
 const COINGECKO_BASE = 'https://api.coingecko.com/api/v3';
 const HELIUS_BASE = 'https://api.helius.xyz';
+const PUBLIC_RPC = 'https://api.mainnet-beta.solana.com';
+
+/** Fetch from Helius RPC with automatic fallback to public Solana RPC on 401/403 */
+async function rpcFetchWithFallback(apiKey: string, body: unknown): Promise<any> {
+  const heliusUrl = `https://mainnet.helius-rpc.com/?api-key=${apiKey}`;
+  const payload = JSON.stringify(body);
+  const headers = { 'Content-Type': 'application/json' };
+
+  let resp = await fetch(heliusUrl, { method: 'POST', headers, body: payload });
+  if (resp.status === 401 || resp.status === 403) {
+    console.warn(`Helius RPC returned ${resp.status}, falling back to public RPC`);
+    // consume body to avoid leak
+    await resp.text();
+    resp = await fetch(PUBLIC_RPC, { method: 'POST', headers, body: payload });
+  }
+  if (!resp.ok) {
+    const text = await resp.text();
+    throw new Error(`RPC failed [${resp.status}]: ${text}`);
+  }
+  return resp.json();
+}
 
 function ok(data: unknown) {
   return new Response(JSON.stringify({ success: true, data }), {
