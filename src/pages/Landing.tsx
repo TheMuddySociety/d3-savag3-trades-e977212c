@@ -4,7 +4,7 @@ import { Activity, ArrowRight, Zap, Shield, BarChart3 } from "lucide-react";
 import { toast } from "sonner";
 import { useWallet } from '@solana/wallet-adapter-react';
 import { UnifiedWalletButton } from '@jup-ag/wallet-adapter';
-import { GlobeChart } from "@/components/dashboard/GlobeChart";
+import { TrendingGlobe } from "@/components/dashboard/TrendingGlobe";
 import { useAdminCheck } from "@/hooks/useAdminCheck";
 
 
@@ -99,11 +99,8 @@ const Landing = () => {
           </div>
 
           {/* Right - Globe */}
-          <div className="flex items-center justify-center">
-            <div className="relative">
-              <GlobeChart />
-              <div className="absolute inset-0 rounded-full border border-primary/5" />
-            </div>
+          <div className="flex items-center justify-center overflow-hidden min-h-[400px]">
+            <TrendingGlobe />
           </div>
         </div>
       </main>
