@@ -73,8 +73,7 @@ serve(async (req) => {
       trustedWallet = profile.wallet_address;
     }
 
-    const body = await req.json();
-    const { action } = body;
+    // body and action already parsed above
     // We ignore wallet_address from body for shared/private actions, 
     // unless it's a public read action like leaderboard
     
