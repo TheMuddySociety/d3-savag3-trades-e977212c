@@ -83,9 +83,9 @@ serve(async (req) => {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 
-    // Deterministic email from wallet address
+    // NEW: Always generate a random password for this login session
+    const password = crypto.randomUUID();
     const email = `${wallet_address}@wallet.savag3bot.app`;
-    const password = `siws_${wallet_address}_${serviceRoleKey.slice(0, 16)}`;
 
     // Check if user exists
     const { data: existingProfile } = await admin
@@ -98,8 +98,13 @@ serve(async (req) => {
 
     if (existingProfile) {
       userId = existingProfile.id;
+      // NEW: Update existing user with the new random password
+      const { error: updateErr } = await admin.auth.admin.updateUserById(userId, {
+        password: password
+      });
+      if (updateErr) throw updateErr;
     } else {
-      // Create new user
+      // Create new user with random password
       const { data: newUser, error: createErr } = await admin.auth.admin.createUser({
         email,
         password,
@@ -113,6 +118,9 @@ serve(async (req) => {
         const found = users?.find((u) => u.email === email);
         if (!found) throw createErr;
         userId = found.id;
+        
+        // Update the found user's password to our new random one
+        await admin.auth.admin.updateUserById(userId, { password });
       } else {
         userId = newUser.user.id;
       }
@@ -124,13 +132,7 @@ serve(async (req) => {
       });
     }
 
-    // Sign in to get session tokens
-    const { data: signInData, error: signInErr } = await admin.auth.admin.generateLink({
-      type: "magiclink",
-      email,
-    });
-
-    // Use signInWithPassword for a proper session
+    // NEW: Use signInWithPassword with the fresh random password
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const anonClient = createClient(supabaseUrl, anonKey);
     const { data: session, error: sessionErr } = await anonClient.auth.signInWithPassword({
