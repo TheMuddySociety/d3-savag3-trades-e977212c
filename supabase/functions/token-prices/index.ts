@@ -8,6 +8,27 @@ const corsHeaders = {
 const JUPITER_PRICE_API = 'https://api.jup.ag/price/v3';
 const COINGECKO_BASE = 'https://api.coingecko.com/api/v3';
 const HELIUS_BASE = 'https://api.helius.xyz';
+const PUBLIC_RPC = 'https://api.mainnet-beta.solana.com';
+
+/** Fetch from Helius RPC with automatic fallback to public Solana RPC on 401/403 */
+async function rpcFetchWithFallback(apiKey: string, body: unknown): Promise<any> {
+  const heliusUrl = `https://mainnet.helius-rpc.com/?api-key=${apiKey}`;
+  const payload = JSON.stringify(body);
+  const headers = { 'Content-Type': 'application/json' };
+
+  let resp = await fetch(heliusUrl, { method: 'POST', headers, body: payload });
+  if (resp.status === 401 || resp.status === 403) {
+    console.warn(`Helius RPC returned ${resp.status}, falling back to public RPC`);
+    // consume body to avoid leak
+    await resp.text();
+    resp = await fetch(PUBLIC_RPC, { method: 'POST', headers, body: payload });
+  }
+  if (!resp.ok) {
+    const text = await resp.text();
+    throw new Error(`RPC failed [${resp.status}]: ${text}`);
+  }
+  return resp.json();
+}
 
 function ok(data: unknown) {
   return new Response(JSON.stringify({ success: true, data }), {
@@ -343,12 +364,8 @@ async function fetchTokenOverview(address: string, apiKey: string, jupiterApiKey
   const pricePromise = fetch(`${JUPITER_PRICE_API}?ids=${address}`, { headers })
     .then(r => r.json()).catch(() => ({}));
 
-  const rpcUrl = `https://mainnet.helius-rpc.com/?api-key=${apiKey}`;
-  const metaPromise = fetch(rpcUrl, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'getAsset', params: { id: address, displayOptions: { showFungible: true } } }),
-  }).then(r => r.json()).catch(() => ({ result: {} }));
+  const metaPromise = rpcFetchWithFallback(apiKey, { jsonrpc: '2.0', id: 1, method: 'getAsset', params: { id: address, displayOptions: { showFungible: true } } })
+    .catch(() => ({ result: {} }));
 
   const [priceResult, metaResult] = await Promise.all([pricePromise, metaPromise]);
 
@@ -380,20 +397,11 @@ async function fetchTokenOverview(address: string, apiKey: string, jupiterApiKey
 // ── Token Trades via Helius ─────────────────────────────────────────
 
 async function fetchTokenTrades(address: string, apiKey: string, limit: number) {
-  const rpcUrl = `https://mainnet.helius-rpc.com/?api-key=${apiKey}`;
-  
-  const sigResponse = await fetch(rpcUrl, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      jsonrpc: '2.0', id: 1,
-      method: 'getSignaturesForAddress',
-      params: [address, { limit: Math.min(limit * 2, 40) }],
-    }),
+  const sigResult = await rpcFetchWithFallback(apiKey, {
+    jsonrpc: '2.0', id: 1,
+    method: 'getSignaturesForAddress',
+    params: [address, { limit: Math.min(limit * 2, 40) }],
   });
-
-  if (!sigResponse.ok) throw new Error(`Helius RPC failed [${sigResponse.status}]`);
-  const sigResult = await sigResponse.json();
   const signatures = (sigResult?.result || []).map((s: any) => s.signature);
 
   if (signatures.length === 0) return [];
@@ -557,16 +565,7 @@ async function fetchPriceHistory(address: string, _interval: string, _timeFrom?:
 // ── Token Holders ───────────────────────────────────────────────────
 
 async function fetchTokenHolders(address: string, apiKey: string) {
-  const rpcUrl = `https://mainnet.helius-rpc.com/?api-key=${apiKey}`;
-  const rpcResponse = await fetch(rpcUrl, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'getTokenLargestAccounts', params: [address] }),
-  });
-
-  if (!rpcResponse.ok) throw new Error(`Helius RPC failed [${rpcResponse.status}]: ${await rpcResponse.text()}`);
-
-  const rpcResult = await rpcResponse.json();
+  const rpcResult = await rpcFetchWithFallback(apiKey, { jsonrpc: '2.0', id: 1, method: 'getTokenLargestAccounts', params: [address] });
   const accounts = rpcResult?.result?.value || [];
 
   const totalInTop = accounts.reduce((sum: number, acc: { uiAmount: number }) => sum + (acc.uiAmount || 0), 0);
@@ -681,22 +680,15 @@ async function fetchShieldCheck(address: string, jupiterApiKey?: string) {
     const isOnStrictList = false; // We'll rely more on Helius and DexScreener verification
 
     // 3. Helius DAS getAsset (mint/freeze authority + metadata)
-    const rpcUrl = HELIUS_API_KEY ? `https://mainnet.helius-rpc.com/?api-key=${HELIUS_API_KEY}` : '';
-    const metaPromise = rpcUrl
-      ? fetch(rpcUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'getAsset', params: { id: address, displayOptions: { showFungible: true } } }),
-        }).then(r => r.ok ? r.json() : { result: {} }).catch(() => ({ result: {} }))
+    const metaPromise = HELIUS_API_KEY
+      ? rpcFetchWithFallback(HELIUS_API_KEY, { jsonrpc: '2.0', id: 1, method: 'getAsset', params: { id: address, displayOptions: { showFungible: true } } })
+          .catch(() => ({ result: {} }))
       : Promise.resolve({ result: {} });
 
     // 4. Token largest accounts (holder concentration)
-    const holdersPromise = rpcUrl
-      ? fetch(rpcUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'getTokenLargestAccounts', params: [address] }),
-        }).then(r => r.ok ? r.json() : { result: { value: [] } }).catch(() => ({ result: { value: [] } }))
+    const holdersPromise = HELIUS_API_KEY
+      ? rpcFetchWithFallback(HELIUS_API_KEY, { jsonrpc: '2.0', id: 1, method: 'getTokenLargestAccounts', params: [address] })
+          .catch(() => ({ result: { value: [] } }))
       : Promise.resolve({ result: { value: [] } });
 
     // 5. DexScreener liquidity + pair age
