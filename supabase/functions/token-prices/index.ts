@@ -691,7 +691,6 @@ async function fetchShieldCheck(address: string, jupiterApiKey?: string) {
       ? rpcFetchWithFallback(HELIUS_API_KEY, { jsonrpc: '2.0', id: 1, method: 'getTokenLargestAccounts', params: [address] })
           .catch(() => ({ result: { value: [] } }))
       : Promise.resolve({ result: { value: [] } });
-      : Promise.resolve({ result: { value: [] } });
 
     // 5. DexScreener liquidity + pair age
     const dexPromise = fetch(`https://api.dexscreener.com/tokens/v1/solana/${address}`)
