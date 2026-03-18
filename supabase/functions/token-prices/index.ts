@@ -575,29 +575,34 @@ async function fetchPriceHistory(address: string, _interval: string, _timeFrom?:
 // ── Token Holders ───────────────────────────────────────────────────
 
 async function fetchTokenHolders(address: string, apiKey: string) {
-  const rpcResult = await rpcFetchWithFallback(apiKey, { jsonrpc: '2.0', id: 1, method: 'getTokenLargestAccounts', params: [address] });
-  const accounts = rpcResult?.result?.value || [];
+  try {
+    const rpcResult = await rpcFetchWithFallback(apiKey, { jsonrpc: '2.0', id: 1, method: 'getTokenLargestAccounts', params: [address] });
+    const accounts = rpcResult?.result?.value || [];
 
-  const totalInTop = accounts.reduce((sum: number, acc: { uiAmount: number }) => sum + (acc.uiAmount || 0), 0);
-  const top10 = accounts.slice(0, 10).reduce((sum: number, acc: { uiAmount: number }) => sum + (acc.uiAmount || 0), 0);
-  const top50 = accounts.slice(10, 50).reduce((sum: number, acc: { uiAmount: number }) => sum + (acc.uiAmount || 0), 0);
-  const top200 = accounts.slice(50, 200).reduce((sum: number, acc: { uiAmount: number }) => sum + (acc.uiAmount || 0), 0);
-  const others = Math.max(0, totalInTop - top10 - top50 - top200);
+    const totalInTop = accounts.reduce((sum: number, acc: { uiAmount: number }) => sum + (acc.uiAmount || 0), 0);
+    const top10 = accounts.slice(0, 10).reduce((sum: number, acc: { uiAmount: number }) => sum + (acc.uiAmount || 0), 0);
+    const top50 = accounts.slice(10, 50).reduce((sum: number, acc: { uiAmount: number }) => sum + (acc.uiAmount || 0), 0);
+    const top200 = accounts.slice(50, 200).reduce((sum: number, acc: { uiAmount: number }) => sum + (acc.uiAmount || 0), 0);
+    const others = Math.max(0, totalInTop - top10 - top50 - top200);
 
-  return {
-    totalAccounts: accounts.length,
-    distribution: [
-      { name: 'Top 10', value: totalInTop > 0 ? (top10 / totalInTop) * 100 : 0 },
-      { name: 'Top 11-50', value: totalInTop > 0 ? (top50 / totalInTop) * 100 : 0 },
-      { name: 'Top 51-200', value: totalInTop > 0 ? (top200 / totalInTop) * 100 : 0 },
-      { name: 'Others', value: totalInTop > 0 ? (others / totalInTop) * 100 : 0 },
-    ],
-    topHolders: accounts.slice(0, 20).map((acc: { address: string; uiAmount: number }) => ({
-      address: acc.address,
-      amount: acc.uiAmount || 0,
-      percentage: totalInTop > 0 ? ((acc.uiAmount || 0) / totalInTop) * 100 : 0,
-    })),
-  };
+    return {
+      totalAccounts: accounts.length,
+      distribution: [
+        { name: 'Top 10', value: totalInTop > 0 ? (top10 / totalInTop) * 100 : 0 },
+        { name: 'Top 11-50', value: totalInTop > 0 ? (top50 / totalInTop) * 100 : 0 },
+        { name: 'Top 51-200', value: totalInTop > 0 ? (top200 / totalInTop) * 100 : 0 },
+        { name: 'Others', value: totalInTop > 0 ? (others / totalInTop) * 100 : 0 },
+      ],
+      topHolders: accounts.slice(0, 20).map((acc: { address: string; uiAmount: number }) => ({
+        address: acc.address,
+        amount: acc.uiAmount || 0,
+        percentage: totalInTop > 0 ? ((acc.uiAmount || 0) / totalInTop) * 100 : 0,
+      })),
+    };
+  } catch (e) {
+    console.warn('fetchTokenHolders failed, returning empty:', e);
+    return { totalAccounts: 0, distribution: [], topHolders: [] };
+  }
 }
 
 // ══════════════════════════════════════════════════════════════════════
