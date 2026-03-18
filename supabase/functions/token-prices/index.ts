@@ -403,7 +403,6 @@ async function fetchTokenTrades(address: string, apiKey: string, limit: number) 
     params: [address, { limit: Math.min(limit * 2, 40) }],
   });
   const signatures = (sigResult?.result || []).map((s: any) => s.signature);
-  const signatures = (sigResult?.result || []).map((s: any) => s.signature);
 
   if (signatures.length === 0) return [];
 
