@@ -19,15 +19,25 @@ async function rpcFetchWithFallback(apiKey: string, body: unknown): Promise<any>
   let resp = await fetch(heliusUrl, { method: 'POST', headers, body: payload });
   if (resp.status === 401 || resp.status === 403) {
     console.warn(`Helius RPC returned ${resp.status}, falling back to public RPC`);
-    // consume body to avoid leak
     await resp.text();
+    resp = await fetch(PUBLIC_RPC, { method: 'POST', headers, body: payload });
+  }
+  if (resp.status === 429) {
+    console.warn('RPC rate limited (429), retrying after 500ms...');
+    await resp.text();
+    await new Promise(r => setTimeout(r, 500));
     resp = await fetch(PUBLIC_RPC, { method: 'POST', headers, body: payload });
   }
   if (!resp.ok) {
     const text = await resp.text();
     throw new Error(`RPC failed [${resp.status}]: ${text}`);
   }
-  return resp.json();
+  const json = await resp.json();
+  // Check for JSON-RPC level errors (e.g. 429 returned inside a 200 response)
+  if (json.error) {
+    throw new Error(`RPC error [${json.error.code}]: ${json.error.message}`);
+  }
+  return json;
 }
 
 function ok(data: unknown) {
