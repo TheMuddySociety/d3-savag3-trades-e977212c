@@ -364,12 +364,8 @@ async function fetchTokenOverview(address: string, apiKey: string, jupiterApiKey
   const pricePromise = fetch(`${JUPITER_PRICE_API}?ids=${address}`, { headers })
     .then(r => r.json()).catch(() => ({}));
 
-  const rpcUrl = `https://mainnet.helius-rpc.com/?api-key=${apiKey}`;
-  const metaPromise = fetch(rpcUrl, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'getAsset', params: { id: address, displayOptions: { showFungible: true } } }),
-  }).then(r => r.json()).catch(() => ({ result: {} }));
+  const metaPromise = rpcFetchWithFallback(apiKey, { jsonrpc: '2.0', id: 1, method: 'getAsset', params: { id: address, displayOptions: { showFungible: true } } })
+    .catch(() => ({ result: {} }));
 
   const [priceResult, metaResult] = await Promise.all([pricePromise, metaPromise]);
 
