@@ -681,22 +681,16 @@ async function fetchShieldCheck(address: string, jupiterApiKey?: string) {
     const isOnStrictList = false; // We'll rely more on Helius and DexScreener verification
 
     // 3. Helius DAS getAsset (mint/freeze authority + metadata)
-    const rpcUrl = HELIUS_API_KEY ? `https://mainnet.helius-rpc.com/?api-key=${HELIUS_API_KEY}` : '';
-    const metaPromise = rpcUrl
-      ? fetch(rpcUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'getAsset', params: { id: address, displayOptions: { showFungible: true } } }),
-        }).then(r => r.ok ? r.json() : { result: {} }).catch(() => ({ result: {} }))
+    const metaPromise = HELIUS_API_KEY
+      ? rpcFetchWithFallback(HELIUS_API_KEY, { jsonrpc: '2.0', id: 1, method: 'getAsset', params: { id: address, displayOptions: { showFungible: true } } })
+          .catch(() => ({ result: {} }))
       : Promise.resolve({ result: {} });
 
     // 4. Token largest accounts (holder concentration)
-    const holdersPromise = rpcUrl
-      ? fetch(rpcUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'getTokenLargestAccounts', params: [address] }),
-        }).then(r => r.ok ? r.json() : { result: { value: [] } }).catch(() => ({ result: { value: [] } }))
+    const holdersPromise = HELIUS_API_KEY
+      ? rpcFetchWithFallback(HELIUS_API_KEY, { jsonrpc: '2.0', id: 1, method: 'getTokenLargestAccounts', params: [address] })
+          .catch(() => ({ result: { value: [] } }))
+      : Promise.resolve({ result: { value: [] } });
       : Promise.resolve({ result: { value: [] } });
 
     // 5. DexScreener liquidity + pair age
