@@ -83,7 +83,6 @@ export const BudgetManager = () => {
     setLoading(true);
     try {
       if (currency === "SOL") {
-        console.log(`[BudgetManager] Starting deposit. RPC_URL: ${RPC_URL}`);
         const connection = new Connection(RPC_URL);
         const lamports = Math.floor(amount * 1e9);
 
@@ -97,25 +96,17 @@ export const BudgetManager = () => {
 
         transaction.feePayer = publicKey;
         
-        console.log(`[BudgetManager] Fetching latest blockhash...`);
         const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash('confirmed');
-        console.log(`[BudgetManager] Blockhash received: ${blockhash.slice(0, 10)}...`);
-        
         transaction.recentBlockhash = blockhash;
 
         const signed = await signTransaction(transaction);
-        console.log(`[BudgetManager] Transaction signed, sending...`);
-        
         const txid = await connection.sendRawTransaction(signed.serialize());
-        console.log(`[BudgetManager] Transaction sent. TXID: ${txid}`);
         
         await connection.confirmTransaction({
           signature: txid,
           blockhash,
           lastValidBlockHeight
         });
-
-        console.log(`[BudgetManager] Transaction confirmed!`);
 
         // Record in DB
         const newDeposit = (budget?.deposit_amount || 0) + amount;
