@@ -31,17 +31,60 @@ serve(async (req) => {
   const birdeyeKey = Deno.env.get('BIRDEYE_API_KEY');
 
   try {
-    const body = await req.json();
-    const { action, wallet_address } = body;
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader && req.method !== 'OPTIONS') {
+      // Check if it's leaderboard, which is public
+      const tempBody = await req.clone().json().catch(() => ({}));
+      if (tempBody.action !== 'leaderboard') {
+        return err('Authorization header is required', 401);
+      }
+    }
 
+    let authenticatedUserId: string | null = null;
+    let trustedWallet: string | null = null;
+
+    if (authHeader) {
+      const userClient = createClient(supabaseUrl, Deno.env.get('SUPABASE_ANON_KEY')!, {
+        global: { headers: { Authorization: authHeader } }
+      });
+      const { data: { user }, error: authError } = await userClient.auth.getUser();
+      
+      if (authError || !user) {
+        console.error('Auth error:', authError);
+        return err('Invalid or expired token', 401);
+      }
+      authenticatedUserId = user.id;
+
+      // Fetch trusted wallet from profiles
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('wallet_address')
+        .eq('id', authenticatedUserId)
+        .single();
+
+      if (profileError || !profile) {
+        console.error('Profile fetch error:', profileError);
+        return err('User profile with wallet address not found', 404);
+      }
+      trustedWallet = profile.wallet_address;
+    }
+
+    const body = await req.json();
+    const { action } = body;
+    // We ignore wallet_address from body for shared/private actions, 
+    // unless it's a public read action like leaderboard
+    
     // Leaderboard doesn't require wallet
     if (action === 'leaderboard') {
       return ok(await getLeaderboard(supabase, body.limit || 20));
     }
 
-    if (!wallet_address || wallet_address.length < 30) {
-      return err('Valid wallet_address is required', 400);
+    // All other actions require a trusted wallet from auth
+    if (!trustedWallet) {
+      return err('Authentication required for this action', 401);
     }
+
+    const wallet_address = trustedWallet;
 
     switch (action) {
       case 'init_wallet':
