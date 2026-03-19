@@ -17,6 +17,7 @@ serve(async (req) => {
   const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
   const heliusKey = Deno.env.get('HELIUS_API_KEY');
   const birdeyeKey = Deno.env.get('BIRDEYE_API_KEY');
+  const jupiterApiKey = Deno.env.get('JUPITER_API_KEY');
   const supabase = createClient(supabaseUrl, supabaseKey);
 
   try {
@@ -78,8 +79,8 @@ serve(async (req) => {
       // 1. Fetch live prices for all holdings
       const mints = holdings.map(h => h.mint);
       let livePrices: Record<string, number> = {};
-      if (birdeyeKey && mints.length > 0) {
-        livePrices = await fetchLivePrices(mints, birdeyeKey);
+      if (mints.length > 0) {
+        livePrices = await fetchLivePrices(mints, birdeyeKey, jupiterApiKey);
       }
       
       // Update holdings with prices
@@ -525,17 +526,17 @@ async function fetchRealHoldings(walletAddress: string, heliusKey: string | unde
   }
 }
 
-async function fetchLivePrices(mints: string[], apiKey: string): Promise<Record<string, number>> {
+async function fetchLivePrices(mints: string[], birdeyeKey?: string, jupiterApiKey?: string): Promise<Record<string, number>> {
   const prices: Record<string, number> = {};
   if (mints.length === 0) return prices;
 
   // 1. Try Birdeye if API key provided
-  if (apiKey) {
+  if (birdeyeKey) {
     try {
       const list = mints.join(',');
       const response = await fetch(
         `https://public-api.birdeye.so/defi/multi_price?list_address=${list}`,
-        { headers: { 'X-API-KEY': apiKey, 'x-chain': 'solana' } }
+        { headers: { 'X-API-KEY': birdeyeKey, 'x-chain': 'solana' } }
       );
       if (response.ok) {
         const result = await response.json();
@@ -554,7 +555,10 @@ async function fetchLivePrices(mints: string[], apiKey: string): Promise<Record<
       // Process in batches of 50
       for (let i = 0; i < remainingMints.length; i += 50) {
         const batch = remainingMints.slice(i, i + 50);
-        const res = await fetch(`https://api.jup.ag/price/v2?ids=${batch.join(',')}`);
+        const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+        if (jupiterApiKey) headers['x-api-key'] = jupiterApiKey;
+        
+        const res = await fetch(`https://api.jup.ag/price/v2?ids=${batch.join(',')}`, { headers });
         if (res.ok) {
           const data = await res.json();
           if (data?.data) {
