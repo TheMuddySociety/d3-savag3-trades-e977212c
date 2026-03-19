@@ -75,9 +75,22 @@ serve(async (req) => {
         if (ep.peak_price) peakPriceMap.set(ep.token_mint, Number(ep.peak_price));
       }
 
-      // Record entry prices for new tokens & update peaks
+      // 1. Fetch live prices for all holdings
+      const mints = holdings.map(h => h.mint);
+      let livePrices: Record<string, number> = {};
+      if (birdeyeKey && mints.length > 0) {
+        livePrices = await fetchLivePrices(mints, birdeyeKey);
+      }
+      
+      // Update holdings with prices
       for (const h of holdings) {
-        if (h.price <= 0) continue;
+        if (livePrices[h.mint]) h.price = livePrices[h.mint];
+      }
+
+      // 2. Record entry prices for new tokens & update peaks
+      for (const h of holdings) {
+        // If we still have no price, we can't track P&L, but we can still track the token exists
+        if (h.price <= 0) continue; 
 
         if (!entryPriceMap.has(h.mint)) {
           entryPriceMap.set(h.mint, h.price);
@@ -98,17 +111,6 @@ serve(async (req) => {
             .eq('wallet_address', walletAddress)
             .eq('token_mint', h.mint);
         }
-      }
-
-      // Fetch live prices
-      const mints = holdings.map(h => h.mint);
-      let livePrices: Record<string, number> = {};
-      if (birdeyeKey && mints.length > 0) {
-        livePrices = await fetchLivePrices(mints, birdeyeKey);
-      }
-      // Fallback to DAS prices
-      for (const h of holdings) {
-        if (!livePrices[h.mint] && h.price > 0) livePrices[h.mint] = h.price;
       }
 
       // ═══ Evaluate SELL strategies ═══
@@ -463,41 +465,60 @@ interface RealHolding {
 async function fetchRealHoldings(walletAddress: string, heliusKey: string | undefined): Promise<RealHolding[]> {
   if (!heliusKey) return [];
 
+  const rpcUrl = `https://mainnet.helius-rpc.com/?api-key=${heliusKey}`;
+  const TOKEN_PROGRAM = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA";
+  const TOKEN_2022_PROGRAM = "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb";
+
   try {
-    const rpcUrl = `https://mainnet.helius-rpc.com/?api-key=${heliusKey}`;
-    const tokensRes = await fetch(rpcUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        jsonrpc: '2.0',
-        id: 'tokens',
-        method: 'searchAssets',
-        params: {
-          ownerAddress: walletAddress,
-          tokenType: 'fungible',
-          displayOptions: { showFungible: true },
-        },
+    const [tokenRes, token2022Res] = await Promise.all([
+      fetch(rpcUrl, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          jsonrpc: "2.0", id: 1, method: "getTokenAccountsByOwner",
+          params: [walletAddress, { programId: TOKEN_PROGRAM }, { encoding: "jsonParsed" }],
+        }),
       }),
-    });
+      fetch(rpcUrl, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          jsonrpc: "2.0", id: 2, method: "getTokenAccountsByOwner",
+          params: [walletAddress, { programId: TOKEN_2022_PROGRAM }, { encoding: "jsonParsed" }],
+        }),
+      }),
+    ]);
 
-    const tokensData = await tokensRes.json();
-    const items = tokensData?.result?.items || [];
-    const holdings: RealHolding[] = [];
+    const t1 = await tokenRes.json();
+    const t2 = await token2022Res.json();
 
-    for (const item of items) {
-      const tokenInfo = item.token_info;
-      if (!tokenInfo || !item.id || item.id === SOL_MINT) continue;
+    const parse = (data: any) => {
+      const accounts = data.result?.value || [];
+      return accounts.map((acc: any) => {
+        const info = acc.account?.data?.parsed?.info;
+        if (!info) return null;
+        const amount = parseFloat(info.tokenAmount?.uiAmountString || "0");
+        if (amount <= 0.000001) return null; // Filter dust
+        return {
+          mint: info.mint,
+          symbol: info.mint.slice(0, 6),
+          amount,
+          decimals: info.tokenAmount?.decimals || 0,
+          price: 0,
+        };
+      }).filter(Boolean);
+    };
 
-      const balance = tokenInfo.balance || 0;
-      const decimals = tokenInfo.decimals || 6;
-      const amount = balance / Math.pow(10, decimals);
-      const price = tokenInfo.price_info?.price_per_token || 0;
-
-      if (amount <= 0) continue;
-      holdings.push({ mint: item.id, symbol: tokenInfo.symbol || item.id.slice(0, 6), amount, decimals, price });
+    const holdings = [...parse(t1), ...parse(t2)];
+    
+    // Deduplicate
+    const map = new Map<string, RealHolding>();
+    for (const h of holdings) {
+      if (map.has(h.mint)) {
+        map.get(h.mint)!.amount += h.amount;
+      } else {
+        map.set(h.mint, h);
+      }
     }
-
-    return holdings;
+    return Array.from(map.values());
   } catch (e) {
     console.error('fetchRealHoldings error:', e);
     return [];
@@ -505,22 +526,49 @@ async function fetchRealHoldings(walletAddress: string, heliusKey: string | unde
 }
 
 async function fetchLivePrices(mints: string[], apiKey: string): Promise<Record<string, number>> {
-  try {
-    const list = mints.join(',');
-    const response = await fetch(
-      `https://public-api.birdeye.so/defi/multi_price?list_address=${list}`,
-      { headers: { 'X-API-KEY': apiKey, 'x-chain': 'solana' } }
-    );
-    if (!response.ok) return {};
-    const result = await response.json();
-    const prices: Record<string, number> = {};
-    for (const [mint, data] of Object.entries(result.data || {})) {
-      prices[mint] = (data as any)?.value || 0;
-    }
-    return prices;
-  } catch {
-    return {};
+  const prices: Record<string, number> = {};
+  if (mints.length === 0) return prices;
+
+  // 1. Try Birdeye if API key provided
+  if (apiKey) {
+    try {
+      const list = mints.join(',');
+      const response = await fetch(
+        `https://public-api.birdeye.so/defi/multi_price?list_address=${list}`,
+        { headers: { 'X-API-KEY': apiKey, 'x-chain': 'solana' } }
+      );
+      if (response.ok) {
+        const result = await response.json();
+        for (const [mint, data] of Object.entries(result.data || {})) {
+          const val = (data as any)?.value;
+          if (val) prices[mint] = val;
+        }
+      }
+    } catch (e) { console.error('Birdeye fetch error:', e); }
   }
+
+  // 2. Jupiter Price API Fallback for missing prices
+  const remainingMints = mints.filter(m => !prices[m]);
+  if (remainingMints.length > 0) {
+    try {
+      // Process in batches of 50
+      for (let i = 0; i < remainingMints.length; i += 50) {
+        const batch = remainingMints.slice(i, i + 50);
+        const res = await fetch(`https://api.jup.ag/price/v2?ids=${batch.join(',')}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data?.data) {
+            for (const [mint, info] of Object.entries(data.data)) {
+              const p = (info as any)?.price;
+              if (p) prices[mint] = parseFloat(String(p));
+            }
+          }
+        }
+      }
+    } catch (e) { console.error('Jupiter price fallback error:', e); }
+  }
+
+  return prices;
 }
 
 interface TrendingToken {
