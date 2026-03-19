@@ -203,12 +203,7 @@ function DesktopDashboard() {
           <span className="text-[10px] font-mono text-muted-foreground bg-secondary px-1.5 py-0.5 rounded">
             LIVE
           </span>
-          <div className="flex items-center gap-1.5 ml-2">
-            <div className="w-1.5 h-1.5 rounded-full bg-chart-green animate-pulse" />
-            <span className="text-xs font-mono text-muted-foreground">
-              {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-            </span>
-          </div>
+          <ConnectionStatus compact />
         </div>
         <Header />
       </div>
