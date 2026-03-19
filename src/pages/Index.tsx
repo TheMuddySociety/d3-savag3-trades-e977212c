@@ -19,6 +19,7 @@ import { DesktopSidebar, DesktopPanel } from "@/components/layout/DesktopSidebar
 import { MobileBottomNav, MobileTab } from "@/components/layout/MobileBottomNav";
 import { MobileHeader } from "@/components/layout/MobileHeader";
 import { Header } from "@/components/layout/Header";
+import { ConnectionStatus } from "@/components/dashboard/ConnectionStatus";
 
 // ─── MOBILE LAYOUT ────────────────────────────────────────
 function MobileDashboard() {
