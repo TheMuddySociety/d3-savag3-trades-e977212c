@@ -2,10 +2,10 @@ import { Activity, LogOut, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useWallet } from '@solana/wallet-adapter-react';
-import { UnifiedWalletButton } from '@jup-ag/wallet-adapter';
 import { useTradingMode } from '@/hooks/useTradingMode';
 import { useToast } from '@/components/ui/use-toast';
 import { useNavigate } from 'react-router-dom';
+import { AccountConnect } from '@/components/auth/AccountConnect';
 
 
 export function MobileHeader() {
@@ -49,7 +49,7 @@ export function MobileHeader() {
               </Button>
             </>
           ) : (
-            <UnifiedWalletButton />
+            <AccountConnect size="sm" />
           )}
         </div>
       </div>

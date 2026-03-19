@@ -19,8 +19,9 @@ createAppKit({
   },
   features: {
     analytics: true,
-    email: false,
-    socials: false,
+    email: true,
+    socials: ['google', 'x', 'discord', 'apple'],
+    emailShowWallets: true,
   },
 });
 

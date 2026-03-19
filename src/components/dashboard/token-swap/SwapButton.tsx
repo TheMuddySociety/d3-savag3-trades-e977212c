@@ -1,7 +1,7 @@
 
 import { Button } from "@/components/ui/button";
 import { RefreshCw } from "lucide-react";
-import { UnifiedWalletButton } from '@jup-ag/wallet-adapter';
+import { AccountConnect } from "@/components/auth/AccountConnect";
 
 interface SwapButtonProps {
   connected: boolean;
@@ -13,7 +13,7 @@ interface SwapButtonProps {
 export function SwapButton({ connected, isSwapping, quote, handleSwap }: SwapButtonProps) {
   if (!connected) {
     return (
-      <UnifiedWalletButton />
+      <AccountConnect className="w-full h-11" />
     );
   }
 

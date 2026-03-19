@@ -5,11 +5,11 @@ import { Shield, LogOut, Activity, Sparkles, Settings as SettingsIcon } from "lu
 import { useToast } from "@/components/ui/use-toast";
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import { useWallet } from '@solana/wallet-adapter-react';
-import { UnifiedWalletButton } from '@jup-ag/wallet-adapter';
 import { useTradingMode } from '@/hooks/useTradingMode';
 import { useAdminCheck } from '@/hooks/useAdminCheck';
 import { useWalletAuth } from '@/hooks/useWalletAuth';
 import { SettingsDialog } from '@/components/dashboard/SettingsDialog';
+import { AccountConnect } from '@/components/auth/AccountConnect';
 
 export function Header() {
   const { toast } = useToast();
@@ -102,10 +102,7 @@ export function Header() {
           )}
           
           {!connected && (
-            <div className="flex items-center gap-2">
-              <UnifiedWalletButton />
-              <appkit-button size="sm" label="WalletConnect" />
-            </div>
+            <AccountConnect />
           )}
         </div>
       </div>
@@ -223,10 +220,7 @@ export function LandingHeader() {
           )}
           
           {!connected && (
-            <div className="flex items-center gap-2">
-              <UnifiedWalletButton />
-              <appkit-button size="sm" label="WalletConnect" />
-            </div>
+            <AccountConnect />
           )}
         </div>
       </div>

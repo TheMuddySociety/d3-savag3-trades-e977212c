@@ -3,10 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { Activity, ArrowRight, Zap, Shield, BarChart3 } from "lucide-react";
 import { toast } from "sonner";
 import { useWallet } from '@solana/wallet-adapter-react';
-import { UnifiedWalletButton } from '@jup-ag/wallet-adapter';
+import { AccountConnect } from "@/components/auth/AccountConnect";
 import { HeroGeometric } from "@/components/ui/shape-landing-hero";
 import { useAdminCheck } from "@/hooks/useAdminCheck";
-
 
 const Landing = () => {
   const navigate = useNavigate();
@@ -52,7 +51,7 @@ const Landing = () => {
               <ArrowRight className="h-4 w-4" />
             </button>
             <div className="scale-110">
-              <UnifiedWalletButton />
+              <AccountConnect size="lg" />
             </div>
           </div>
 
