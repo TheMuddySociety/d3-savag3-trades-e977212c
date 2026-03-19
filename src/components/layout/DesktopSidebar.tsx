@@ -23,7 +23,7 @@ const navItems = [
   { id: 'portfolio' as DesktopPanel, label: 'Portfolio', icon: Wallet, section: 'Trade' },
   { id: 'tokens' as DesktopPanel, label: 'Tokens', icon: BarChart3, section: 'Market' },
   { id: 'signals' as DesktopPanel, label: 'Signals', icon: Zap, section: 'Market' },
-  { id: 'bots' as DesktopPanel, label: 'Bot Tools', icon: Bot, section: 'Automation' },
+  { id: 'bots' as DesktopPanel, label: 'D3MON DAN', icon: Bot, section: 'Automation' },
   { id: 'alerts' as DesktopPanel, label: 'Alerts', icon: Bell, section: 'Automation' },
   { id: 'chat' as DesktopPanel, label: 'AI Chat', icon: MessageSquare, section: 'AI' },
 ];
@@ -42,7 +42,7 @@ export function DesktopSidebar({ activePanel, onPanelChange, collapsed, onCollap
         <Activity className="h-5 w-5 text-accent shrink-0" />
         {!collapsed && (
           <span className="text-sm font-bold tracking-tight text-foreground whitespace-nowrap group">
-            SAVAG3<span className="text-accent">BOT</span>
+            D3MON <span className="text-accent">DAN</span>
           </span>
         )}
       </div>

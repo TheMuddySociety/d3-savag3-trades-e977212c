@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Brain, TrendingUp, TrendingDown, ShieldCheck, Flame, Palmtree, Zap, Users, Wallet, Rocket, Cloud } from "lucide-react";
+import { Brain, TrendingUp, TrendingDown, ShieldCheck, Flame, Palmtree, Zap, Users, Wallet, Rocket, Cloud, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { useConnection } from "@solana/wallet-adapter-react";
@@ -12,6 +12,7 @@ import { JupiterUltraService } from "@/services/jupiter/ultra";
 import { LiveTradeConfirmDialog } from "./LiveTradeConfirmDialog";
 import { BudgetManager } from "./BudgetManager";
 import { supabase } from "@/integrations/supabase/client";
+import { AgentService } from "@/services/solana/agentService";
 
 const SOL_MINT = "So11111111111111111111111111111111111111112";
 
@@ -81,6 +82,8 @@ export const AutoStrategies = ({ killSignal = 0 }: Props) => {
   const [executingTrade, setExecutingTrade] = useState(false);
   const [useHighPerformance, setUseHighPerformance] = useState(true);
   const [pendingTrades, setPendingTrades] = useState<PendingTrade[]>([]);
+  const [isAgentHired, setIsAgentHired] = useState(false);
+  const [isHiring, setIsHiring] = useState(false);
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
   const pendingPollRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -132,6 +135,35 @@ export const AutoStrategies = ({ killSignal = 0 }: Props) => {
       if (pendingPollRef.current) { clearInterval(pendingPollRef.current); pendingPollRef.current = null; }
     }
   }, [killSignal]);
+
+  // Check agent status on mount / wallet change
+  useEffect(() => {
+    const checkStatus = async () => {
+      if (wallet.publicKey) {
+        const hired = await AgentService.isAgentHired(wallet.publicKey.toBase58());
+        setIsAgentHired(hired);
+      }
+    };
+    checkStatus();
+  }, [wallet.publicKey]);
+
+  const handleHireDan = async () => {
+    if (!wallet.publicKey) return;
+    setIsHiring(true);
+    try {
+      const signature = await AgentService.hireDan(wallet);
+      setIsAgentHired(true);
+      addLog(`🤝 D3MON DAN HIRED! Proxy trade authority delegated (tx: ${signature.slice(0, 8)}...)`);
+      toast({
+        title: "🤝 D3MON Dan Hired!",
+        description: "Your personal agent is now authorized to trade on-chain 24/7.",
+      });
+    } catch (e: any) {
+      toast({ title: "Failed to hire Dan", description: e.message, variant: "destructive" });
+    } finally {
+      setIsHiring(false);
+    }
+  };
 
   // Fetch live wallet holdings via edge function
   const fetchLiveHoldings = useCallback(async (): Promise<LiveHolding[]> => {
@@ -637,7 +669,7 @@ export const AutoStrategies = ({ killSignal = 0 }: Props) => {
                 if (success) {
                   addLog(`🔥✅ Sniped ${target.symbol} for ${budget} SOL!`);
                   
-                  // Schedule auto-sell timer if configured
+                  // D3MON Dan's autonomous execution log
                   if (autoSellSec > 0 && !launchAutoSellTimers.current.has(target.mint)) {
                     addLog(`⏱️ Auto-sell timer set: ${target.symbol} in ${autoSellSec}s`);
                     const timer = setTimeout(async () => {
@@ -786,8 +818,8 @@ export const AutoStrategies = ({ killSignal = 0 }: Props) => {
 
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Brain className="h-4 w-4 text-[hsl(var(--fun-purple))]" />
-          <span className="text-sm font-medium text-foreground">Auto Strategies</span>
+          <Brain className="h-4 w-4 text-accent" />
+          <span className="text-sm font-bold text-foreground">D3MON DAN'S WAR ROOM</span>
         </div>
         <div className="flex items-center gap-1">
           {executingTrade && (
@@ -803,28 +835,50 @@ export const AutoStrategies = ({ killSignal = 0 }: Props) => {
         </div>
       </div>
 
-      {/* Beach Mode Toggle */}
-      <div className="flex items-center justify-between p-2 rounded-lg bg-accent/5 border border-accent/20">
-        <div className="flex items-center gap-2">
-          <Palmtree className={`h-4 w-4 ${beachMode ? "text-accent" : "text-muted-foreground"}`} />
-          <div>
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs font-bold text-foreground">🏖️ Beach Mode</span>
-              <div className="px-1.5 py-0.5 rounded-full bg-primary/20 text-primary text-[9px] font-bold uppercase tracking-wider flex items-center gap-1 border border-primary/20">
-                <Cloud className="w-2.5 h-2.5" />
-                24/7 CLOUD
-              </div>
-            </div>
-            <p className="text-[10px] text-muted-foreground">Autonomous server-side trading — runs even when app is closed</p>
+      <div className="p-3 rounded-lg border border-accent/30 bg-accent/5 backdrop-blur-sm space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className={`h-2 w-2 rounded-full ${isAgentHired ? 'bg-chart-green animate-pulse' : 'bg-muted'}`} />
+            <span className="text-sm font-bold tracking-tight">
+              AGENT STATUS: {isAgentHired ? 'HIRED & ACTIVE' : 'NOT HIRED'}
+            </span>
           </div>
+          {!isAgentHired && (
+            <Button 
+              size="sm" 
+              className="h-7 text-[10px] bg-accent hover:bg-accent/80 text-foreground font-bold"
+              onClick={handleHireDan}
+              disabled={isHiring}
+            >
+              {isHiring ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Users className="h-3 w-3 mr-1" />}
+              HIRE D3MON DAN
+            </Button>
+          )}
         </div>
-        <Switch checked={beachMode} onCheckedChange={handleBeachMode} />
+        
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Palmtree className="h-4 w-4 text-accent" />
+            <div className="space-y-0.5">
+              <div className="flex items-center gap-2">
+                <Label className="text-xs font-semibold">24/7 Cloud Execution (Beach Mode)</Label>
+                <div className="px-1.5 py-0.5 rounded-full bg-primary/20 text-primary text-[9px] font-bold uppercase tracking-wider flex items-center gap-1 border border-primary/20">
+                  <Cloud className="w-2.5 h-2.5" />
+                  CLOUD
+                </div>
+              </div>
+              <p className="text-[10px] text-muted-foreground">Dan trades for you even when you're offline</p>
+            </div>
+          </div>
+          <Switch checked={beachMode} onCheckedChange={handleBeachMode} />
+        </div>
       </div>
+
       {beachMode && activeCount > 0 && (
         <div className="p-2 rounded-lg bg-accent/10 border border-accent/20">
           <p className="text-[11px] text-accent font-medium flex items-center gap-2">
             <ShieldCheck className="w-3.5 h-3.5" />
-            Live Cloud Guard Active: {activeCount} strateg{activeCount > 1 ? "ies" : "y"} running autonomously 24/7.
+            D3MON DAN PROTECTED: {activeCount} strategies active 24/7 in the cloud.
           </p>
         </div>
       )}

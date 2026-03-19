@@ -12,10 +12,10 @@ createAppKit({
   networks: [solana, solanaDevnet] as any,
   adapters: [solanaAdapter],
   metadata: {
-    name: 'SAVAG3 Trades',
-    description: 'AI-Powered Solana Trading Bot',
+    name: 'D3MON Dan',
+    description: 'Your Personal AI Trading Agent on Solana',
     url: window.location.origin,
-    icons: ['https://savag3.trades/logo.png'],
+    icons: ['https://savag3.trades/dan-logo.png'],
   },
   features: {
     analytics: true,

@@ -37,7 +37,7 @@ export function Header() {
             <div className="relative h-8 w-8 rounded-lg bg-foreground flex items-center justify-center overflow-hidden group-hover:scale-105 transition-transform duration-200 border border-accent/30">
               <img 
                 src="/savag3bot-logo.png" 
-                alt="SAVAG3BOT" 
+                alt="D3MON DAN" 
                 className="h-6 w-6 object-contain"
                 onError={(e) => {
                   e.currentTarget.style.display = 'none';
@@ -46,7 +46,7 @@ export function Header() {
               <div className="absolute inset-0 border border-accent/20 rounded-lg pointer-events-none"></div>
             </div>
             <span className="hidden font-bold sm:inline-block text-xl tracking-tighter text-foreground group-hover:text-accent transition-colors">
-              SAVAG3 <span className="text-accent">TRADES</span>
+              D3MON <span className="text-accent">DAN</span>
             </span>
           </Link>
         </div>
@@ -138,7 +138,7 @@ export function LandingHeader() {
             <div className="relative h-8 w-8 rounded-lg bg-foreground flex items-center justify-center overflow-hidden group-hover:scale-105 transition-transform duration-200 border border-accent/30">
               <img 
                 src="/savag3bot-logo.png" 
-                alt="SAVAG3BOT" 
+                alt="D3MON DAN" 
                 className="h-6 w-6 object-contain"
                 onError={(e) => {
                   e.currentTarget.style.display = 'none';
@@ -147,7 +147,7 @@ export function LandingHeader() {
               <div className="absolute inset-0 border border-accent/20 rounded-lg pointer-events-none"></div>
             </div>
             <span className="hidden font-bold sm:inline-block text-xl tracking-tighter text-foreground group-hover:text-accent transition-colors">
-              D3 SAVAG3 <span className="text-accent">TRADES</span>
+              D3MON <span className="text-accent">DAN</span>
             </span>
           </Link>
           <nav className="flex items-center space-x-4 text-sm font-medium">
