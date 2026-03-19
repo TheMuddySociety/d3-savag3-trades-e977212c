@@ -253,6 +253,137 @@ serve(async (req) => {
       processed++;
     }
 
+    // ═══ Execution Phase (Processing Pending Trades) ═══
+    const platformPrivateKey = Deno.env.get('PLATFORM_WALLET_PRIVATE_KEY');
+    if (platformPrivateKey) {
+      console.log('--- Starting Autonomous Execution Phase ---');
+      const { data: pendingTrades } = await supabase
+        .from('pending_auto_trades')
+        .select('*')
+        .eq('status', 'pending')
+        .limit(10); // Process a few at a time
+
+      if (pendingTrades && pendingTrades.length > 0) {
+        // Load Solana tools dynamically for execution
+        const { Connection, Keypair, VersionedTransaction } = await import("npm:@solana/web3.js@1.95.3");
+        const bs58 = (await import("npm:bs58@5.0.0")).default;
+        
+        const platformKeypair = Keypair.fromSecretKey(bs58.decode(platformPrivateKey));
+        const jupiterApiKey = Deno.env.get("JUPITER_API_KEY");
+        const heliusKey = Deno.env.get("HELIUS_API_KEY");
+
+        for (const trade of pendingTrades) {
+          try {
+            // Check user budget
+            const { data: budget } = await supabase
+              .from('auto_trade_budgets')
+              .select('*')
+              .eq('wallet_address', trade.wallet_address)
+              .eq('budget_mode', 'deposit')
+              .eq('is_active', true)
+              .single();
+
+            if (!budget) {
+              console.log(`Skipping trade for ${trade.wallet_address} — No active deposit budget`);
+              continue;
+            }
+
+            // Estimate trade value in SOL/USDC
+            const tradeValue = trade.side === 'buy' ? parseFloat(trade.amount_raw) / 1e9 : (trade.current_price * parseFloat(trade.amount_raw) / Math.pow(10, trade.decimals));
+            
+            if (budget.remaining_amount < tradeValue) {
+               console.log(`Insufficient budget for ${trade.wallet_address}: need ${tradeValue}, have ${budget.remaining_amount}`);
+               continue;
+            }
+
+            console.log(`Executing ${trade.side} ${trade.token_symbol} for ${trade.wallet_address}...`);
+
+            // 1. Get Order from Jupiter Ultra
+            const inputMint = trade.side === 'buy' ? SOL_MINT : trade.token_mint;
+            const outputMint = trade.side === 'buy' ? trade.token_mint : SOL_MINT;
+            const orderUrl = `https://api.jup.ag/ultra/v1/order?inputMint=${inputMint}&outputMint=${outputMint}&amount=${trade.amount_raw}&taker=${platformKeypair.publicKey.toString()}&swapMode=ExactIn`;
+            
+            const orderRes = await fetch(orderUrl, {
+              headers: jupiterApiKey ? { 'x-api-key': jupiterApiKey } : {}
+            });
+
+            if (!orderRes.ok) {
+              console.error(`Jupiter Order failed: ${await orderRes.text()}`);
+              continue;
+            }
+
+            const order = await orderRes.json();
+            if (!order.transaction) continue;
+
+            // 2. Sign Transaction
+            const transactionBuf = Uint8Array.from(atob(order.transaction), c => c.charCodeAt(0));
+            const transaction = VersionedTransaction.deserialize(transactionBuf);
+            transaction.sign([platformKeypair]);
+            const signedTxBase64 = btoa(String.fromCharCode.apply(null, Array.from(transaction.serialize())));
+
+            // 3. Execute Transaction (Prefer Helius if available)
+            let signature = '';
+            if (heliusKey) {
+              const heliusRes = await fetch(`https://sender.helius-rpc.com/fast?api-key=${heliusKey}`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  jsonrpc: "2.0",
+                  id: order.requestId,
+                  method: "sendTransaction",
+                  params: [signedTxBase64, { encoding: "base64", skipPreflight: true }]
+                }),
+              });
+              const heliusData = await heliusRes.json();
+              signature = heliusData.result;
+            } else {
+              const execRes = await fetch("https://api.jup.ag/ultra/v1/execute", {
+                method: "POST",
+                headers: { 
+                  "Content-Type": "application/json",
+                  ...(jupiterApiKey ? { 'x-api-key': jupiterApiKey } : {})
+                },
+                body: JSON.stringify({ signedTransaction: signedTxBase64, requestId: order.requestId }),
+              });
+              const execData = await execRes.json();
+              signature = execData.signature;
+            }
+
+            if (signature) {
+              console.log(`Trade executed! Signature: ${signature}`);
+              
+              // 4. Update Database
+              const newSpent = budget.spent_amount + tradeValue;
+              const newRemaining = budget.remaining_amount - tradeValue;
+
+              await supabase.from('auto_trade_budgets')
+                .update({ spent_amount: newSpent, remaining_amount: newRemaining, updated_at: new Date().toISOString() })
+                .eq('id', budget.id);
+
+              await supabase.from('pending_auto_trades')
+                .update({ status: 'executed', tx_signature: signature, executed_at: new Date().toISOString() })
+                .eq('id', trade.id);
+
+              // Log to live_trades
+              await supabase.from('live_trades').insert({
+                wallet_address: trade.wallet_address,
+                tx_signature: signature,
+                input_mint: inputMint,
+                output_mint: outputMint,
+                input_amount: trade.side === 'buy' ? tradeValue : parseFloat(trade.amount_raw) / Math.pow(10, trade.decimals),
+                output_amount: trade.side === 'buy' ? 0 : tradeValue, // Approx for output
+                status: 'success',
+                trade_type: 'auto',
+                bot_type: trade.strategy,
+              });
+            }
+          } catch (tradeErr) {
+            console.error(`Failed to execute trade ${trade.id}:`, tradeErr);
+          }
+        }
+      }
+    }
+
     return jsonResponse({ success: true, data: { processed, queued } });
   } catch (error: unknown) {
     console.error('auto-trader error:', error);

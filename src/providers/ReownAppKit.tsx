@@ -12,10 +12,10 @@ createAppKit({
   networks: [solana, solanaDevnet] as any,
   adapters: [solanaAdapter],
   metadata: {
-    name: 'SAVAG3BOT',
-    description: 'Solana Memecoin Trading Terminal',
-    url: 'https://memebot-profit-finder.lovable.app',
-    icons: ['https://memebot-profit-finder.lovable.app/savag3bot-logo.png'],
+    name: 'SAVAG3 Trades',
+    description: 'AI-Powered Solana Trading Bot',
+    url: window.location.origin,
+    icons: ['https://savag3.trades/logo.png'],
   },
   features: {
     analytics: true,

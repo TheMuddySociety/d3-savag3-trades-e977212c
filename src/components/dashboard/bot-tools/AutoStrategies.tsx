@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Brain, TrendingUp, TrendingDown, ShieldCheck, Flame, Palmtree, Zap, Users, Wallet, Rocket } from "lucide-react";
+import { Brain, TrendingUp, TrendingDown, ShieldCheck, Flame, Palmtree, Zap, Users, Wallet, Rocket, Cloud } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { useConnection } from "@solana/wallet-adapter-react";
@@ -808,15 +808,24 @@ export const AutoStrategies = ({ killSignal = 0 }: Props) => {
         <div className="flex items-center gap-2">
           <Palmtree className={`h-4 w-4 ${beachMode ? "text-accent" : "text-muted-foreground"}`} />
           <div>
-            <span className="text-xs font-medium text-foreground">🏖️ Beach Mode</span>
-            <p className="text-[10px] text-muted-foreground">Server scans every 60s & queues trades for auto-execution</p>
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs font-bold text-foreground">🏖️ Beach Mode</span>
+              <div className="px-1.5 py-0.5 rounded-full bg-primary/20 text-primary text-[9px] font-bold uppercase tracking-wider flex items-center gap-1 border border-primary/20">
+                <Cloud className="w-2.5 h-2.5" />
+                24/7 CLOUD
+              </div>
+            </div>
+            <p className="text-[10px] text-muted-foreground">Autonomous server-side trading — runs even when app is closed</p>
           </div>
         </div>
         <Switch checked={beachMode} onCheckedChange={handleBeachMode} />
       </div>
       {beachMode && activeCount > 0 && (
-        <div className="p-2 rounded-lg bg-accent/10 border border-accent/30">
-          <p className="text-[11px] text-accent font-medium">✅ {activeCount} strateg{activeCount > 1 ? "ies" : "y"} running server-side — trades queue while you're away & execute when you open the app!</p>
+        <div className="p-2 rounded-lg bg-accent/10 border border-accent/20">
+          <p className="text-[11px] text-accent font-medium flex items-center gap-2">
+            <ShieldCheck className="w-3.5 h-3.5" />
+            Live Cloud Guard Active: {activeCount} strateg{activeCount > 1 ? "ies" : "y"} running autonomously 24/7.
+          </p>
         </div>
       )}
 
