@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { TopMemecoins } from "@/components/dashboard/TopMemecoins";
 import { TokenSwap } from "@/components/dashboard/TokenSwap";
 import { BotAccess } from "@/components/dashboard/BotAccess";
@@ -13,6 +13,7 @@ import { MemeScanner } from "@/components/dashboard/MemeScanner";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { useAdminCheck } from "@/hooks/useAdminCheck";
+import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 
 // Layout components
 import { DesktopSidebar, DesktopPanel } from "@/components/layout/DesktopSidebar";
@@ -20,47 +21,87 @@ import { MobileBottomNav, MobileTab } from "@/components/layout/MobileBottomNav"
 import { MobileHeader } from "@/components/layout/MobileHeader";
 import { Header } from "@/components/layout/Header";
 import { ConnectionStatus } from "@/components/dashboard/ConnectionStatus";
+import { Loader2 } from "lucide-react";
+
+// ─── PULL INDICATOR ───────────────────────────────────────
+function PullIndicator({ pullDistance, refreshing, progress }: { pullDistance: number; refreshing: boolean; progress: number }) {
+  if (pullDistance <= 0 && !refreshing) return null;
+  return (
+    <div
+      className="flex items-center justify-center overflow-hidden transition-[height] duration-200 ease-out"
+      style={{ height: pullDistance }}
+    >
+      <div className="flex flex-col items-center gap-1">
+        <Loader2
+          className={`h-5 w-5 text-primary transition-transform ${refreshing ? 'animate-spin' : ''}`}
+          style={{ transform: refreshing ? undefined : `rotate(${progress * 360}deg)`, opacity: Math.max(0.3, progress) }}
+        />
+        <span className="text-[10px] text-muted-foreground font-medium">
+          {refreshing ? 'Refreshing…' : progress >= 1 ? 'Release to refresh' : 'Pull to refresh'}
+        </span>
+      </div>
+    </div>
+  );
+}
 
 // ─── MOBILE LAYOUT ────────────────────────────────────────
 function MobileDashboard() {
   const [activeTab, setActiveTab] = useState<MobileTab>('trade');
+  const [refreshKey, setRefreshKey] = useState(0);
   const { publicKey } = useWallet();
   const walletAddress = publicKey?.toBase58() || null;
+
+  const handleRefresh = useCallback(async () => {
+    setRefreshKey((k) => k + 1);
+    // Allow children to re-fetch
+    await new Promise((r) => setTimeout(r, 800));
+  }, []);
+
+  const { containerRef, pullDistance, refreshing, progress } = usePullToRefresh({
+    onRefresh: handleRefresh,
+  });
 
   return (
     <div className="min-h-screen bg-background">
       <MobileHeader />
-      <div className="pt-14 pb-[72px] px-3 space-y-2.5">
-        <ConnectionStatus />
-        {activeTab === 'trade' && (
-          <>
-            <TokenSwap />
-            <MiniChart title="SOL/USD" />
-            <PortfolioTracker />
-          </>
-        )}
-        {activeTab === 'tokens' && (
-          <>
-            <TopMemecoins />
-            <Leaderboard />
-            <MemeScanner />
-          </>
-        )}
-        {activeTab === 'bots' && (
-          <>
-            <BotAccess />
-            <AIToolsAgents />
-          </>
-        )}
-        {activeTab === 'alerts' && (
-          <>
-            <PriceAlerts walletAddress={walletAddress} />
-            <LiveSignalFeed />
-          </>
-        )}
-        {activeTab === 'chat' && (
-          <JupiterAIChat />
-        )}
+      <div
+        ref={containerRef}
+        className="pt-14 pb-[72px] overflow-y-auto"
+        style={{ height: '100vh' }}
+      >
+        <PullIndicator pullDistance={pullDistance} refreshing={refreshing} progress={progress} />
+        <div className="px-3 space-y-2.5">
+          <ConnectionStatus />
+          {activeTab === 'trade' && (
+            <>
+              <TokenSwap key={`swap-${refreshKey}`} />
+              <MiniChart title="SOL/USD" key={`chart-${refreshKey}`} />
+              <PortfolioTracker key={`portfolio-${refreshKey}`} />
+            </>
+          )}
+          {activeTab === 'tokens' && (
+            <>
+              <TopMemecoins key={`meme-${refreshKey}`} />
+              <Leaderboard key={`leader-${refreshKey}`} />
+              <MemeScanner key={`scanner-${refreshKey}`} />
+            </>
+          )}
+          {activeTab === 'bots' && (
+            <>
+              <BotAccess />
+              <AIToolsAgents />
+            </>
+          )}
+          {activeTab === 'alerts' && (
+            <>
+              <PriceAlerts walletAddress={walletAddress} key={`alerts-${refreshKey}`} />
+              <LiveSignalFeed key={`signals-${refreshKey}`} />
+            </>
+          )}
+          {activeTab === 'chat' && (
+            <JupiterAIChat />
+          )}
+        </div>
       </div>
       <MobileBottomNav activeTab={activeTab} onTabChange={setActiveTab} />
     </div>
