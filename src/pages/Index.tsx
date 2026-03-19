@@ -30,7 +30,8 @@ function MobileDashboard() {
   return (
     <div className="min-h-screen bg-background">
       <MobileHeader />
-      <div className="pt-16 pb-20 px-3 space-y-3">
+      <div className="pt-14 pb-[72px] px-3 space-y-2.5">
+        <ConnectionStatus />
         {activeTab === 'trade' && (
           <>
             <TokenSwap />
