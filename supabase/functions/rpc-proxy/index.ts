@@ -55,7 +55,7 @@ serve(async (req) => {
       rpcUrl = `https://mainnet.helius-rpc.com/?api-key=${heliusKey}`;
     }
 
-    const body = await req.text();
+    // body already parsed above
 
     const rpcRes = await fetch(rpcUrl, {
       method: "POST",
