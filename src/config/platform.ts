@@ -13,7 +13,7 @@ export const PLATFORM_CONFIG = {
    * Uses Reown Blockchain API if PROJECT_ID is available, falls back to public RPC
    */
   RPC_URL: import.meta.env.VITE_REOWN_PROJECT_ID 
-    ? `https://rpc.walletconnect.org/v1/?chainId=solana:5eykt4UsFvXYfy2khEezeL5ox1oUM22bR&projectId=${import.meta.env.VITE_REOWN_PROJECT_ID}`
+    ? `https://rpc.walletconnect.org/v1/?chainId=solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp&projectId=${import.meta.env.VITE_REOWN_PROJECT_ID}`
     : "https://api.mainnet-beta.solana.com",
   
   /**

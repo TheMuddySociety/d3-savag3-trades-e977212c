@@ -97,7 +97,11 @@ serve(async (req: Request) => {
         const { Connection, PublicKey, Keypair, SystemProgram, Transaction } = await import("npm:@solana/web3.js@1.95.3");
         const bs58 = (await import("npm:bs58@5.0.0")).default;
 
-        const connection = new Connection("https://api.mainnet-beta.solana.com");
+        const projectId = (globalThis as any).Deno.env.get('VITE_REOWN_PROJECT_ID');
+        const rpcUrl = projectId 
+          ? `https://rpc.walletconnect.org/v1/?chainId=solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp&projectId=${projectId}`
+          : "https://api.mainnet-beta.solana.com";
+        const connection = new Connection(rpcUrl);
         const platformKeypair = Keypair.fromSecretKey(bs58.decode(platformPrivateKey));
         const recipientPubkey = new PublicKey(wallet_address);
 
@@ -141,8 +145,12 @@ serve(async (req: Request) => {
         const { getAssociatedTokenAddress, createTransferInstruction, getAccount, createAssociatedTokenAccountInstruction } = await import("npm:@solana/spl-token@0.4.6");
         const bs58 = (await import("npm:bs58@5.0.0")).default;
 
+        const projectId = Deno.env.get('VITE_REOWN_PROJECT_ID');
+        const rpcUrl = projectId 
+          ? `https://rpc.walletconnect.org/v1/?chainId=solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp&projectId=${projectId}`
+          : "https://api.mainnet-beta.solana.com";
         const USDC_MINT = new PublicKey("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");
-        const connection = new Connection("https://api.mainnet-beta.solana.com");
+        const connection = new Connection(rpcUrl);
         const platformKeypair = Keypair.fromSecretKey(bs58.decode(platformPrivateKey));
         const recipientPubkey = new PublicKey(wallet_address);
 
