@@ -22,6 +22,7 @@ createAppKit({
     email: true,
     socials: ['google', 'x', 'discord', 'apple'],
     emailShowWallets: true,
+    onramp: true,
   },
 });
 

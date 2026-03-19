@@ -10,8 +10,11 @@ export const PLATFORM_CONFIG = {
   
   /**
    * Default RPC URL for Solana connection
+   * Uses Reown Blockchain API if PROJECT_ID is available, falls back to public RPC
    */
-  RPC_URL: "https://api.mainnet-beta.solana.com",
+  RPC_URL: import.meta.env.VITE_REOWN_PROJECT_ID 
+    ? `https://rpc.walletconnect.org/v1/?chainId=solana:5eykt4UsFvXYfy2khEezeL5ox1oUM22bR&projectId=${import.meta.env.VITE_REOWN_PROJECT_ID}`
+    : "https://api.mainnet-beta.solana.com",
   
   /**
    * USDC Mint Address on Solana
