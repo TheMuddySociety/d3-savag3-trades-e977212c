@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { TopMemecoins } from "@/components/dashboard/TopMemecoins";
 import { TokenSwap } from "@/components/dashboard/TokenSwap";
 import { BotAccess } from "@/components/dashboard/BotAccess";
