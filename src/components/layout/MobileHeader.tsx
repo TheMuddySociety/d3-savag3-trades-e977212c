@@ -23,36 +23,33 @@ export function MobileHeader() {
   };
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-background/90 backdrop-blur-xl border-b border-border">
-      <div className="flex items-center justify-between h-12 px-3">
-        <div className="flex items-center gap-2">
-          <Activity className="h-4 w-4 text-primary" />
-          <span className="text-sm font-bold tracking-tight text-foreground">
-            S3<span className="text-primary">BOT</span>
+    <header className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-xl border-b border-border/50">
+      <div className="flex items-center justify-between h-11 px-3">
+        <div className="flex items-center gap-1.5">
+          <Activity className="h-4 w-4 text-accent shrink-0" />
+          <span className="text-xs font-bold tracking-tight text-foreground">
+            S3<span className="text-accent">BOT</span>
           </span>
           {connected && hasFreePass && (
-            <Badge className="bg-accent/20 text-accent border-accent/30 text-[9px] h-4 px-1">
-              <Sparkles className="h-2.5 w-2.5 mr-0.5" />
+            <Badge className="bg-accent/15 text-accent border-accent/20 text-[8px] h-3.5 px-1">
+              <Sparkles className="h-2 w-2 mr-0.5" />
               FREE
             </Badge>
           )}
         </div>
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1">
           {connected && publicKey ? (
             <>
-              <div className="flex items-center gap-1 bg-secondary px-2 py-1 rounded text-[10px] font-mono text-muted-foreground">
+              <div className="flex items-center gap-1 bg-secondary/80 px-1.5 py-0.5 rounded text-[9px] font-mono text-muted-foreground">
                 <div className="w-1.5 h-1.5 rounded-full bg-chart-green animate-pulse" />
                 {publicKey.toString().slice(0, 4)}…{publicKey.toString().slice(-4)}
               </div>
-              <Button onClick={handleDisconnect} variant="ghost" size="icon" className="h-7 w-7">
-                <LogOut className="h-3.5 w-3.5" />
+              <Button onClick={handleDisconnect} variant="ghost" size="icon" className="h-6 w-6">
+                <LogOut className="h-3 w-3" />
               </Button>
             </>
           ) : (
-            <div className="flex items-center gap-1.5">
-              <UnifiedWalletButton />
-              <appkit-button size="sm" label="WC" />
-            </div>
+            <UnifiedWalletButton />
           )}
         </div>
       </div>

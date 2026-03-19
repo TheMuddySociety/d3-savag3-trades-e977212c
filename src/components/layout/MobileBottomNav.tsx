@@ -18,32 +18,32 @@ const tabs = [
 
 export function MobileBottomNav({ activeTab, onTabChange }: MobileBottomNavProps) {
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-xl border-t border-border safe-area-bottom">
-      <div className="flex items-center justify-around h-16 px-2">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-xl border-t border-border/50 safe-area-bottom">
+      <div className="flex items-center justify-around h-14 px-1">
         {tabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => onTabChange(tab.id)}
             className={cn(
-              "relative flex flex-col items-center gap-1 px-3 py-1.5 rounded-lg transition-all min-w-[56px]",
+              "relative flex flex-col items-center gap-0.5 px-2 py-1 rounded-lg transition-all min-w-[48px]",
               activeTab === tab.id
-                ? "text-primary"
+                ? "text-accent"
                 : "text-muted-foreground"
             )}
           >
+            {activeTab === tab.id && (
+              <div className="absolute top-0 w-6 h-0.5 rounded-full bg-accent shadow-[0_0_6px_hsl(var(--accent)/0.5)]" />
+            )}
             <tab.icon className={cn(
-              "h-5 w-5 transition-all",
+              "h-4 w-4 transition-all",
               activeTab === tab.id && "scale-110"
             )} />
             <span className={cn(
-              "text-[10px] font-medium",
+              "text-[9px] font-medium",
               activeTab === tab.id && "font-semibold"
             )}>
               {tab.label}
             </span>
-            {activeTab === tab.id && (
-              <div className="absolute bottom-1 w-8 h-0.5 rounded-full bg-primary" />
-            )}
           </button>
         ))}
       </div>
