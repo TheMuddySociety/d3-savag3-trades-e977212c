@@ -15,7 +15,7 @@ createAppKit({
     name: 'D3MON Dan',
     description: 'Your Personal AI Trading Agent on Solana',
     url: window.location.origin,
-    icons: ['https://savag3.trades/dan-logo.png'],
+    icons: ['/dan-logo.jpg'],
   },
   features: {
     analytics: true,

@@ -39,10 +39,10 @@ export function DesktopSidebar({ activePanel, onPanelChange, collapsed, onCollap
     )}>
       {/* Logo */}
       <div className="h-14 flex items-center gap-2 px-3 border-b border-accent/10 shrink-0">
-        <Activity className="h-5 w-5 text-accent shrink-0" />
+        <img src={window.location.origin + '/dan-logo.jpg'} className="h-5 w-5 object-contain" alt="Logo" />
         {!collapsed && (
           <span className="text-sm font-bold tracking-tight text-foreground whitespace-nowrap group">
-            D3MON <span className="text-accent">DAN</span>
+            SAVAG3<span className="text-accent">BOT</span>
           </span>
         )}
       </div>

@@ -26,9 +26,9 @@ export function MobileHeader() {
     <header className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-xl border-b border-border/50">
       <div className="flex items-center justify-between h-11 px-3">
         <div className="flex items-center gap-1.5">
-          <Activity className="h-4 w-4 text-accent shrink-0" />
+          <img src="/dan-logo.jpg" className="h-4 w-4 object-contain" alt="Logo" />
           <span className="text-xs font-bold tracking-tight text-foreground">
-            S3<span className="text-accent">BOT</span>
+            SAVAG3<span className="text-accent">BOT</span>
           </span>
           {connected && hasFreePass && (
             <Badge className="bg-accent/15 text-accent border-accent/20 text-[8px] h-3.5 px-1">
