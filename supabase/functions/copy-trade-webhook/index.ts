@@ -8,18 +8,59 @@ const corsHeaders = {
 
 const SOL_MINT = "So11111111111111111111111111111111111111112";
 
+async function verifyHeliusSignature(body: string, authHeader: string | null, secret: string): Promise<boolean> {
+  if (!authHeader) return false;
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    "raw",
+    encoder.encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+  const signature = await crypto.subtle.sign("HMAC", key, encoder.encode(body));
+  const expected = Array.from(new Uint8Array(signature))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
+  // Constant-time comparison
+  if (expected.length !== authHeader.length) return false;
+  let mismatch = 0;
+  for (let i = 0; i < expected.length; i++) {
+    mismatch |= expected.charCodeAt(i) ^ authHeader.charCodeAt(i);
+  }
+  return mismatch === 0;
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
+    // ── Webhook signature verification ──
+    const webhookSecret = Deno.env.get('HELIUS_WEBHOOK_SECRET');
+    const rawBody = await req.text();
+
+    if (webhookSecret) {
+      const authHeader = req.headers.get('authorization');
+      const isValid = await verifyHeliusSignature(rawBody, authHeader, webhookSecret);
+      if (!isValid) {
+        console.error('Webhook signature verification failed');
+        return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+    } else {
+      console.warn('HELIUS_WEBHOOK_SECRET not set — webhook signature verification skipped. Set it to secure this endpoint.');
+    }
+
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     // Helius sends an array of enhanced transactions
-    const transactions = await req.json();
+    const transactions = JSON.parse(rawBody);
 
     if (!Array.isArray(transactions) || transactions.length === 0) {
       return new Response(JSON.stringify({ success: true, processed: 0 }), {
@@ -50,19 +91,15 @@ serve(async (req) => {
     const eventsToInsert: any[] = [];
 
     for (const tx of transactions) {
-      // Determine the fee payer / source wallet
       const feePayer = tx.feePayer;
       if (!feePayer) continue;
 
-      // Check if this transaction is from a monitored wallet
       const configs = targetMap.get(feePayer);
       if (!configs) continue;
 
-      // Parse swap details
       const tokenTransfers = tx.tokenTransfers || [];
       const nativeTransfers = tx.nativeTransfers || [];
 
-      // Determine buy or sell by SOL flow
       const solSent = nativeTransfers
         .filter((t: any) => t.fromUserAccount === feePayer)
         .reduce((sum: number, t: any) => sum + (t.amount || 0), 0);
@@ -70,16 +107,13 @@ serve(async (req) => {
         .filter((t: any) => t.toUserAccount === feePayer)
         .reduce((sum: number, t: any) => sum + (t.amount || 0), 0);
 
-      // Find the non-SOL token involved
       const nonSolTransfer = tokenTransfers.find((t: any) => t.mint !== SOL_MINT);
       if (!nonSolTransfer) continue;
 
       const isBuy = solSent > solReceived;
       const solAmount = Math.abs(solSent - solReceived) / 1e9;
 
-      // Create event for each subscriber of this target wallet
       for (const config of configs) {
-        // Skip sell events if auto_sell is off
         if (!isBuy && !config.auto_sell) continue;
 
         eventsToInsert.push({
@@ -94,7 +128,6 @@ serve(async (req) => {
         });
       }
 
-      // Update last_checked_tx for all configs watching this wallet
       await supabase
         .from('copy_trade_configs')
         .update({ last_checked_tx: tx.signature, updated_at: new Date().toISOString() })
