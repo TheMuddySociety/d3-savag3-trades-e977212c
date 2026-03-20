@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { TopMemecoins } from "@/components/dashboard/TopMemecoins";
 import { TokenSwap } from "@/components/dashboard/TokenSwap";
@@ -46,6 +46,8 @@ function PullIndicator({ pullDistance, refreshing, progress }: { pullDistance: n
 }
 
 // ─── MOBILE LAYOUT ────────────────────────────────────────
+const MOBILE_TABS: MobileTab[] = ['trade', 'tokens', 'bots', 'alerts', 'chat'];
+
 function MobileDashboard() {
   const [activeTab, setActiveTab] = useState<MobileTab>('trade');
   const [refreshKey, setRefreshKey] = useState(0);
@@ -62,6 +64,32 @@ function MobileDashboard() {
     onRefresh: handleRefresh,
   });
 
+  // ─── Swipe gesture handling ──────────────────────────────
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    const touch = e.touches[0];
+    touchStartRef.current = { x: touch.clientX, y: touch.clientY };
+  }, []);
+
+  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+    if (!touchStartRef.current) return;
+    const touch = e.changedTouches[0];
+    const dx = touch.clientX - touchStartRef.current.x;
+    const dy = touch.clientY - touchStartRef.current.y;
+    touchStartRef.current = null;
+
+    // Only trigger on horizontal swipes (dx > dy) with sufficient distance
+    if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy)) return;
+
+    setActiveTab((current) => {
+      const idx = MOBILE_TABS.indexOf(current);
+      if (dx < 0 && idx < MOBILE_TABS.length - 1) return MOBILE_TABS[idx + 1]; // swipe left → next
+      if (dx > 0 && idx > 0) return MOBILE_TABS[idx - 1]; // swipe right → prev
+      return current;
+    });
+  }, []);
+
   return (
     <div className="min-h-screen bg-background">
       <MobileHeader />
@@ -69,6 +97,8 @@ function MobileDashboard() {
         ref={containerRef}
         className="pt-14 pb-[72px] overflow-y-auto"
         style={{ height: '100vh' }}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
       >
         <PullIndicator pullDistance={pullDistance} refreshing={refreshing} progress={progress} />
         <div className="px-3 space-y-2.5">
