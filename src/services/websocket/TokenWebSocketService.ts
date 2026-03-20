@@ -160,10 +160,10 @@ class TokenWebSocketService {
             logoUrl: t.logo || '/placeholder.svg',
             tokenAddress: isSolanaAddress ? t.address : undefined,
             liquidity: t.liquidity || 0,
-            holders: 0,
+            holders: (t.txns_buys_24h || 0) + (t.txns_sells_24h || 0),
             tags,
-            timestamp: t.pairAge ? new Date(t.pairAge).getTime() : Date.now(),
-            bondingCurveProgress: undefined,
+            timestamp: t.pairAge ? t.pairAge : Date.now(),
+            bondingCurveProgress: t.bonding_curve_progress ?? undefined,
           };
         });
     } catch (err) {

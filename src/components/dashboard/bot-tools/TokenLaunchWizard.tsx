@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,6 +20,7 @@ import {
   Send,
   Zap,
   TrendingUp,
+  Cloud,
 } from "lucide-react";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { toast } from "sonner";
@@ -29,6 +31,7 @@ import {
   type TokenCreateParams,
 } from "@/services/jupiter/studio";
 import { cn } from "@/lib/utils";
+import { backgroundTaskService } from "@/services/d3mon/BackgroundTaskService";
 
 type Step = "configure" | "curve" | "upload" | "review";
 const STEPS: Step[] = ["configure", "curve", "upload", "review"];
@@ -57,6 +60,7 @@ export function TokenLaunchWizard() {
   const [preset, setPreset] = useState<CurvePreset>("meme");
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [backgroundLaunch, setBackgroundLaunch] = useState(false);
 
   const stepIndex = STEPS.indexOf(step);
   const canGoNext =
@@ -385,23 +389,35 @@ export function TokenLaunchWizard() {
             {!publicKey ? (
               <p className="text-xs text-destructive text-center">Connect your wallet to launch</p>
             ) : (
-              <Button
-                className="w-full h-10 text-sm font-bold gap-2"
-                onClick={handleLaunch}
-                disabled={isLaunching}
-              >
-                {isLaunching ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Launching...
-                  </>
-                ) : (
-                  <>
-                    <Rocket className="h-4 w-4" />
-                    Launch Token on Jupiter Studio
-                  </>
-                )}
-              </Button>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between p-2 rounded-lg bg-muted/20 border border-border/50">
+                  <div className="flex items-center gap-2">
+                    <Cloud className="h-3.5 w-3.5 text-primary" />
+                    <div>
+                      <p className="text-[10px] font-semibold">Launch in Background</p>
+                      <p className="text-[9px] text-muted-foreground">D3MON Dan completes the launch while you're away</p>
+                    </div>
+                  </div>
+                  <Switch checked={backgroundLaunch} onCheckedChange={setBackgroundLaunch} />
+                </div>
+                <Button
+                  className="w-full h-10 text-sm font-bold gap-2"
+                  onClick={handleLaunch}
+                  disabled={isLaunching}
+                >
+                  {isLaunching ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      {backgroundLaunch ? 'Queuing...' : 'Launching...'}
+                    </>
+                  ) : (
+                    <>
+                      <Rocket className="h-4 w-4" />
+                      {backgroundLaunch ? 'Queue Background Launch' : 'Launch Token on Jupiter Studio'}
+                    </>
+                  )}
+                </Button>
+              </div>
             )}
           </div>
         )}

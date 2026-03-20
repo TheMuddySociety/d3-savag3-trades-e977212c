@@ -1,0 +1,274 @@
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
+type TaskType = 'background_trade' | 'background_launch';
+type TaskStatus = 'queued' | 'processing' | 'completed' | 'failed';
+
+interface TaskRow {
+  id: string;
+  wallet_address: string;
+  task_type: TaskType;
+  status: TaskStatus;
+  params: Record<string, any>;
+  result: Record<string, any> | null;
+  error: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    // Auth check
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: 'No authorization header' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+
+    // Verify JWT to get wallet
+    const userClient = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const { data: { user }, error: authError } = await userClient.auth.getUser();
+    if (authError || !user) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const serviceClient = createClient(supabaseUrl, supabaseServiceKey);
+
+    const body = await req.json();
+    const { action } = body;
+
+    switch (action) {
+      // ── Queue a background trade ──────────────────────────────
+      case 'queue_trade': {
+        const { wallet_address, input_mint, output_mint, amount, slippage_bps } = body;
+        if (!wallet_address || !input_mint || !output_mint || !amount) {
+          return new Response(JSON.stringify({ error: 'Missing required trade params' }), {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+
+        const { data, error } = await serviceClient
+          .from('d3mon_task_queue')
+          .insert({
+            wallet_address,
+            task_type: 'background_trade' as TaskType,
+            status: 'queued' as TaskStatus,
+            params: { input_mint, output_mint, amount, slippage_bps: slippage_bps || 300 },
+          })
+          .select()
+          .single();
+
+        if (error) throw error;
+        return new Response(JSON.stringify({ success: true, task: data }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      // ── Queue a background token launch ───────────────────────
+      case 'queue_launch': {
+        const { wallet_address, token_name, token_symbol, description, signed_tx, image_url, curve_preset } = body;
+        if (!wallet_address || !token_name || !token_symbol || !signed_tx) {
+          return new Response(JSON.stringify({ error: 'Missing required launch params' }), {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+
+        const { data, error } = await serviceClient
+          .from('d3mon_task_queue')
+          .insert({
+            wallet_address,
+            task_type: 'background_launch' as TaskType,
+            status: 'queued' as TaskStatus,
+            params: { token_name, token_symbol, description, signed_tx, image_url, curve_preset },
+          })
+          .select()
+          .single();
+
+        if (error) throw error;
+        return new Response(JSON.stringify({ success: true, task: data }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      // ── Get pending/recent tasks for a wallet ─────────────────
+      case 'get_tasks': {
+        const { wallet_address, limit = 20 } = body;
+        if (!wallet_address) {
+          return new Response(JSON.stringify({ error: 'wallet_address required' }), {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+
+        const { data, error } = await serviceClient
+          .from('d3mon_task_queue')
+          .select('*')
+          .eq('wallet_address', wallet_address)
+          .order('created_at', { ascending: false })
+          .limit(limit);
+
+        if (error) throw error;
+        return new Response(JSON.stringify({ success: true, tasks: data || [] }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      // ── Process next queued task (called by cron / scheduler) ──
+      case 'process_next': {
+        // Pick the oldest queued task
+        const { data: task, error: fetchError } = await serviceClient
+          .from('d3mon_task_queue')
+          .select('*')
+          .eq('status', 'queued')
+          .order('created_at', { ascending: true })
+          .limit(1)
+          .single();
+
+        if (fetchError || !task) {
+          return new Response(JSON.stringify({ success: true, processed: false, reason: 'no queued tasks' }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+
+        // Mark as processing
+        await serviceClient
+          .from('d3mon_task_queue')
+          .update({ status: 'processing', updated_at: new Date().toISOString() })
+          .eq('id', task.id);
+
+        try {
+          let result: any = {};
+
+          if (task.task_type === 'background_trade') {
+            result = await executeBackgroundTrade(task.params);
+          } else if (task.task_type === 'background_launch') {
+            result = await executeBackgroundLaunch(task.params, supabaseUrl, supabaseServiceKey);
+          }
+
+          await serviceClient
+            .from('d3mon_task_queue')
+            .update({ status: 'completed', result, updated_at: new Date().toISOString() })
+            .eq('id', task.id);
+
+          return new Response(JSON.stringify({ success: true, processed: true, task_id: task.id, result }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        } catch (execError: unknown) {
+          const errorMsg = execError instanceof Error ? execError.message : 'Unknown execution error';
+          await serviceClient
+            .from('d3mon_task_queue')
+            .update({ status: 'failed', error: errorMsg, updated_at: new Date().toISOString() })
+            .eq('id', task.id);
+
+          return new Response(JSON.stringify({ success: false, task_id: task.id, error: errorMsg }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+      }
+
+      case 'ping':
+        return new Response(JSON.stringify({ status: 'ok', ts: Date.now() }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+
+      default:
+        return new Response(JSON.stringify({ error: 'Invalid action' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+    }
+  } catch (error: unknown) {
+    console.error('D3MON Background error:', error);
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    return new Response(JSON.stringify({ success: false, error: message }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+});
+
+// ─── Background Trade Execution ─────────────────────────────────────
+async function executeBackgroundTrade(params: Record<string, any>) {
+  const { input_mint, output_mint, amount, slippage_bps } = params;
+
+  // Use Jupiter Ultra API (gasless) for the swap
+  const orderResp = await fetch('https://ultra-api.jup.ag/v1/order', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      inputMint: input_mint,
+      outputMint: output_mint,
+      amount: Math.floor(amount * 1e9), // Convert SOL to lamports
+      taker: params.wallet_address,
+      slippageBps: slippage_bps,
+    }),
+  });
+
+  if (!orderResp.ok) {
+    throw new Error(`Jupiter order failed: ${orderResp.status}`);
+  }
+
+  const order = await orderResp.json();
+  return {
+    order_id: order.requestId,
+    input_mint,
+    output_mint,
+    amount,
+    status: 'order_created',
+    note: 'Trade order created. User must sign the transaction to complete.',
+  };
+}
+
+// ─── Background Token Launch Execution ──────────────────────────────
+async function executeBackgroundLaunch(params: Record<string, any>, supabaseUrl: string, serviceKey: string) {
+  const { signed_tx, token_name, token_symbol } = params;
+
+  // Submit the pre-signed transaction via Jupiter Studio
+  const jupiterApiKey = Deno.env.get('JUPITER_API_KEY');
+  if (!jupiterApiKey) throw new Error('JUPITER_API_KEY not configured');
+
+  const submitResp = await fetch('https://api.jup.ag/studio/v1/dbc/pool/submit', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': jupiterApiKey,
+    },
+    body: JSON.stringify({ signedTransaction: signed_tx }),
+  });
+
+  if (!submitResp.ok) {
+    const errBody = await submitResp.text();
+    throw new Error(`Studio submit failed: ${submitResp.status} - ${errBody}`);
+  }
+
+  const result = await submitResp.json();
+  return {
+    token_name,
+    token_symbol,
+    signature: result.signature || result.txSignature,
+    mint: result.mint,
+    status: 'launched',
+  };
+}

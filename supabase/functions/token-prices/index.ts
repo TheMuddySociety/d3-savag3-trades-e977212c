@@ -288,6 +288,8 @@ async function fetchTrendingTokens() {
           liquidity: pair.liquidity?.usd || 0,
           dexId: pair.dexId || '',
           pairAge: pair.pairCreatedAt || null,
+          txns_buys_24h: pair.txns?.h24?.buys || 0,
+          txns_sells_24h: pair.txns?.h24?.sells || 0,
         });
       }
     }
@@ -336,6 +338,9 @@ async function fetchTrendingTokens() {
                 volume_24h: pair.volume?.h24 || 0,
                 liquidity: pair.liquidity?.usd || 0,
                 dexId: pair.dexId || '',
+                pairAge: pair.pairCreatedAt || existing.pairAge || null,
+                txns_buys_24h: pair.txns?.h24?.buys || 0,
+                txns_sells_24h: pair.txns?.h24?.sells || 0,
                 source: 'boost',
               });
             }

@@ -13,6 +13,7 @@ import { LiveTradeConfirmDialog } from "./LiveTradeConfirmDialog";
 import { BudgetManager } from "./BudgetManager";
 import { supabase } from "@/integrations/supabase/client";
 import { AgentService } from "@/services/solana/agentService";
+import { backgroundTaskService } from "@/services/d3mon/BackgroundTaskService";
 
 const SOL_MINT = "So11111111111111111111111111111111111111112";
 
@@ -137,14 +138,23 @@ export const AutoStrategies = ({ killSignal = 0 }: Props) => {
   }, [killSignal]);
 
   // Check agent status on mount / wallet change
+  const [pendingTaskCount, setPendingTaskCount] = useState(0);
+
   useEffect(() => {
     const checkStatus = async () => {
       if (wallet.publicKey) {
-        const hired = await AgentService.isAgentHired(wallet.publicKey.toBase58());
+        const addr = wallet.publicKey.toBase58();
+        const hired = await AgentService.isAgentHired(addr);
         setIsAgentHired(hired);
+        try {
+          const count = await backgroundTaskService.getPendingCount(addr);
+          setPendingTaskCount(count);
+        } catch {}
       }
     };
     checkStatus();
+    const interval = setInterval(checkStatus, 30000);
+    return () => clearInterval(interval);
   }, [wallet.publicKey]);
 
   const handleHireDan = async () => {
@@ -825,6 +835,11 @@ export const AutoStrategies = ({ killSignal = 0 }: Props) => {
           {executingTrade && (
             <Badge className="bg-[hsl(var(--fun-yellow))]/20 text-[hsl(var(--fun-yellow))] border-[hsl(var(--fun-yellow))]/30 animate-pulse">
               Executing...
+            </Badge>
+          )}
+          {pendingTaskCount > 0 && (
+            <Badge className="bg-[hsl(var(--fun-yellow))]/20 text-[hsl(var(--fun-yellow))] border-[hsl(var(--fun-yellow))]/30">
+              ⏳ {pendingTaskCount} queued
             </Badge>
           )}
           {activeCount > 0 && (
