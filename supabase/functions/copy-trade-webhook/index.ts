@@ -37,22 +37,26 @@ serve(async (req) => {
   }
 
   try {
-    // ── Webhook signature verification ──
+    // ── Webhook signature verification (MANDATORY) ──
     const webhookSecret = Deno.env.get('HELIUS_WEBHOOK_SECRET');
     const rawBody = await req.text();
 
-    if (webhookSecret) {
-      const authHeader = req.headers.get('authorization');
-      const isValid = await verifyHeliusSignature(rawBody, authHeader, webhookSecret);
-      if (!isValid) {
-        console.error('Webhook signature verification failed');
-        return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-          status: 401,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
-    } else {
-      console.warn('HELIUS_WEBHOOK_SECRET not set — webhook signature verification skipped. Set it to secure this endpoint.');
+    if (!webhookSecret) {
+      console.error('CRITICAL: HELIUS_WEBHOOK_SECRET is not set. Rejecting all webhook requests until configured.');
+      return new Response(JSON.stringify({ error: 'Server misconfigured' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const authHeader = req.headers.get('authorization');
+    const isValid = await verifyHeliusSignature(rawBody, authHeader, webhookSecret);
+    if (!isValid) {
+      console.error('Webhook signature verification failed');
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
