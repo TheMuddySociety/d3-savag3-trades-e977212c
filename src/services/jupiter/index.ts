@@ -4,3 +4,4 @@ export * from './quotes';
 export * from './transactions';
 export * from './tokens';
 export * from './ultra';
+export * from './studio';

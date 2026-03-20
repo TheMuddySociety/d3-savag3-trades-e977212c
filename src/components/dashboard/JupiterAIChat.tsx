@@ -13,10 +13,11 @@ import { useWallet } from "@solana/wallet-adapter-react";
 type Message = { role: "user" | "assistant"; content: string };
 
 const SUGGESTED_PROMPTS = [
+  "How do I launch a token on Jupiter Studio?",
+  "Best bonding curve for a meme token?",
   "How do I use the Ultra Swap API?",
   "Analyze token safety with Shield API",
-  "Best DCA strategy on Solana",
-  "How does Jupiter limit orders work?",
+  "How to claim LP fees from my token?",
 ];
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/jupiter-ai`;

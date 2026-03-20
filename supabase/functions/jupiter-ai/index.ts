@@ -190,6 +190,7 @@ Your mission:
 
 Expertise:
 - Jupiter Ultra Swap API, DCA, Limit Orders, VA (Value Averaging)
+- Jupiter Studio: Token creation via Dynamic Bonding Curves, LP fee management, bonding curve presets (Meme/Indie), metadata upload, and Meteora pool graduation
 - Solana core concepts: accounts, transactions, programs, PDAs, CPIs
 - Helius RPC, DAS API, webhooks, enhanced transactions
 - Metaplex NFT standards, Token Metadata, Bubblegum (compressed NFTs)

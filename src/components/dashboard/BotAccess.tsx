@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Bot, Clock, Crosshair, BarChart3, Brain, Wallet, OctagonX, Layers, Eye, List, TrendingUp } from "lucide-react";
+import { Bot, Clock, Crosshair, BarChart3, Brain, Wallet, OctagonX, Layers, Eye, List, TrendingUp, Rocket, Coins } from "lucide-react";
 import { DCABot } from "./bot-tools/DCABot";
 import { BuySniper } from "./bot-tools/BuySniper";
 import { VolumeBot } from "./bot-tools/VolumeBot";
@@ -12,6 +12,8 @@ import { BatchTrader } from "./bot-tools/BatchTrader";
 import { CopyTradeBot } from "./bot-tools/CopyTradeBot";
 import { LiveTradeHistory } from "./bot-tools/LiveTradeHistory";
 import { GridBot } from "./bot-tools/GridBot";
+import { TokenLaunchWizard } from "./bot-tools/TokenLaunchWizard";
+import { FeeDashboard } from "./bot-tools/FeeDashboard";
 import { ProfitSimulator } from "./ProfitSimulator";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { useToast } from "@/hooks/use-toast";
@@ -99,6 +101,14 @@ export const BotAccess = () => {
               <TrendingUp className="h-3 w-3" />
               <span className="hidden sm:inline">Profit</span>
             </TabsTrigger>
+            <TabsTrigger value="launch" className="text-[10px] gap-0.5 data-[state=active]:bg-accent/20 px-2 shrink-0 snap-start">
+              <Rocket className="h-3 w-3" />
+              <span className="hidden sm:inline">Launch</span>
+            </TabsTrigger>
+            <TabsTrigger value="fees" className="text-[10px] gap-0.5 data-[state=active]:bg-accent/20 px-2 shrink-0 snap-start">
+              <Coins className="h-3 w-3" />
+              <span className="hidden sm:inline">Fees</span>
+            </TabsTrigger>
             <TabsTrigger value="trades" className="text-[10px] gap-0.5 data-[state=active]:bg-accent/20 px-2 shrink-0 snap-start">
               <List className="h-3 w-3" />
               <span className="hidden sm:inline">Trades</span>
@@ -128,6 +138,12 @@ export const BotAccess = () => {
           </TabsContent>
           <TabsContent value="profit" className="mt-0">
             <ProfitSimulator />
+          </TabsContent>
+          <TabsContent value="launch" className="mt-0">
+            <TokenLaunchWizard />
+          </TabsContent>
+          <TabsContent value="fees" className="mt-0">
+            <FeeDashboard />
           </TabsContent>
           <TabsContent value="trades" className="mt-0">
             <LiveTradeHistory />
