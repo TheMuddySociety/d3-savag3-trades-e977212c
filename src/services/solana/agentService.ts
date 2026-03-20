@@ -1,15 +1,23 @@
 import { createUmi } from "@metaplex-foundation/umi-bundle-defaults";
 import { mplCore } from "@metaplex-foundation/mpl-core";
+import { mplAgentIdentity, mplAgentTools } from "@metaplex-foundation/mpl-agent-registry";
 import {
-  mplAgentIdentity,
-  mplAgentTools,
   registerIdentityV1,
+} from "@metaplex-foundation/mpl-agent-registry/dist/src/generated/identity/instructions/registerIdentityV1";
+import {
   findAgentIdentityV1Pda,
   safeFetchAgentIdentityV1,
-  findExecutiveProfileV1Pda,
-  findExecutionDelegateRecordV1Pda,
+} from "@metaplex-foundation/mpl-agent-registry/dist/src/generated/identity/accounts/agentIdentityV1";
+import {
   delegateExecutionV1,
-} from "@metaplex-foundation/mpl-agent-registry";
+} from "@metaplex-foundation/mpl-agent-registry/dist/src/generated/tools/instructions/delegateExecutionV1";
+import {
+  findExecutiveProfileV1Pda,
+} from "@metaplex-foundation/mpl-agent-registry/dist/src/generated/tools/accounts/executiveProfileV1";
+import {
+  findExecutionDelegateRecordV1Pda,
+  safeFetchExecutionDelegateRecordV1,
+} from "@metaplex-foundation/mpl-agent-registry/dist/src/generated/tools/accounts/executionDelegateRecordV1";
 import { publicKey } from "@metaplex-foundation/umi";
 import { walletAdapterIdentity } from "@metaplex-foundation/umi-signer-wallet-adapters";
 import { PLATFORM_CONFIG } from "@/config/platform";
@@ -22,9 +30,6 @@ import { PLATFORM_CONFIG } from "@/config/platform";
  *  2. registerIdentityV1 binds an identity PDA + AgentIdentity plugin to that asset
  *  3. D3MON Dan's executive profile (EXECUTIVE_ADDRESS) is pre-registered on-chain
  *  4. delegateExecutionV1 grants D3MON Dan execution authority over the user's agent asset
- *
- * The executive profile only needs to be registered once per authority wallet.
- * Delegation is per-asset — each user delegates their own agent asset.
  */
 export class AgentService {
   /** D3MON Dan's executive authority wallet */
@@ -43,23 +48,30 @@ export class AgentService {
   }
 
   /**
-   * Checks whether a given asset already has a registered agent identity.
-   * Uses safeFetchAgentIdentityV1 which returns null instead of throwing.
+   * Creates a read-only Umi instance (no wallet adapter needed).
+   */
+  private static getReadOnlyUmi() {
+    return createUmi(PLATFORM_CONFIG.RPC_URL)
+      .use(mplCore())
+      .use(mplAgentIdentity())
+      .use(mplAgentTools());
+  }
+
+  /**
+   * Checks whether a given asset already has a registered agent identity
+   * AND has delegated execution to D3MON Dan's executive profile.
    */
   static async isAgentHired(walletAddress: string): Promise<boolean> {
     try {
-      const umi = createUmi(PLATFORM_CONFIG.RPC_URL)
-        .use(mplCore())
-        .use(mplAgentIdentity())
-        .use(mplAgentTools());
-
+      const umi = this.getReadOnlyUmi();
       const assetPubkey = publicKey(walletAddress);
-      const pda = findAgentIdentityV1Pda(umi, { asset: assetPubkey });
-      const identity = await safeFetchAgentIdentityV1(umi, pda);
 
+      // Check if agent identity exists
+      const identityPda = findAgentIdentityV1Pda(umi, { asset: assetPubkey });
+      const identity = await safeFetchAgentIdentityV1(umi, identityPda);
       if (!identity) return false;
 
-      // Additionally check if delegation to our executive exists
+      // Check if delegation to our executive exists
       const executiveProfilePda = findExecutiveProfileV1Pda(umi, {
         authority: publicKey(this.EXECUTIVE_ADDRESS),
       });
@@ -67,14 +79,8 @@ export class AgentService {
         executiveProfile: executiveProfilePda,
         agentAsset: assetPubkey,
       });
-
-      // Try to fetch the delegation record — if it exists, agent is "hired"
-      try {
-        const account = await umi.rpc.getAccount(delegatePda);
-        return account.exists;
-      } catch {
-        return false;
-      }
+      const delegateRecord = await safeFetchExecutionDelegateRecordV1(umi, delegatePda);
+      return delegateRecord !== null;
     } catch {
       return false;
     }
@@ -86,9 +92,6 @@ export class AgentService {
    * Prerequisites:
    *  - The user must own an MPL Core asset with a registered agent identity.
    *  - D3MON Dan's executive profile must already be registered on-chain.
-   *
-   * For the MVP, we assume the asset address == the user's wallet address.
-   * In production you'd create a dedicated Core asset per user.
    */
   static async hireDan(wallet: any): Promise<string> {
     const umi = this.getUmi(wallet);
@@ -98,17 +101,16 @@ export class AgentService {
     try {
       console.log("Delegating execution to D3MON Dan...");
 
-      // Derive the executive profile PDA for D3MON Dan
       const executiveProfilePda = findExecutiveProfileV1Pda(umi, {
         authority: executivePubkey,
       });
 
-      // Delegate execution: the user (asset owner) grants D3MON Dan's
-      // executive profile permission to execute on their agent asset.
+      const agentIdentityPda = findAgentIdentityV1Pda(umi, { asset: userPubkey });
+
       const tx = await delegateExecutionV1(umi, {
         executiveProfile: executiveProfilePda,
         agentAsset: userPubkey,
-        agentIdentity: findAgentIdentityV1Pda(umi, { asset: userPubkey }),
+        agentIdentity: agentIdentityPda,
       }).sendAndConfirm(umi);
 
       const signature = Buffer.from(tx.signature).toString("base64");
