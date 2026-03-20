@@ -64,7 +64,12 @@ serve(async (req) => {
   const JUPITER_API_KEY = Deno.env.get('JUPITER_API_KEY');
 
   try {
-    const body = await req.json();
+    let body: any;
+    try {
+      body = await req.json();
+    } catch {
+      return err('Invalid or missing JSON body', 400);
+    }
     const { action, addresses, address } = body;
 
     switch (action) {
@@ -106,6 +111,9 @@ serve(async (req) => {
 
       case 'recent_launches':
         return ok(await fetchRecentLaunches());
+
+      case 'ping':
+        return ok({ status: 'ok', ts: Date.now() });
 
       default:
         return err('Invalid action', 400);

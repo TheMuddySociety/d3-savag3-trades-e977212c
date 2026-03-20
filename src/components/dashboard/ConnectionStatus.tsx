@@ -40,7 +40,7 @@ export function ConnectionStatus({ compact = false }: { compact?: boolean }) {
     // API check
     try {
       const { error } = await supabase.functions.invoke('token-prices', {
-        body: { tokens: ['So11111111111111111111111111111111111111112'] },
+        body: { action: 'ping' },
       });
       setApiStatus(error ? 'down' : 'ok');
     } catch {
