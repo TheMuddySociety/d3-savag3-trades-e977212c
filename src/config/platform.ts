@@ -2,6 +2,24 @@
  * Platform-wide configuration constants
  */
 
+function getDefaultRpcUrl(): string {
+  // Check for user-configured custom RPC
+  try {
+    const saved = localStorage.getItem("custom_api_settings");
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (parsed.useCustomRpc && parsed.customRpc) {
+        return parsed.customRpc;
+      }
+    }
+  } catch {}
+
+  // Fall back to Reown Blockchain API or public RPC
+  return import.meta.env.VITE_REOWN_PROJECT_ID 
+    ? `https://rpc.walletconnect.org/v1/?chainId=solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp&projectId=${import.meta.env.VITE_REOWN_PROJECT_ID}`
+    : "https://api.mainnet-beta.solana.com";
+}
+
 export const PLATFORM_CONFIG = {
   /**
    * The public key of the platform-governed wallet used for bot trades and deposits.
@@ -9,12 +27,11 @@ export const PLATFORM_CONFIG = {
   WALLET_ADDRESS: "ETz1CboRkEJZDZcstd6bjHtjhRsydHQNHPEYMuhcYK2Z",
   
   /**
-   * Default RPC URL for Solana connection
-   * Uses Reown Blockchain API if PROJECT_ID is available, falls back to public RPC
+   * RPC URL for Solana connection — uses user's custom RPC if configured
    */
-  RPC_URL: import.meta.env.VITE_REOWN_PROJECT_ID 
-    ? `https://rpc.walletconnect.org/v1/?chainId=solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp&projectId=${import.meta.env.VITE_REOWN_PROJECT_ID}`
-    : "https://api.mainnet-beta.solana.com",
+  get RPC_URL() {
+    return getDefaultRpcUrl();
+  },
   
   /**
    * USDC Mint Address on Solana
@@ -26,3 +43,4 @@ export const PLATFORM_CONFIG = {
    */
   SOL_MINT: "So11111111111111111111111111111111111111112",
 };
+
