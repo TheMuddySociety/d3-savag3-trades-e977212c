@@ -1,78 +1,110 @@
-import { createUmi } from "@metaplex-foundation/umi-bundle-defaults";
-import { 
-  registerIdentity, 
-  delegateExecution,
-  fetchAgentIdentity,
-  getAgentIdentityPda
-} from "@metaplex-foundation/mpl-agent-registry";
-import { publicKey, KeypairSigner, Umi } from "@metaplex-foundation/umi";
-import { walletAdapterIdentity } from "@metaplex-foundation/umi-signer-wallet-adapters";
 import { PLATFORM_CONFIG } from "@/config/platform";
 
 /**
- * Service to manage D3MON Dan on-chain agent delegation using Metaplex MPL-Agent.
+ * Lazily imports all Metaplex / Umi dependencies so the heavy Node-only
+ * modules (stream, etc.) are never evaluated until a user actually triggers
+ * an agent action.  This prevents the browser crash on page load.
+ */
+async function loadDeps() {
+  const [
+    { createUmi },
+    { mplCore },
+    { mplAgentIdentity, mplAgentTools },
+    { publicKey },
+    { walletAdapterIdentity },
+    identityAccounts,
+    toolsInstructions,
+    profileAccounts,
+    delegateAccounts,
+  ] = await Promise.all([
+    import("@metaplex-foundation/umi-bundle-defaults"),
+    import("@metaplex-foundation/mpl-core"),
+    import("@metaplex-foundation/mpl-agent-registry"),
+    import("@metaplex-foundation/umi"),
+    import("@metaplex-foundation/umi-signer-wallet-adapters"),
+    import("@metaplex-foundation/mpl-agent-registry/dist/src/generated/identity/accounts/agentIdentityV1"),
+    import("@metaplex-foundation/mpl-agent-registry/dist/src/generated/tools/instructions/delegateExecutionV1"),
+    import("@metaplex-foundation/mpl-agent-registry/dist/src/generated/tools/accounts/executiveProfileV1"),
+    import("@metaplex-foundation/mpl-agent-registry/dist/src/generated/tools/accounts/executionDelegateRecordV1"),
+  ]);
+
+  return {
+    createUmi,
+    mplCore,
+    mplAgentIdentity,
+    mplAgentTools,
+    publicKey,
+    walletAdapterIdentity,
+    findAgentIdentityV1Pda: identityAccounts.findAgentIdentityV1Pda,
+    safeFetchAgentIdentityV1: identityAccounts.safeFetchAgentIdentityV1,
+    delegateExecutionV1: toolsInstructions.delegateExecutionV1,
+    findExecutiveProfileV1Pda: profileAccounts.findExecutiveProfileV1Pda,
+    findExecutionDelegateRecordV1Pda: delegateAccounts.findExecutionDelegateRecordV1Pda,
+    safeFetchExecutionDelegateRecordV1: delegateAccounts.safeFetchExecutionDelegateRecordV1,
+  };
+}
+
+/**
+ * Service to manage D3MON Dan on-chain agent delegation using Metaplex MPL-Agent Registry.
  */
 export class AgentService {
   private static EXECUTIVE_ADDRESS = PLATFORM_CONFIG.WALLET_ADDRESS;
 
-  /**
-   * Initializes Umi with the user's wallet adapter.
-   */
-  private static getUmi(wallet: any): Umi {
-    const umi = createUmi(PLATFORM_CONFIG.RPC_URL)
-      .use(walletAdapterIdentity(wallet));
-    return umi;
-  }
-
-  /**
-   * Checks if the user has already hired (delegated to) D3MON Dan.
-   */
   static async isAgentHired(walletAddress: string): Promise<boolean> {
     try {
-      const umi = createUmi(PLATFORM_CONFIG.RPC_URL);
-      const agentAsset = publicKey(walletAddress); // In a real app, this might be a specific Core Asset NFT
-      const pda = getAgentIdentityPda(umi, { asset: agentAsset });
-      
-      const identity = await fetchAgentIdentity(umi, pda);
-      // Check if our EXECUTIVE_ADDRESS is in the delegation records
-      // This is a simplified check for the demonstration
-      return !!identity;
-    } catch (e) {
+      const deps = await loadDeps();
+      const umi = deps.createUmi(PLATFORM_CONFIG.RPC_URL)
+        .use(deps.mplCore())
+        .use(deps.mplAgentIdentity())
+        .use(deps.mplAgentTools());
+
+      const assetPubkey = deps.publicKey(walletAddress);
+      const identityPda = deps.findAgentIdentityV1Pda(umi, { asset: assetPubkey });
+      const identity = await deps.safeFetchAgentIdentityV1(umi, identityPda);
+      if (!identity) return false;
+
+      const executiveProfilePda = deps.findExecutiveProfileV1Pda(umi, {
+        authority: deps.publicKey(this.EXECUTIVE_ADDRESS),
+      });
+      const delegatePda = deps.findExecutionDelegateRecordV1Pda(umi, {
+        executiveProfile: deps.publicKey(executiveProfilePda),
+        agentAsset: assetPubkey,
+      });
+      const delegateRecord = await deps.safeFetchExecutionDelegateRecordV1(umi, delegatePda);
+      return delegateRecord !== null;
+    } catch {
       return false;
     }
   }
 
-  /**
-   * Performs the on-chain "Hire" transaction:
-   * 1. Register Agent Identity for the user's wallet/asset.
-   * 2. Delegate execution authority to D3MON Dan's executive profile.
-   */
   static async hireDan(wallet: any): Promise<string> {
-    const umi = this.getUmi(wallet);
-    const userPubkey = publicKey(wallet.publicKey.toBase58());
-    
-    // For this implementation, we treat the user's wallet itself as the "Agent Asset"
-    // In a production MPL-Agent setup, you typically create a separate Core Asset (NFT)
-    // that represents the "Agent Instance".
-    
+    const deps = await loadDeps();
+    const umi = deps.createUmi(PLATFORM_CONFIG.RPC_URL)
+      .use(deps.mplCore())
+      .use(deps.mplAgentIdentity())
+      .use(deps.mplAgentTools())
+      .use(deps.walletAdapterIdentity(wallet));
+
+    const userPubkey = deps.publicKey(wallet.publicKey.toBase58());
+    const executivePubkey = deps.publicKey(this.EXECUTIVE_ADDRESS);
+
     try {
-      console.log("Registering Agent Identity...");
-      // 1. Register Identity
-      // Note: This requires the asset to exist. If using the wallet as asset, might need specific logic.
-      // Usually: const asset = await createCoreAsset(umi, ...);
-      
-      // 2. Delegate to D3MON Dan
-      /*
-      const tx = await delegateExecution(umi, {
-        asset: userPubkey,
-        executive: publicKey(this.EXECUTIVE_ADDRESS),
+      console.log("Delegating execution to D3MON Dan...");
+
+      const executiveProfilePda = deps.findExecutiveProfileV1Pda(umi, {
+        authority: executivePubkey,
+      });
+      const agentIdentityPda = deps.findAgentIdentityV1Pda(umi, { asset: userPubkey });
+
+      const tx = await deps.delegateExecutionV1(umi, {
+        executiveProfile: executiveProfilePda,
+        agentAsset: userPubkey,
+        agentIdentity: agentIdentityPda,
       }).sendAndConfirm(umi);
-      
-      return tx.signature.toString();
-      */
-      
-      // Mocking the successful transaction for now as we are in a sandbox
-      return "2vN...mock_signature";
+
+      const signature = Buffer.from(tx.signature).toString("base64");
+      console.log("Delegation successful:", signature);
+      return signature;
     } catch (e: any) {
       throw new Error(`Failed to hire D3MON Dan: ${e.message}`);
     }
