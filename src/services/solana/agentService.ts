@@ -76,7 +76,7 @@ export class AgentService {
         authority: publicKey(this.EXECUTIVE_ADDRESS),
       });
       const delegatePda = findExecutionDelegateRecordV1Pda(umi, {
-        executiveProfile: executiveProfilePda,
+        executiveProfile: publicKey(executiveProfilePda),
         agentAsset: assetPubkey,
       });
       const delegateRecord = await safeFetchExecutionDelegateRecordV1(umi, delegatePda);
