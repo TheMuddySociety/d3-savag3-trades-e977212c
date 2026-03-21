@@ -2,6 +2,7 @@
 import { VersionedTransaction } from '@solana/web3.js';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { JupiterV6Service, jupiterV6Service } from './v6';
 
 export interface UltraOrderResponse {
   inputMint: string;
@@ -198,6 +199,67 @@ export class JupiterUltraService {
     } catch (error) {
       console.error('Error in Ultra swap flow:', error);
       toast.error(`Swap failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      return null;
+    }
+  }
+
+  /**
+   * Smart swap: routes through V6 when custom API key is configured, Ultra otherwise
+   */
+  static async smartSwap(
+    wallet: any,
+    inputMint: string,
+    outputMint: string,
+    amount: string,
+    swapMode: 'ExactIn' | 'ExactOut' = 'ExactIn',
+  ): Promise<UltraExecuteResponse | null> {
+    // Route to V6 if user has custom Jupiter API key
+    if (JupiterV6Service.isV6Available()) {
+      console.log('[SmartSwap] Using Jupiter V6 (custom API key detected)');
+      const result = await jupiterV6Service.buildAndSendSwap(wallet, {
+        inputMint,
+        outputMint,
+        amount,
+        swapMode,
+      });
+      if (result) {
+        // Map V6 result to UltraExecuteResponse shape
+        return {
+          status: 'Success',
+          signature: result.signature,
+          code: 0,
+          totalInputAmount: result.quote.inAmount,
+          totalOutputAmount: result.quote.outAmount,
+        };
+      }
+      return null;
+    }
+
+    // Default: Ultra (gasless)
+    console.log('[SmartSwap] Using Jupiter Ultra (default)');
+    return this.swap(wallet, inputMint, outputMint, amount, swapMode);
+  }
+
+  /**
+   * Get a price quote without building a transaction (for display / price checking)
+   */
+  static async getQuoteOnly(
+    inputMint: string,
+    outputMint: string,
+    amount: string,
+  ): Promise<{ inAmount: string; outAmount: string; priceImpactPct: string } | null> {
+    try {
+      const res = await fetch(
+        `https://quote-api.jup.ag/v6/quote?inputMint=${inputMint}&outputMint=${outputMint}&amount=${amount}&slippageBps=300`
+      );
+      if (!res.ok) return null;
+      const data = await res.json();
+      return {
+        inAmount: data.inAmount,
+        outAmount: data.outAmount,
+        priceImpactPct: data.priceImpactPct,
+      };
+    } catch {
       return null;
     }
   }

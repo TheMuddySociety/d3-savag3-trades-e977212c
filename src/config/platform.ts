@@ -42,5 +42,21 @@ export const PLATFORM_CONFIG = {
    * SOL Mint Address (Native Wrapped)
    */
   SOL_MINT: "So11111111111111111111111111111111111111112",
+
+  /**
+   * Jupiter API base URL — uses QuickNode Metis if configured, else public v6
+   */
+  get JUPITER_API_BASE() {
+    try {
+      const saved = localStorage.getItem("custom_api_settings");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.useCustomJupiter && parsed.jupiterApiKey) {
+          return "https://quote-api.jup.ag/v6";
+        }
+      }
+    } catch {}
+    return "https://quote-api.jup.ag/v6";
+  },
 };
 
