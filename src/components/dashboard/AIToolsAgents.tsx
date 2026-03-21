@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Bot, Search, ExternalLink } from "lucide-react";
+import { Bot, Search } from "lucide-react";
 import { tools, categoryLabels, categoryIcons, type ToolCategory } from "./ai-tools/toolsData";
 import { ToolCard } from "./ai-tools/ToolCard";
 
@@ -32,14 +32,6 @@ export function AIToolsAgents() {
               {tools.length} tools
             </Badge>
           </CardTitle>
-          <a
-            href="https://github.com/solana-foundation/awesome-solana-ai"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-xs text-muted-foreground hover:text-accent transition-colors flex items-center gap-1"
-          >
-            GitHub <ExternalLink className="h-3 w-3" />
-          </a>
         </div>
 
         <div className="relative mt-2">
@@ -73,7 +65,7 @@ export function AIToolsAgents() {
       </CardHeader>
 
       <CardContent className="pt-0">
-        <div className="space-y-2 max-h-[520px] overflow-y-auto pr-1 scrollbar-thin">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[520px] overflow-y-auto pr-1 scrollbar-thin">
           {filtered.map((tool) => (
             <ToolCard key={tool.id} tool={tool} />
           ))}
