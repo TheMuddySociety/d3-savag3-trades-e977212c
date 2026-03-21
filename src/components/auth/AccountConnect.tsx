@@ -1,9 +1,7 @@
 
 import React, { useState } from "react";
-import { Button } from "@/components/ui/button";
 import { PumpLoginModal } from "./PumpLoginModal";
 import { useWallet } from "@solana/wallet-adapter-react";
-import { Wallet } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface AccountConnectProps {
@@ -19,17 +17,27 @@ export function AccountConnect({ className, size = "sm" }: AccountConnectProps) 
 
   return (
     <>
-      <Button
+      <button
         onClick={() => setModalOpen(true)}
         className={cn(
-          "bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-lg transition-all active:scale-95 shadow-[0_0_15px_rgba(var(--primary),0.3)]",
+          "group relative flex items-center gap-2 px-4 py-2 rounded-full bg-[#0A0A0B] border border-white/10 hover:border-primary/40 transition-all duration-300 active:scale-95 shadow-[0_0_20px_rgba(var(--primary),0.15)] hover:shadow-[0_0_30px_rgba(var(--primary),0.3)]",
           className
         )}
-        size={size}
       >
-        <Wallet className="w-3.5 h-3.5 mr-2" />
-        Connect or Create
-      </Button>
+        {/* Pill capsule icon */}
+        <div className="relative flex items-center transform rotate-[-30deg] scale-75">
+          <div className="w-4 h-2.5 bg-white rounded-l-full" />
+          <div className="w-4 h-2.5 bg-primary rounded-r-full shadow-[0_0_8px_rgba(var(--primary),0.6)]" />
+        </div>
+
+        {/* Text */}
+        <span className="text-xs font-bold text-white/90 group-hover:text-white tracking-tight whitespace-nowrap">
+          Connect
+        </span>
+
+        {/* Subtle glow behind pill */}
+        <div className="absolute inset-0 rounded-full bg-primary/5 blur-sm opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+      </button>
 
       <PumpLoginModal open={modalOpen} onOpenChange={setModalOpen} />
     </>
