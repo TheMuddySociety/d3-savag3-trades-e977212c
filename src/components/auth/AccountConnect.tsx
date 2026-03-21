@@ -20,23 +20,19 @@ export function AccountConnect({ className, size = "sm" }: AccountConnectProps) 
       <button
         onClick={() => setModalOpen(true)}
         className={cn(
-          "group relative flex items-center gap-2 px-4 py-2 rounded-full bg-[#0A0A0B] border border-white/10 hover:border-primary/40 transition-all duration-300 active:scale-95 shadow-[0_0_20px_rgba(var(--primary),0.15)] hover:shadow-[0_0_30px_rgba(var(--primary),0.3)]",
+          "group relative flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-transparent hover:bg-white/5 transition-all duration-200 active:scale-95",
           className
         )}
       >
-        {/* Pill capsule icon */}
-        <div className="relative flex items-center transform rotate-[-30deg] scale-75">
-          <div className="w-4 h-2.5 bg-white rounded-l-full" />
-          <div className="w-4 h-2.5 bg-primary rounded-r-full shadow-[0_0_8px_rgba(var(--primary),0.6)]" />
-        </div>
-
-        {/* Text */}
-        <span className="text-xs font-bold text-white/90 group-hover:text-white tracking-tight whitespace-nowrap">
+        {/* D3 Logo */}
+        <img
+          src="/d3-icon.png"
+          alt="D3"
+          className="w-6 h-6 object-contain group-hover:scale-110 transition-transform duration-200"
+        />
+        <span className="text-xs font-bold text-white/80 group-hover:text-white tracking-tight">
           Connect
         </span>
-
-        {/* Subtle glow behind pill */}
-        <div className="absolute inset-0 rounded-full bg-primary/5 blur-sm opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
       </button>
 
       <PumpLoginModal open={modalOpen} onOpenChange={setModalOpen} />
