@@ -268,8 +268,8 @@ serve(async (req) => {
 
       if (pendingTrades && pendingTrades.length > 0) {
         // Load Solana tools dynamically for execution
-        const { Connection, Keypair, VersionedTransaction } = await import("npm:@solana/web3.js@1.95.3");
-        const bs58 = (await import("npm:bs58@5.0.0")).default;
+        const { Connection, Keypair, VersionedTransaction } = await import("https://esm.sh/@solana/web3.js@1.95.3");
+        const bs58 = (await import("https://esm.sh/bs58@5.0.0")).default;
         
         const platformKeypair = Keypair.fromSecretKey(bs58.decode(platformPrivateKey));
         const jupiterApiKey = Deno.env.get("JUPITER_API_KEY");
