@@ -1,16 +1,16 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Loader2, Wifi, WifiOff, TrendingUp, Rocket, Globe, Moon, GraduationCap } from 'lucide-react';
 import { useRealtimeTokens } from '@/hooks/useRealtimeTokens';
-import { TrendingCarousel, FilterTabs, TokenTable, FilterType } from './pumpfun';
-import { FilterOptions } from './pumpfun/FilterTabs';
+import { TrendingCarousel, FilterTabs, TokenTable, FilterType } from '../pumpfun';
+import { FilterOptions } from '../pumpfun/FilterTabs';
 import { MemeToken } from '@/types/memeToken';
 import { LaunchpadService } from '@/services/launchpads/LaunchpadService';
 import { pumpFunService } from '@/services/pumpfun';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { tokenWebSocketService } from '@/services/websocket/TokenWebSocketService';
-import { TokenDetailModal } from './TokenDetailModal';
-import { CreateAlertDialog } from './CreateAlertDialog';
+import { TokenDetailModal } from '../TokenDetailModal';
+import { CreateAlertDialog } from '../alerts/CreateAlertDialog';
 import { usePriceAlerts } from '@/hooks/usePriceAlerts';
 import { useWallet } from '@solana/wallet-adapter-react';
 

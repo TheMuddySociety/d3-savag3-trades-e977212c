@@ -15,7 +15,7 @@ import { LiveTradeHistory } from "./bot-tools/LiveTradeHistory";
 import { GridBot } from "./bot-tools/GridBot";
 import { TokenLaunchWizard } from "./bot-tools/TokenLaunchWizard";
 import { FeeDashboard } from "./bot-tools/FeeDashboard";
-import { ProfitSimulator } from "./ProfitSimulator";
+import { ProfitSimulator } from "./analytics/ProfitSimulator";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { useToast } from "@/hooks/use-toast";
 
