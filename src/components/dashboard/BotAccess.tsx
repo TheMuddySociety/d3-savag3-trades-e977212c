@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -24,6 +24,17 @@ export const BotAccess = () => {
   const walletAddress = publicKey?.toBase58() || null;
   const { toast } = useToast();
   const [killSignal, setKillSignal] = useState(0);
+  const [activeTab, setActiveTab] = useState("d3mon");
+
+  // Listen for navigation events from AI Tools cards
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail?.tab) setActiveTab(detail.tab);
+    };
+    window.addEventListener("navigate-bot-tab", handler);
+    return () => window.removeEventListener("navigate-bot-tab", handler);
+  }, []);
 
   const handleKillAll = useCallback(() => {
     setKillSignal(prev => prev + 1);
@@ -31,7 +42,7 @@ export const BotAccess = () => {
   }, [toast]);
 
   return (
-    <Card className="w-full">
+    <Card className="w-full" data-bot-tools>
       <CardHeader className="pb-2">
         <div className="flex items-center gap-2">
           <Bot className="h-5 w-5 text-primary" />
@@ -68,7 +79,7 @@ export const BotAccess = () => {
       </CardHeader>
 
       <CardContent className="pt-0">
-        <Tabs defaultValue="d3mon" className="w-full">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="w-full flex overflow-x-auto snap-x bg-muted/30 h-8 mb-3 gap-0.5 no-scrollbar">
             <TabsTrigger value="d3mon" className="text-[10px] gap-0.5 data-[state=active]:bg-destructive/20 data-[state=active]:text-destructive px-2 shrink-0 snap-start">
               <Flame className="h-3 w-3" />

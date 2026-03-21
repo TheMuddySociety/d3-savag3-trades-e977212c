@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,18 @@ export function AIToolsAgents() {
     return matchCategory && matchSearch;
   });
 
+  const handleToolClick = useCallback((tabKey: string) => {
+    // Dispatch custom event — BotAccess listens for this
+    window.dispatchEvent(
+      new CustomEvent("navigate-bot-tab", { detail: { tab: tabKey } })
+    );
+    // Scroll to the Bot Trading Tools section
+    const botSection = document.querySelector("[data-bot-tools]");
+    if (botSection) {
+      botSection.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, []);
+
   return (
     <Card className="border-border/50 bg-card/80 backdrop-blur-sm">
       <CardHeader className="pb-3">
@@ -37,7 +49,7 @@ export function AIToolsAgents() {
         <div className="relative mt-2">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
           <Input
-            placeholder="Search tools, skills, agents..."
+            placeholder="Search tools..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-9 h-8 text-xs bg-muted/50 border-border/50"
@@ -67,10 +79,14 @@ export function AIToolsAgents() {
       <CardContent className="pt-0">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[520px] overflow-y-auto pr-1 scrollbar-thin">
           {filtered.map((tool) => (
-            <ToolCard key={tool.id} tool={tool} />
+            <ToolCard
+              key={tool.id}
+              tool={tool}
+              onClick={tool.tabKey ? () => handleToolClick(tool.tabKey!) : undefined}
+            />
           ))}
           {filtered.length === 0 && (
-            <div className="text-center py-8 text-muted-foreground text-sm">
+            <div className="text-center py-8 text-muted-foreground text-sm col-span-2">
               No tools found matching your search.
             </div>
           )}
@@ -79,3 +95,4 @@ export function AIToolsAgents() {
     </Card>
   );
 }
+

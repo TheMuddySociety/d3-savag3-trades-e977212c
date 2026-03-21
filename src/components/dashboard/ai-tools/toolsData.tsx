@@ -10,6 +10,8 @@ export interface AITool {
   icon: React.ReactNode;
   tags: string[];
   status: "active" | "coming-soon";
+  /** Maps to a BotAccess tab value — clicking the card activates this tab */
+  tabKey?: string;
 }
 
 export const tools: AITool[] = [
@@ -21,6 +23,7 @@ export const tools: AITool[] = [
     icon: <Crosshair className="h-5 w-5" />,
     tags: ["Sniping", "Launches", "Speed"],
     status: "active",
+    tabKey: "sniper",
   },
   {
     id: "dca-bot",
@@ -30,6 +33,7 @@ export const tools: AITool[] = [
     icon: <Clock className="h-5 w-5" />,
     tags: ["DCA", "Recurring", "Strategy"],
     status: "active",
+    tabKey: "dca",
   },
   {
     id: "volume-bot",
@@ -39,6 +43,7 @@ export const tools: AITool[] = [
     icon: <BarChart3 className="h-5 w-5" />,
     tags: ["Volume", "Market Making"],
     status: "active",
+    tabKey: "volume",
   },
   {
     id: "grid-bot",
@@ -48,6 +53,7 @@ export const tools: AITool[] = [
     icon: <Layers className="h-5 w-5" />,
     tags: ["Grid", "Range", "Passive"],
     status: "active",
+    tabKey: "grid",
   },
   {
     id: "copy-trade",
@@ -57,6 +63,7 @@ export const tools: AITool[] = [
     icon: <Eye className="h-5 w-5" />,
     tags: ["Copy", "Follow", "Mirror"],
     status: "active",
+    tabKey: "copy",
   },
   {
     id: "d3mon-dan",
@@ -66,6 +73,7 @@ export const tools: AITool[] = [
     icon: <Brain className="h-5 w-5" />,
     tags: ["AI Agent", "24/7", "Cloud"],
     status: "active",
+    tabKey: "d3mon",
   },
   {
     id: "token-launch",
@@ -75,6 +83,7 @@ export const tools: AITool[] = [
     icon: <Rocket className="h-5 w-5" />,
     tags: ["Launch", "Studio", "Bonding"],
     status: "active",
+    tabKey: "launch",
   },
   {
     id: "ultra-swap",
@@ -84,6 +93,7 @@ export const tools: AITool[] = [
     icon: <Zap className="h-5 w-5" />,
     tags: ["Swap", "Gasless", "Jupiter"],
     status: "active",
+    tabKey: "sniper",
   },
   {
     id: "v6-swap",
@@ -93,6 +103,7 @@ export const tools: AITool[] = [
     icon: <Activity className="h-5 w-5" />,
     tags: ["V6", "Custom RPC", "Pro"],
     status: "active",
+    tabKey: "sniper",
   },
   {
     id: "price-watcher",
@@ -102,6 +113,7 @@ export const tools: AITool[] = [
     icon: <Gauge className="h-5 w-5" />,
     tags: ["Alerts", "Threshold", "Monitor"],
     status: "active",
+    tabKey: "auto",
   },
   {
     id: "mev-shield",
@@ -120,6 +132,7 @@ export const tools: AITool[] = [
     icon: <Search className="h-5 w-5" />,
     tags: ["Simulate", "Backtest", "Plan"],
     status: "active",
+    tabKey: "profit",
   },
   {
     id: "batch-trader",
@@ -129,6 +142,7 @@ export const tools: AITool[] = [
     icon: <Bot className="h-5 w-5" />,
     tags: ["Batch", "Multi-Token"],
     status: "active",
+    tabKey: "batch",
   },
   {
     id: "background-tasks",
@@ -138,6 +152,7 @@ export const tools: AITool[] = [
     icon: <Bot className="h-5 w-5" />,
     tags: ["Background", "Queue", "24/7"],
     status: "active",
+    tabKey: "auto",
   },
 ];
 
