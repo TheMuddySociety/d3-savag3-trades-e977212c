@@ -3,7 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Bot, Clock, Crosshair, BarChart3, Brain, Wallet, OctagonX, Layers, Eye, List, TrendingUp, Rocket, Coins } from "lucide-react";
+import { Bot, Clock, Crosshair, BarChart3, Brain, Wallet, OctagonX, Layers, Eye, List, TrendingUp, Rocket, Coins, Flame } from "lucide-react";
+import { D3monDanHero } from "./bot-tools/D3monDanHero";
 import { DCABot } from "./bot-tools/DCABot";
 import { BuySniper } from "./bot-tools/BuySniper";
 import { VolumeBot } from "./bot-tools/VolumeBot";
@@ -67,8 +68,12 @@ export const BotAccess = () => {
       </CardHeader>
 
       <CardContent className="pt-0">
-        <Tabs defaultValue="sniper" className="w-full">
+        <Tabs defaultValue="d3mon" className="w-full">
           <TabsList className="w-full flex overflow-x-auto snap-x bg-muted/30 h-8 mb-3 gap-0.5 no-scrollbar">
+            <TabsTrigger value="d3mon" className="text-[10px] gap-0.5 data-[state=active]:bg-destructive/20 data-[state=active]:text-destructive px-2 shrink-0 snap-start">
+              <Flame className="h-3 w-3" />
+              <span className="hidden sm:inline">D3MON</span>
+            </TabsTrigger>
             <TabsTrigger value="sniper" className="text-[10px] gap-0.5 data-[state=active]:bg-primary/20 px-2 shrink-0 snap-start">
               <Crosshair className="h-3 w-3" />
               <span className="hidden sm:inline">Sniper</span>
@@ -115,6 +120,9 @@ export const BotAccess = () => {
             </TabsTrigger>
           </TabsList>
 
+          <TabsContent value="d3mon" className="mt-0">
+            <D3monDanHero />
+          </TabsContent>
           <TabsContent value="sniper" className="mt-0">
             <BuySniper killSignal={killSignal} />
           </TabsContent>
