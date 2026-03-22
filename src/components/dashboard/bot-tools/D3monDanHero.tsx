@@ -3,15 +3,16 @@ import { Spotlight } from "@/components/ui/spotlight";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Brain, Flame, Shield, Zap, Clock, TrendingUp, Cloud } from "lucide-react";
+import { Brain, Flame, Shield, Zap, Clock, TrendingUp, Cloud, Loader2 } from "lucide-react";
 import { useWallet } from "@solana/wallet-adapter-react";
 
 interface D3monDanHeroProps {
   onHire?: () => void;
   isHired?: boolean;
+  isHiring?: boolean;
 }
 
-export function D3monDanHero({ onHire, isHired }: D3monDanHeroProps) {
+export function D3monDanHero({ onHire, isHired, isHiring }: D3monDanHeroProps) {
   const { publicKey } = useWallet();
 
   return (
@@ -70,10 +71,15 @@ export function D3monDanHero({ onHire, isHired }: D3monDanHeroProps) {
               ) : (
                 <Button
                   onClick={onHire}
+                  disabled={isHiring}
                   className="bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-sm font-bold gap-2 h-10 px-6"
                 >
-                  <Brain className="h-4 w-4" />
-                  Hire D3MON Dan
+                  {isHiring ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Brain className="h-4 w-4" />
+                  )}
+                  {isHiring ? "Hiring Dan..." : "Hire D3MON Dan"}
                 </Button>
               )}
             </div>

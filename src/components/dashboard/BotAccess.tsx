@@ -17,24 +17,61 @@ import { TokenLaunchWizard } from "./bot-tools/TokenLaunchWizard";
 import { FeeDashboard } from "./bot-tools/FeeDashboard";
 import { ProfitSimulator } from "./analytics/ProfitSimulator";
 import { BackgroundTaskMonitor } from './background/BackgroundTaskMonitor';
+import { AgentService } from "@/services/solana/agentService";
+import { backgroundTaskService } from "@/services/d3mon/BackgroundTaskService";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { useToast } from "@/hooks/use-toast";
 
 export const BotAccess = () => {
-  const { publicKey } = useWallet();
+  const wallet = useWallet();
+  const { publicKey } = wallet;
   const walletAddress = publicKey?.toBase58() || null;
   const { toast } = useToast();
   const [killSignal, setKillSignal] = useState(0);
   const [activeTab, setActiveTab] = useState("d3mon");
   const [isD3monHired, setIsD3monHired] = useState(false);
+  const [isHiring, setIsHiring] = useState(false);
 
-  const handleHireD3mon = useCallback(() => {
-    setIsD3monHired(true);
-    toast({
-      title: "🔥 D3MON Dan Hired!",
-      description: "Your AI agent is now active and watching the markets 24/7.",
-    });
-  }, [toast]);
+  // Check on-chain agent status
+  useEffect(() => {
+    const checkAgentStatus = async () => {
+      if (walletAddress) {
+        const hired = await AgentService.isAgentHired(walletAddress);
+        setIsD3monHired(hired);
+      }
+    };
+    checkAgentStatus();
+  }, [walletAddress]);
+
+  const handleHireD3mon = useCallback(async () => {
+    if (!wallet.publicKey || !wallet.signTransaction) {
+      toast({
+        title: "Wallet Not Connected",
+        description: "Please connect your wallet to hire Dan.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsHiring(true);
+    try {
+      await AgentService.hireDan(wallet);
+      setIsD3monHired(true);
+      toast({
+        title: "🔥 D3MON Dan Hired!",
+        description: "Your autonomous agent is now active and authorized to trade on-chain.",
+      });
+    } catch (error) {
+      console.error("Failed to hire Dan:", error);
+      toast({
+        title: "Hiring Failed",
+        description: error instanceof Error ? error.message : "Transactional error occurred during hiring.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsHiring(false);
+    }
+  }, [wallet, walletAddress, toast]);
 
   // Listen for navigation events from AI Tools cards
   useEffect(() => {
@@ -146,7 +183,7 @@ export const BotAccess = () => {
           </TabsList>
 
           <TabsContent value="d3mon" className="mt-0">
-            <D3monDanHero onHire={handleHireD3mon} isHired={isD3monHired} />
+            <D3monDanHero onHire={handleHireD3mon} isHired={isD3monHired} isHiring={isHiring} />
           </TabsContent>
           <TabsContent value="sniper" className="mt-0">
             <BuySniper killSignal={killSignal} />

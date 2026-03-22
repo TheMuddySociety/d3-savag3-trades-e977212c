@@ -1,23 +1,27 @@
-import { useState, useEffect } from 'react';
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Shield, LogOut, Activity, Sparkles, Settings as SettingsIcon } from "lucide-react";
-import { useToast } from "@/components/ui/use-toast";
-import { useNavigate, Link, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, Link } from "react-router-dom";
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useTradingMode } from '@/hooks/useTradingMode';
 import { useAdminCheck } from '@/hooks/useAdminCheck';
 import { useWalletAuth } from '@/hooks/useWalletAuth';
-import { SettingsDialog } from '@/components/dashboard/SettingsDialog';
+import { useToast } from "@/components/ui/use-toast";
+import { Shield } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { AccountConnect } from '@/components/auth/AccountConnect';
 
-export function Header() {
+// Shared Sub-components
+import { NavLogo } from "./header/NavLogo";
+import { FeeBadge } from "./header/FeeBadge";
+import { WalletUserMenu } from "./header/WalletUserMenu";
+
+/**
+ * Shared hook to manage common header logic
+ */
+function useHeaderLogic() {
   const { toast } = useToast();
   const navigate = useNavigate();
   const { publicKey, connected, disconnect } = useWallet();
   const { hasFreePass, buyFreePass, isPaymentPending } = useTradingMode();
   const { signOut } = useWalletAuth();
-  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const handleDisconnect = async () => {
     await signOut();
@@ -29,79 +33,40 @@ export function Header() {
     navigate('/');
   };
 
+  return {
+    publicKey,
+    connected,
+    handleDisconnect,
+    hasFreePass,
+    buyFreePass,
+    isPaymentPending
+  };
+}
+
+export function Header() {
+  const logic = useHeaderLogic();
+
   return (
     <header className="sticky top-0 z-50 w-full border-b border-accent/20 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-14 items-center justify-between">
         <div className="flex items-center gap-4">
-          <Link to="/" className="flex items-center gap-2 group">
-            <div className="relative h-8 w-8 rounded-lg bg-foreground flex items-center justify-center overflow-hidden group-hover:scale-105 transition-transform duration-200 border border-accent/30">
-              <img 
-                src="/dan-logo.jpg" 
-                alt="SAVAG3BOT" 
-                className="h-6 w-6 object-contain"
-                onError={(e) => {
-                  e.currentTarget.style.display = 'none';
-                }}
-              />
-              <div className="absolute inset-0 border border-accent/20 rounded-lg pointer-events-none"></div>
-            </div>
-            <span className="hidden font-bold sm:inline-block text-xl tracking-tighter text-foreground group-hover:text-accent transition-colors">
-              SAVAG3<span className="text-accent">BOT</span>
-            </span>
-          </Link>
+          <NavLogo />
         </div>
 
         <div className="flex items-center gap-2">
-          {connected && hasFreePass && (
-            <Badge className="bg-accent/20 text-accent border-accent/30 text-[10px]">
-              <Sparkles className="h-3 w-3 mr-1" />
-              FEE-FREE ✨
-            </Badge>
-          )}
+          <FeeBadge 
+            connected={logic.connected}
+            hasFreePass={logic.hasFreePass}
+            isPaymentPending={logic.isPaymentPending}
+            onBuyPass={logic.buyFreePass}
+          />
 
-          {connected && !hasFreePass && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-[10px] h-7 text-accent hover:text-accent"
-              onClick={buyFreePass}
-              disabled={isPaymentPending}
-            >
-              <Sparkles className="h-3 w-3 mr-1" />
-              0.1 SOL = No Fees
-            </Button>
-          )}
-
-          {connected && publicKey && (
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-1.5 bg-secondary px-3 py-1.5 rounded-md border border-border">
-                <div className="w-1.5 h-1.5 rounded-full bg-chart-green animate-pulse" />
-                <span className="text-xs font-mono text-muted-foreground">
-                  {publicKey.toString().slice(0, 4)}...{publicKey.toString().slice(-4)}
-                </span>
-              </div>
-              <Button 
-                onClick={() => setSettingsOpen(true)}
-                variant="ghost"
-                size="sm"
-                className="text-xs h-8 text-muted-foreground hover:text-foreground"
-              >
-                <SettingsIcon className="h-3.5 w-3.5" />
-              </Button>
-
-              <Button 
-                onClick={handleDisconnect}
-                variant="ghost"
-                size="sm"
-                className="text-xs h-8 text-muted-foreground hover:text-foreground"
-              >
-                <LogOut className="h-3.5 w-3.5" />
-              </Button>
-              <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
-            </div>
-          )}
-          
-          {!connected && (
+          {logic.connected && logic.publicKey ? (
+            <WalletUserMenu 
+              publicKey={logic.publicKey}
+              onDisconnect={logic.handleDisconnect}
+            />
+          ) : (
             <AccountConnect />
           )}
         </div>
@@ -110,23 +75,12 @@ export function Header() {
   );
 }
 
-// Full header for Landing page
+// Full header for Landing page with Dashboard/Admin links
 export function LandingHeader() {
-  const { toast } = useToast();
-  const navigate = useNavigate();
+  const logic = useHeaderLogic();
   const location = useLocation();
-  const { publicKey, connected, disconnect } = useWallet();
-  const { hasFreePass, buyFreePass, isPaymentPending } = useTradingMode();
-  const walletAddress = publicKey?.toBase58() || null;
+  const walletAddress = logic.publicKey?.toBase58() || null;
   const { isAdmin } = useAdminCheck(walletAddress);
-  const { signOut } = useWalletAuth();
-
-  const handleDisconnect = async () => {
-    await signOut();
-    disconnect();
-    toast({ title: "Disconnected", description: "Wallet disconnected" });
-    navigate('/');
-  };
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -134,48 +88,18 @@ export function LandingHeader() {
     <header className="sticky top-0 z-50 w-full border-b border-accent/20 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-14 items-center justify-between">
         <div className="flex items-center gap-4">
-          <Link to="/" className="flex items-center gap-2 group">
-            <div className="relative h-8 w-8 rounded-lg bg-foreground flex items-center justify-center overflow-hidden group-hover:scale-105 transition-transform duration-200 border border-accent/30">
-              <img 
-                src="/dan-logo.jpg" 
-                alt="SAVAG3BOT" 
-                className="h-6 w-6 object-contain"
-                onError={(e) => {
-                  e.currentTarget.style.display = 'none';
-                }}
-              />
-              <div className="absolute inset-0 border border-accent/20 rounded-lg pointer-events-none"></div>
-            </div>
-            <span className="hidden font-bold sm:inline-block text-xl tracking-tighter text-foreground group-hover:text-accent transition-colors">
-              SAVAG3<span className="text-accent">BOT</span>
-            </span>
-          </Link>
-          <nav className="flex items-center space-x-4 text-sm font-medium">
-          </nav>
+          <NavLogo />
         </div>
         
         <div className="flex items-center gap-2">
-          {connected && hasFreePass && (
-            <Badge className="bg-accent/20 text-accent border-accent/30 text-[10px]">
-              <Sparkles className="h-3 w-3 mr-1" />
-              FEE-FREE ✨
-            </Badge>
-          )}
+          <FeeBadge 
+            connected={logic.connected}
+            hasFreePass={logic.hasFreePass}
+            isPaymentPending={logic.isPaymentPending}
+            onBuyPass={logic.buyFreePass}
+          />
 
-          {connected && !hasFreePass && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-[10px] h-7 text-accent hover:text-accent"
-              onClick={buyFreePass}
-              disabled={isPaymentPending}
-            >
-              <Sparkles className="h-3 w-3 mr-1" />
-              0.1 SOL = No Fees
-            </Button>
-          )}
-
-          {connected && (
+          {logic.connected && (
             <Link to="/dashboard">
               <Button
                 variant={isActive('/dashboard') ? "secondary" : "ghost"}
@@ -200,26 +124,12 @@ export function LandingHeader() {
             </Link>
           )}
           
-          {connected && publicKey && (
-            <div className="flex items-center gap-2">
-              <div className="hidden sm:flex items-center gap-1.5 bg-secondary px-3 py-1.5 rounded-md">
-                <div className="w-1.5 h-1.5 rounded-full bg-chart-green animate-pulse" />
-                <span className="text-xs font-mono text-muted-foreground">
-                  {publicKey.toString().slice(0, 4)}...{publicKey.toString().slice(-4)}
-                </span>
-              </div>
-              <Button 
-                onClick={handleDisconnect}
-                variant="ghost"
-                size="sm"
-                className="text-xs h-8 text-muted-foreground hover:text-foreground"
-              >
-                <LogOut className="h-3.5 w-3.5" />
-              </Button>
-            </div>
-          )}
-          
-          {!connected && (
+          {logic.connected && logic.publicKey ? (
+            <WalletUserMenu 
+              publicKey={logic.publicKey}
+              onDisconnect={logic.handleDisconnect}
+            />
+          ) : (
             <AccountConnect />
           )}
         </div>
@@ -227,3 +137,4 @@ export function LandingHeader() {
     </header>
   );
 }
+
