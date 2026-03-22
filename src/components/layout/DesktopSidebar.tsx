@@ -1,9 +1,19 @@
 import { useState } from 'react';
 import { 
-  ArrowLeftRight, BarChart3, Bot, Bell, MessageSquare, 
-  Activity, ChevronLeft, ChevronRight, LineChart, Wallet,
-  Zap, Shield
-} from 'lucide-react';
+  BarChart3, 
+  Wallet, 
+  Bot, 
+  MessageSquare, 
+  Bell, 
+  Settings, 
+  Shield, 
+  Zap,
+  Flame,
+  LayoutDashboard,
+  ArrowLeftRight,
+  ChevronLeft,
+  ChevronRight
+} from "lucide-react";
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Link, useLocation } from 'react-router-dom';
@@ -23,7 +33,7 @@ const navItems = [
   { id: 'portfolio' as DesktopPanel, label: 'Portfolio', icon: Wallet, section: 'Trade' },
   { id: 'tokens' as DesktopPanel, label: 'Tokens', icon: BarChart3, section: 'Market' },
   { id: 'signals' as DesktopPanel, label: 'Signals', icon: Zap, section: 'Market' },
-  { id: 'bots' as DesktopPanel, label: 'D3MON DAN', icon: Bot, section: 'Automation' },
+  { id: 'd3mon' as DesktopPanel, label: 'D3S Agent', icon: Flame, section: 'Automation', color: 'text-accent' },
   { id: 'alerts' as DesktopPanel, label: 'Alerts', icon: Bell, section: 'Automation' },
   { id: 'chat' as DesktopPanel, label: 'AI Chat', icon: MessageSquare, section: 'AI' },
 ];

@@ -6,13 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Brain, Flame, Shield, Zap, Clock, TrendingUp, Cloud, Loader2 } from "lucide-react";
 import { useWallet } from "@solana/wallet-adapter-react";
 
-interface D3monDanHeroProps {
+interface D3SAgentHeroProps {
   onHire?: () => void;
   isHired?: boolean;
   isHiring?: boolean;
 }
 
-export function D3monDanHero({ onHire, isHired, isHiring }: D3monDanHeroProps) {
+export function D3SAgentHero({ onHire, isHired, isHiring }: D3SAgentHeroProps) {
   const { publicKey } = useWallet();
 
   return (
@@ -32,10 +32,10 @@ export function D3monDanHero({ onHire, isHired, isHiring }: D3monDanHeroProps) {
             </Badge>
 
             <h1 className="text-3xl md:text-5xl font-bold bg-clip-text text-transparent bg-gradient-to-b from-neutral-50 to-neutral-400 leading-tight">
-              D3M0N DAN
+              D3S AGENT
             </h1>
             <p className="mt-2 text-sm md:text-base text-neutral-400 max-w-md leading-relaxed">
-              Your autonomous on-chain trading agent. Hire Dan to trade 24/7,
+              Your autonomous on-chain trading agent. Hire D3S Agent to trade 24/7,
               snipe launches, and manage your portfolio while you sleep.
             </p>
 
@@ -60,13 +60,13 @@ export function D3monDanHero({ onHire, isHired, isHiring }: D3monDanHeroProps) {
             {/* CTA */}
             <div className="mt-6 flex items-center gap-3">
               {!publicKey ? (
-                <p className="text-xs text-neutral-500">Connect wallet to hire D3MON Dan</p>
+                <p className="text-xs text-neutral-500">Connect wallet to hire D3S Agent</p>
               ) : isHired ? (
                 <div className="flex items-center gap-2">
                   <Badge className="bg-accent/20 text-accent border-accent/30">
                     <Cloud className="h-3 w-3 mr-1" /> Agent Active
                   </Badge>
-                  <span className="text-[10px] text-neutral-500">Dan is watching the markets</span>
+                  <span className="text-[10px] text-neutral-500">D3S Agent is watching the markets</span>
                 </div>
               ) : (
                 <Button
@@ -80,7 +80,7 @@ export function D3monDanHero({ onHire, isHired, isHiring }: D3monDanHeroProps) {
                   ) : (
                     <Brain className="h-4 w-4" />
                   )}
-                  {isHiring ? "Hiring Dan..." : "Hire D3MON Dan"}
+                  {isHiring ? "Deploying Agent..." : "Hire D3S Agent"}
                 </Button>
               )}
             </div>

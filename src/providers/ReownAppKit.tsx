@@ -12,7 +12,7 @@ createAppKit({
   networks: [solana, solanaDevnet] as any,
   adapters: [solanaAdapter],
   metadata: {
-    name: 'D3MON Dan',
+    name: 'D3S Agent',
     description: 'Your Personal AI Trading Agent on Solana',
     url: window.location.origin,
     icons: ['/dan-logo.jpg'],

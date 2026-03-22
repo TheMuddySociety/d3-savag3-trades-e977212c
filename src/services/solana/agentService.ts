@@ -45,7 +45,7 @@ async function loadDeps() {
 }
 
 /**
- * Service to manage D3MON Dan on-chain agent delegation using Metaplex MPL-Agent Registry.
+ * Service to manage D3S Agent on-chain agent delegation using Metaplex MPL-Agent Registry.
  */
 export class AgentService {
   private static EXECUTIVE_ADDRESS = PLATFORM_CONFIG.WALLET_ADDRESS;
@@ -77,7 +77,7 @@ export class AgentService {
     }
   }
 
-  static async hireDan(wallet: any): Promise<string> {
+  static async activateAgent(wallet: any): Promise<string> {
     const deps = await loadDeps();
     const umi = deps.createUmi(PLATFORM_CONFIG.RPC_URL)
       .use(deps.mplCore())
@@ -89,7 +89,7 @@ export class AgentService {
     const executivePubkey = deps.publicKey(this.EXECUTIVE_ADDRESS);
 
     try {
-      console.log("Delegating execution to D3MON Dan...");
+      console.log("Delegating execution to D3S Agent...");
 
       const executiveProfilePda = deps.findExecutiveProfileV1Pda(umi, {
         authority: executivePubkey,
@@ -106,7 +106,7 @@ export class AgentService {
       console.log("Delegation successful:", signature);
       return signature;
     } catch (e: any) {
-      throw new Error(`Failed to hire D3MON Dan: ${e.message}`);
+      throw new Error(`Failed to hire D3S Agent: ${e.message}`);
     }
   }
 }

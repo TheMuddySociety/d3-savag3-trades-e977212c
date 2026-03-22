@@ -184,7 +184,7 @@ export function JupiterAIChat() {
         <div className="flex items-center justify-between">
           <CardTitle className="text-base flex items-center gap-2">
             <Bot className="h-5 w-5 text-accent" />
-            D3MON DAN
+            D3S AGENT
             <Badge variant="outline" className="text-xs border-accent/50 text-accent">
               AGENT
             </Badge>
@@ -268,7 +268,7 @@ export function JupiterAIChat() {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && sendMessage(input)}
-            placeholder="Ask D3MON Dan about a trade, strategy, or token..."
+            placeholder="Ask D3S Agent about a trade, strategy, or token..."
             className="h-8 text-xs bg-muted/50 border-border/50"
             disabled={isLoading}
           />

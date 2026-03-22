@@ -136,7 +136,7 @@ export function TokenLaunchWizard() {
           curve_preset: preset
         });
         
-        toast.success("🚀 Background Launch Queued! D3MON Dan will handle the rest.");
+        toast.success("🚀 Background Launch Queued! D3S Agent will handle the rest.");
         setLaunchResult({ mint: prepareResult.mint }); // Show success screen with mint
       } else {
         console.log('[Wizard] Submitting immediate launch...');
@@ -424,7 +424,7 @@ export function TokenLaunchWizard() {
                     <Cloud className="h-3.5 w-3.5 text-primary" />
                     <div>
                       <p className="text-[10px] font-semibold">Launch in Background</p>
-                      <p className="text-[9px] text-muted-foreground">D3MON Dan completes the launch while you're away</p>
+                      <p className="text-[9px] text-muted-foreground">D3S Agent completes the launch while you're away</p>
                     </div>
                   </div>
                   <Switch checked={backgroundLaunch} onCheckedChange={setBackgroundLaunch} />

@@ -1,4 +1,4 @@
-import { Zap, Activity, Shield, Bot, Crosshair, Clock, BarChart3, Rocket, Eye, Brain, Layers, Gauge, Search } from "lucide-react";
+import { Zap, Activity, Shield, Bot, Crosshair, Clock, BarChart3, Rocket, Eye, Brain, Layers, Gauge, Search, History as HistoryIcon } from "lucide-react";
 
 export type ToolCategory = "all" | "trading" | "analysis" | "security" | "automation";
 
@@ -67,13 +67,13 @@ export const tools: AITool[] = [
   },
   {
     id: "d3mon-dan",
-    name: "D3MON Dan Agent",
-    description: "Autonomous AI trading agent. Hire Dan to trade 24/7, manage strategies, and execute in the background via Cloud Mode.",
+    name: "D3S Agent",
+    description: "Delegate long-term tasks to D3S Agent. The agent will monitor prices and execute swaps based on your custom rules while you're offline.",
     category: "automation",
-    icon: <Brain className="h-5 w-5" />,
-    tags: ["AI Agent", "24/7", "Cloud"],
+    icon: <HistoryIcon className="h-5 w-5" />,
+    tags: ["Automation", "Rules", "24/7"],
     status: "active",
-    tabKey: "d3mon",
+    tabKey: "agent",
   },
   {
     id: "token-launch",
@@ -88,10 +88,10 @@ export const tools: AITool[] = [
   {
     id: "ultra-swap",
     name: "Jupiter Ultra Swaps",
-    description: "Gasless swaps via Jupiter Ultra API. Best price across all DEXs with anti-MEV protection and auto priority fees.",
+    description: "Connect D3S Agent to Jupiter Ultra for high-frequency, MEV-protected swaps with zero platform fees.",
     category: "trading",
     icon: <Zap className="h-5 w-5" />,
-    tags: ["Swap", "Gasless", "Jupiter"],
+    tags: ["Trading", "Fast", "Jup"],
     status: "active",
     tabKey: "sniper",
   },
@@ -147,7 +147,7 @@ export const tools: AITool[] = [
   {
     id: "background-tasks",
     name: "Background Cloud Mode",
-    description: "Queue trades and token launches for D3MON Dan to execute in the background while you're away. 24/7 operation.",
+    description: "Queue trades and token launches for D3S Agent to execute in the background while you're away. 24/7 operation.",
     category: "automation",
     icon: <Bot className="h-5 w-5" />,
     tags: ["Background", "Queue", "24/7"],

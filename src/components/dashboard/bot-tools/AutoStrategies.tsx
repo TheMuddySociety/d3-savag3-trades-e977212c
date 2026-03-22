@@ -157,19 +157,19 @@ export const AutoStrategies = ({ killSignal = 0 }: Props) => {
     return () => clearInterval(interval);
   }, [wallet.publicKey]);
 
-  const handleHireDan = async () => {
+  const handleHireAgent = async () => {
     if (!wallet.publicKey) return;
     setIsHiring(true);
     try {
-      const signature = await AgentService.hireDan(wallet);
+      const signature = await AgentService.activateAgent(wallet);
       setIsAgentHired(true);
-      addLog(`🤝 D3MON DAN HIRED! Proxy trade authority delegated (tx: ${signature.slice(0, 8)}...)`);
+      addLog(`🤝 D3S AGENT ACTIVATED! Proxy trade authority delegated (tx: ${signature.slice(0, 8)}...)`);
       toast({
-        title: "🤝 D3MON Dan Hired!",
-        description: "Your personal agent is now authorized to trade on-chain 24/7.",
+        title: "🤝 D3S Agent Activated!",
+        description: "Your autonomous agent is now authorized to trade on-chain 24/7.",
       });
     } catch (e: any) {
-      toast({ title: "Failed to hire Dan", description: e.message, variant: "destructive" });
+      toast({ title: "Activation Failed", description: e.message, variant: "destructive" });
     } finally {
       setIsHiring(false);
     }
@@ -679,7 +679,7 @@ export const AutoStrategies = ({ killSignal = 0 }: Props) => {
                 if (success) {
                   addLog(`🔥✅ Sniped ${target.symbol} for ${budget} SOL!`);
                   
-                  // D3MON Dan's autonomous execution log
+                  // D3S Agent's autonomous execution log
                   if (autoSellSec > 0 && !launchAutoSellTimers.current.has(target.mint)) {
                     addLog(`⏱️ Auto-sell timer set: ${target.symbol} in ${autoSellSec}s`);
                     const timer = setTimeout(async () => {
@@ -829,7 +829,7 @@ export const AutoStrategies = ({ killSignal = 0 }: Props) => {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Brain className="h-4 w-4 text-accent" />
-          <span className="text-sm font-bold text-foreground">D3MON DAN'S WAR ROOM</span>
+          <span className="text-sm font-bold text-foreground uppercase tracking-wider">D3S Agent's War Room</span>
         </div>
         <div className="flex items-center gap-1">
           {executingTrade && (
@@ -859,15 +859,14 @@ export const AutoStrategies = ({ killSignal = 0 }: Props) => {
             </span>
           </div>
           {!isAgentHired && (
-            <Button 
-              size="sm" 
-              className="h-7 text-[10px] bg-accent hover:bg-accent/80 text-foreground font-bold"
-              onClick={handleHireDan}
-              disabled={isHiring}
-            >
-              {isHiring ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Users className="h-3 w-3 mr-1" />}
-              HIRE D3MON DAN
-            </Button>
+              <Button 
+                className="w-full flex items-center gap-2 bg-accent hover:bg-accent/90 pulse-border"
+                onClick={handleHireAgent}
+                disabled={isHiring}
+              >
+                {isHiring ? <Loader2 className="h-3 w-3 animate-spin" /> : <Users className="h-3 w-3" />}
+                ACTIVATE D3S AGENT
+              </Button>
           )}
         </div>
         
@@ -882,7 +881,7 @@ export const AutoStrategies = ({ killSignal = 0 }: Props) => {
                   CLOUD
                 </div>
               </div>
-              <p className="text-[10px] text-muted-foreground">Dan trades for you even when you're offline</p>
+              <p className="text-[10px] text-muted-foreground">The agent trades for you even when you're offline</p>
             </div>
           </div>
           <Switch checked={beachMode} onCheckedChange={handleBeachMode} />
@@ -893,7 +892,7 @@ export const AutoStrategies = ({ killSignal = 0 }: Props) => {
         <div className="p-2 rounded-lg bg-accent/10 border border-accent/20">
           <p className="text-[11px] text-accent font-medium flex items-center gap-2">
             <ShieldCheck className="w-3.5 h-3.5" />
-            D3MON DAN PROTECTED: {activeCount} strategies active 24/7 in the cloud.
+            D3S AGENT PROTECTED: {activeCount} strategies active 24/7 in the cloud.
           </p>
         </div>
       )}

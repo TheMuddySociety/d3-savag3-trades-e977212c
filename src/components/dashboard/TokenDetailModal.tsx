@@ -256,7 +256,7 @@ export function TokenDetailModal({ token, open, onOpenChange, onSetAlert }: Toke
       
       toast({
         title: "🚀 Background Task Queued",
-        description: `D3MON Dan is now watching for an entry to buy ${selectedAmount} SOL of ${token.symbol}. Check the 'Tasks' tab for status.`,
+        description: `D3S Agent is now watching for an entry to buy ${selectedAmount} SOL of ${token.symbol}. Check the 'Tasks' tab for status.`,
       });
     } catch (error) {
       console.error('Failed to queue background trade:', error);
@@ -544,12 +544,12 @@ export function TokenDetailModal({ token, open, onOpenChange, onSetAlert }: Toke
                         <div className="flex items-center justify-between text-[11px]">
                           <span className="text-muted-foreground font-medium flex items-center gap-1.5">
                             <Brain className="h-3 w-3 text-accent" />
-                            D3MON Autonomous Entry
+                            D3S Agent Autonomous Entry
                           </span>
                           <Badge variant="outline" className="text-[9px] text-accent border-accent/30 h-4">BETA</Badge>
                         </div>
                         <p className="text-[10px] text-muted-foreground">
-                          Queue this trade to execute via D3MON background engine. No need to keep the tab open.
+                          Queue this trade to execute via D3S Agent background engine. No need to keep the tab open.
                         </p>
                         <Button 
                           size="sm"

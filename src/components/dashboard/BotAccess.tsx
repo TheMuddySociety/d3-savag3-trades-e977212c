@@ -4,7 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Bot, Clock, Crosshair, BarChart3, Brain, Wallet, OctagonX, Layers, Eye, List, TrendingUp, Rocket, Coins, Flame, History } from "lucide-react";
-import { D3monDanHero } from "./bot-tools/D3monDanHero";
+import { D3SAgentHero } from "./bot-tools/D3SAgentHero";
 import { DCABot } from "./bot-tools/DCABot";
 import { BuySniper } from "./bot-tools/BuySniper";
 import { VolumeBot } from "./bot-tools/VolumeBot";
@@ -28,8 +28,8 @@ export const BotAccess = () => {
   const walletAddress = publicKey?.toBase58() || null;
   const { toast } = useToast();
   const [killSignal, setKillSignal] = useState(0);
-  const [activeTab, setActiveTab] = useState("d3mon");
-  const [isD3monHired, setIsD3monHired] = useState(false);
+  const [activeTab, setActiveTab] = useState("agent");
+  const [isAgentHired, setIsAgentHired] = useState(false);
   const [isHiring, setIsHiring] = useState(false);
 
   // Check on-chain agent status
@@ -37,17 +37,17 @@ export const BotAccess = () => {
     const checkAgentStatus = async () => {
       if (walletAddress) {
         const hired = await AgentService.isAgentHired(walletAddress);
-        setIsD3monHired(hired);
+        setIsAgentHired(hired);
       }
     };
     checkAgentStatus();
   }, [walletAddress]);
 
-  const handleHireD3mon = useCallback(async () => {
+  const handleActivateAgent = useCallback(async () => {
     if (!wallet.publicKey || !wallet.signTransaction) {
       toast({
         title: "Wallet Not Connected",
-        description: "Please connect your wallet to hire Dan.",
+        description: "Please connect your wallet to hire D3S Agent.",
         variant: "destructive"
       });
       return;
@@ -55,18 +55,18 @@ export const BotAccess = () => {
 
     setIsHiring(true);
     try {
-      await AgentService.hireDan(wallet);
-      setIsD3monHired(true);
+      await AgentService.activateAgent(wallet);
+      setIsAgentHired(true);
       toast({
-        title: "🔥 D3MON Dan Hired!",
-        description: "Your autonomous agent is now active and authorized to trade on-chain.",
+        title: "🤝 D3S Agent Activated!",
+        description: "Your autonomous agent is now authorized to trade on-chain 24/7.",
       });
     } catch (error) {
-      console.error("Failed to hire Dan:", error);
+      console.error("Failed to activate agent:", error);
       toast({
-        title: "Hiring Failed",
-        description: error instanceof Error ? error.message : "Transactional error occurred during hiring.",
-        variant: "destructive"
+        title: "Activation Failed",
+        description: error instanceof Error ? error.message : "Failed to activate D3S Agent.",
+        variant: "destructive",
       });
     } finally {
       setIsHiring(false);
@@ -128,9 +128,9 @@ export const BotAccess = () => {
       <CardContent className="pt-0">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="w-full flex overflow-x-auto snap-x bg-black/40 border border-border/40 h-9 mb-3 gap-0.5 no-scrollbar p-1 rounded-lg backdrop-blur-md">
-            <TabsTrigger value="d3mon" className="text-[10px] gap-1 transition-all duration-300 data-[state=active]:glass-accent data-[state=active]:text-accent px-3 shrink-0 snap-start rounded-md">
+            <TabsTrigger value="agent" className="text-[10px] gap-1 transition-all duration-300 data-[state=active]:glass-accent data-[state=active]:text-accent px-3 shrink-0 snap-start rounded-md">
               <Flame className="h-3 w-3" />
-              <span className="hidden sm:inline">D3MON</span>
+              <span className="hidden sm:inline">D3S AGENT</span>
             </TabsTrigger>
             <TabsTrigger value="sniper" className="text-[10px] gap-1 transition-all duration-300 data-[state=active]:glass-accent data-[state=active]:text-accent px-3 shrink-0 snap-start rounded-md">
               <Crosshair className="h-3 w-3" />
@@ -182,8 +182,8 @@ export const BotAccess = () => {
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="d3mon" className="mt-0">
-            <D3monDanHero onHire={handleHireD3mon} isHired={isD3monHired} isHiring={isHiring} />
+          <TabsContent value="agent" className="mt-0">
+            <D3SAgentHero onHire={handleActivateAgent} isHired={isAgentHired} isHiring={isHiring} />
           </TabsContent>
           <TabsContent value="sniper" className="mt-0">
             <BuySniper killSignal={killSignal} />
