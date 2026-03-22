@@ -274,15 +274,13 @@ export function TopMemecoins() {
     <div className="space-y-6">
       {/* Data Source Toggle + Connection Status */}
       <div className="flex items-center justify-between flex-wrap gap-2">
-        <div className="flex items-center gap-1 rounded-full border border-border bg-card/50 p-1">
+        <div className="flex items-center gap-1.5 rounded-full border border-border/40 bg-black/40 backdrop-blur-md p-1 px-1.5">
           <Button
             size="sm"
-            variant="ghost"
+            variant={dataSource === 'trending' ? 'glass-accent' : 'glass'}
             className={cn(
-              "rounded-full gap-1.5 h-7 text-xs px-3 transition-all",
-              dataSource === 'trending'
-                ? "bg-primary text-primary-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground"
+              "rounded-full gap-1.5 h-7 text-xs px-3 transition-all duration-300",
+              dataSource !== 'trending' && "opacity-70 hover:opacity-100"
             )}
             onClick={() => setDataSource('trending')}
           >
@@ -291,12 +289,10 @@ export function TopMemecoins() {
           </Button>
           <Button
             size="sm"
-            variant="ghost"
+            variant={dataSource === 'new_launches' ? 'glass-accent' : 'glass'}
             className={cn(
-              "rounded-full gap-1.5 h-7 text-xs px-3 transition-all",
-              dataSource === 'new_launches'
-                ? "bg-primary text-primary-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground"
+              "rounded-full gap-1.5 h-7 text-xs px-3 transition-all duration-300",
+              dataSource !== 'new_launches' && "opacity-70 hover:opacity-100"
             )}
             onClick={() => setDataSource('new_launches')}
           >
@@ -305,12 +301,10 @@ export function TopMemecoins() {
           </Button>
           <Button
             size="sm"
-            variant="ghost"
+            variant={dataSource === 'graduated' ? 'glass-accent' : 'glass'}
             className={cn(
-              "rounded-full gap-1.5 h-7 text-xs px-3 transition-all",
-              dataSource === 'graduated'
-                ? "bg-primary text-primary-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground"
+              "rounded-full gap-1.5 h-7 text-xs px-3 transition-all duration-300",
+              dataSource !== 'graduated' && "opacity-70 hover:opacity-100"
             )}
             onClick={() => setDataSource('graduated')}
           >

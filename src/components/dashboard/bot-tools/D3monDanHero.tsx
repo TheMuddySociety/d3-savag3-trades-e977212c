@@ -18,7 +18,7 @@ export function D3monDanHero({ onHire, isHired, isHiring }: D3monDanHeroProps) {
   return (
     <div className="space-y-4">
       {/* Hero Card with 3D Scene */}
-      <Card className="w-full h-[420px] md:h-[500px] bg-black/[0.96] relative overflow-hidden border-primary/20">
+      <Card className="w-full h-[420px] md:h-[500px] bg-black/40 relative overflow-hidden border-border/40 backdrop-blur-md shadow-2xl">
         <Spotlight
           className="-top-40 left-0 md:left-60 md:-top-20"
           fill="hsl(var(--primary))"
@@ -42,16 +42,16 @@ export function D3monDanHero({ onHire, isHired, isHiring }: D3monDanHeroProps) {
             {/* Feature pills */}
             <div className="flex flex-wrap gap-2 mt-5">
               {[
-                { icon: Zap, label: "Jupiter Ultra Swaps", color: "text-yellow-400" },
-                { icon: Shield, label: "Anti-MEV Protection", color: "text-emerald-400" },
-                { icon: Clock, label: "24/7 Cloud Mode", color: "text-blue-400" },
-                { icon: TrendingUp, label: "Smart DCA", color: "text-purple-400" },
-              ].map(({ icon: Icon, label, color }) => (
+                { icon: Zap, label: "Jupiter Ultra Swaps" },
+                { icon: Shield, label: "Anti-MEV Protection" },
+                { icon: Clock, label: "24/7 Cloud Mode" },
+                { icon: TrendingUp, label: "Smart DCA" },
+              ].map(({ icon: Icon, label }) => (
                 <div
                   key={label}
-                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-[10px] text-neutral-300"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full glass border border-white/5 text-[10px] text-neutral-300 transition-all hover:bg-white/10"
                 >
-                  <Icon className={`h-3 w-3 ${color}`} />
+                  <Icon className="h-3 w-3 text-accent" />
                   {label}
                 </div>
               ))}
@@ -72,7 +72,8 @@ export function D3monDanHero({ onHire, isHired, isHiring }: D3monDanHeroProps) {
                 <Button
                   onClick={onHire}
                   disabled={isHiring}
-                  className="bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-sm font-bold gap-2 h-10 px-6"
+                  variant="glass-accent"
+                  className="text-sm font-bold gap-2 h-10 px-8 rounded-full border-accent/40 shadow-[0_0_20px_rgba(255,0,0,0.1)]"
                 >
                   {isHiring ? (
                     <Loader2 className="h-4 w-4 animate-spin" />

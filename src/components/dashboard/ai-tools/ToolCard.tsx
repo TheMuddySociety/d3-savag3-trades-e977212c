@@ -1,6 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { ArrowRight } from "lucide-react";
 import type { AITool } from "./toolsData";
+import { cn } from "@/lib/utils";
 
 interface ToolCardProps {
   tool: AITool;
@@ -16,11 +17,12 @@ export function ToolCard({ tool, onClick }: ToolCardProps) {
       tabIndex={isClickable ? 0 : undefined}
       onClick={isClickable ? onClick : undefined}
       onKeyDown={isClickable ? (e) => { if (e.key === 'Enter' || e.key === ' ') onClick?.(); } : undefined}
-      className={`group rounded-xl border border-border/40 bg-card/50 transition-all duration-200 p-4 flex flex-col gap-3 ${
+      className={cn(
+        "group rounded-xl border border-border/40 bg-card/50 transition-all duration-300 p-4 flex flex-col gap-3",
         isClickable
-          ? "cursor-pointer hover:bg-accent/10 hover:border-accent/50 hover:shadow-[0_0_20px_rgba(var(--accent),0.1)] active:scale-[0.98]"
+          ? "cursor-pointer hover:bg-accent/5 hover:border-accent/40 hover:shadow-[0_0_30px_rgba(255,0,0,0.05)] active:scale-[0.98]"
           : "hover:bg-card/80 hover:border-border/60"
-      }`}
+      )}
     >
       {/* Icon + Status */}
       <div className="flex items-start justify-between">

@@ -89,7 +89,7 @@ export const BotAccess = () => {
   }, [toast]);
 
   return (
-    <Card className="w-full" data-bot-tools>
+    <Card className="w-full border-border/40 bg-card/40 backdrop-blur-md shadow-xl" data-bot-tools>
       <CardHeader className="pb-2">
         <div className="flex items-center gap-2">
           <Bot className="h-5 w-5 text-primary" />
@@ -104,13 +104,13 @@ export const BotAccess = () => {
 
         {walletAddress && (
           <Button
-            variant="outline"
+            variant="glass"
             size="sm"
-            className="w-full mt-2 h-7 text-xs border-destructive/40 text-destructive hover:bg-destructive hover:text-destructive-foreground"
+            className="w-full mt-2 h-7 text-[10px] font-bold border-destructive/30 text-destructive bg-destructive/5 hover:bg-destructive/10 hover:text-destructive transition-all duration-300 rounded-md"
             onClick={handleKillAll}
           >
-            <OctagonX className="h-3.5 w-3.5 mr-1.5" />
-            Kill All Bots
+            <OctagonX className="h-3 w-3 mr-1.5" />
+            DISARM ALL BOTS (GLOBAL KILL SWITCH)
           </Button>
         )}
 
@@ -127,56 +127,56 @@ export const BotAccess = () => {
 
       <CardContent className="pt-0">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="w-full flex overflow-x-auto snap-x bg-muted/30 h-8 mb-3 gap-0.5 no-scrollbar">
-            <TabsTrigger value="d3mon" className="text-[10px] gap-0.5 data-[state=active]:bg-destructive/20 data-[state=active]:text-destructive px-2 shrink-0 snap-start">
+          <TabsList className="w-full flex overflow-x-auto snap-x bg-black/40 border border-border/40 h-9 mb-3 gap-0.5 no-scrollbar p-1 rounded-lg backdrop-blur-md">
+            <TabsTrigger value="d3mon" className="text-[10px] gap-1 transition-all duration-300 data-[state=active]:glass-accent data-[state=active]:text-accent px-3 shrink-0 snap-start rounded-md">
               <Flame className="h-3 w-3" />
               <span className="hidden sm:inline">D3MON</span>
             </TabsTrigger>
-            <TabsTrigger value="sniper" className="text-[10px] gap-0.5 data-[state=active]:bg-primary/20 px-2 shrink-0 snap-start">
+            <TabsTrigger value="sniper" className="text-[10px] gap-1 transition-all duration-300 data-[state=active]:glass-accent data-[state=active]:text-accent px-3 shrink-0 snap-start rounded-md">
               <Crosshair className="h-3 w-3" />
               <span className="hidden sm:inline">Sniper</span>
             </TabsTrigger>
-            <TabsTrigger value="dca" className="text-[10px] gap-0.5 data-[state=active]:bg-accent/20 px-2 shrink-0 snap-start">
+            <TabsTrigger value="dca" className="text-[10px] gap-1 transition-all duration-300 data-[state=active]:glass-accent data-[state=active]:text-accent px-3 shrink-0 snap-start rounded-md">
               <Clock className="h-3 w-3" />
               <span className="hidden sm:inline">DCA</span>
             </TabsTrigger>
-            <TabsTrigger value="volume" className="text-[10px] gap-0.5 data-[state=active]:bg-accent/20 px-2 shrink-0 snap-start">
+            <TabsTrigger value="volume" className="text-[10px] gap-1 transition-all duration-300 data-[state=active]:glass-accent data-[state=active]:text-accent px-3 shrink-0 snap-start rounded-md">
               <BarChart3 className="h-3 w-3" />
               <span className="hidden sm:inline">Vol</span>
             </TabsTrigger>
-            <TabsTrigger value="batch" className="text-[10px] gap-0.5 data-[state=active]:bg-primary/20 px-2 shrink-0 snap-start">
+            <TabsTrigger value="batch" className="text-[10px] gap-1 transition-all duration-300 data-[state=active]:glass-accent data-[state=active]:text-accent px-3 shrink-0 snap-start rounded-md">
               <Layers className="h-3 w-3" />
               <span className="hidden sm:inline">Batch</span>
             </TabsTrigger>
-            <TabsTrigger value="grid" className="text-[10px] gap-0.5 data-[state=active]:bg-primary/20 px-2 shrink-0 snap-start">
+            <TabsTrigger value="grid" className="text-[10px] gap-1 transition-all duration-300 data-[state=active]:glass-accent data-[state=active]:text-accent px-3 shrink-0 snap-start rounded-md">
               <Bot className="h-3 w-3" />
               <span className="hidden sm:inline">Grid</span>
             </TabsTrigger>
-            <TabsTrigger value="copy" className="text-[10px] gap-0.5 data-[state=active]:bg-[hsl(var(--fun-purple))]/20 px-2 shrink-0 snap-start">
+            <TabsTrigger value="copy" className="text-[10px] gap-1 transition-all duration-300 data-[state=active]:glass-accent data-[state=active]:text-accent px-3 shrink-0 snap-start rounded-md">
               <Eye className="h-3 w-3" />
               <span className="hidden sm:inline">Copy</span>
             </TabsTrigger>
-            <TabsTrigger value="auto" className="text-[10px] gap-0.5 data-[state=active]:bg-primary/20 px-2 shrink-0 snap-start">
+            <TabsTrigger value="auto" className="text-[10px] gap-1 transition-all duration-300 data-[state=active]:glass-accent data-[state=active]:text-accent px-3 shrink-0 snap-start rounded-md">
               <Brain className="h-3 w-3" />
               <span className="hidden sm:inline">Auto</span>
             </TabsTrigger>
-            <TabsTrigger value="profit" className="text-[10px] gap-0.5 data-[state=active]:bg-primary/20 px-2 shrink-0 snap-start">
+            <TabsTrigger value="profit" className="text-[10px] gap-1 transition-all duration-300 data-[state=active]:glass-accent data-[state=active]:text-accent px-3 shrink-0 snap-start rounded-md">
               <TrendingUp className="h-3 w-3" />
               <span className="hidden sm:inline">Profit</span>
             </TabsTrigger>
-            <TabsTrigger value="launch" className="text-[10px] gap-0.5 data-[state=active]:bg-accent/20 px-2 shrink-0 snap-start">
+            <TabsTrigger value="launch" className="text-[10px] gap-1 transition-all duration-300 data-[state=active]:glass-accent data-[state=active]:text-accent px-3 shrink-0 snap-start rounded-md">
               <Rocket className="h-3 w-3" />
               <span className="hidden sm:inline">Launch</span>
             </TabsTrigger>
-            <TabsTrigger value="tasks" className="text-[10px] gap-0.5 data-[state=active]:bg-accent/20 px-2 shrink-0 snap-start">
+            <TabsTrigger value="tasks" className="text-[10px] gap-1 transition-all duration-300 data-[state=active]:glass-accent data-[state=active]:text-accent px-3 shrink-0 snap-start rounded-md">
               <History className="h-3 w-3" />
               <span className="hidden sm:inline">Tasks</span>
             </TabsTrigger>
-            <TabsTrigger value="fees" className="text-[10px] gap-0.5 data-[state=active]:bg-accent/20 px-2 shrink-0 snap-start">
+            <TabsTrigger value="fees" className="text-[10px] gap-1 transition-all duration-300 data-[state=active]:glass-accent data-[state=active]:text-accent px-3 shrink-0 snap-start rounded-md">
               <Coins className="h-3 w-3" />
               <span className="hidden sm:inline">Fees</span>
             </TabsTrigger>
-            <TabsTrigger value="trades" className="text-[10px] gap-0.5 data-[state=active]:bg-accent/20 px-2 shrink-0 snap-start">
+            <TabsTrigger value="trades" className="text-[10px] gap-1 transition-all duration-300 data-[state=active]:glass-accent data-[state=active]:text-accent px-3 shrink-0 snap-start rounded-md">
               <List className="h-3 w-3" />
               <span className="hidden sm:inline">Trades</span>
             </TabsTrigger>

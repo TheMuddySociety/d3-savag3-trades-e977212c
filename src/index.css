@@ -148,6 +148,32 @@
     border-color: hsl(var(--primary));
     box-shadow: 0 0 0 2px hsl(var(--primary) / 0.15);
   }
+
+  /* Black Glass Look */
+  .glass-black {
+    background: rgba(0, 0, 0, 0.4) !important;
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.8) !important;
+  }
+
+  .glass-black:hover {
+    background: rgba(255, 255, 255, 0.03) !important;
+    border-color: rgba(255, 255, 255, 0.15) !important;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.9), 0 0 15px rgba(255, 255, 255, 0.02) !important;
+  }
+
+  .glass-accent {
+    background: hsla(0, 84%, 50%, 0.05) !important;
+    backdrop-filter: blur(8px) !important;
+    border: 1px solid hsla(0, 84%, 50%, 0.2) !important;
+  }
+
+  .glass-accent:hover {
+    background: hsla(0, 84%, 50%, 0.1) !important;
+    border-color: hsla(0, 84%, 50%, 0.4) !important;
+  }
 }
 
 /* Status Colors */

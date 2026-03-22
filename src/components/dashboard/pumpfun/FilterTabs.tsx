@@ -31,10 +31,10 @@ interface FilterTabsProps {
 }
 
 const primaryFilters = [
-  { id: 'movers' as FilterType, label: 'Movers', icon: Sparkles, color: 'text-yellow-400' },
-  { id: 'live' as FilterType, label: 'Live', icon: Radio, color: 'text-red-500' },
-  { id: 'new' as FilterType, label: 'New', icon: Trophy, color: 'text-amber-400' },
-  { id: 'marketcap' as FilterType, label: 'Market cap', icon: Coins, color: 'text-green-400' },
+  { id: 'movers' as FilterType, label: 'Movers', icon: Sparkles, color: 'text-accent' },
+  { id: 'live' as FilterType, label: 'Live', icon: Radio, color: 'text-accent' },
+  { id: 'new' as FilterType, label: 'New', icon: Trophy, color: 'text-accent' },
+  { id: 'marketcap' as FilterType, label: 'Market cap', icon: Coins, color: 'text-accent' },
 ];
 
 const moreFilters = [
@@ -67,17 +67,15 @@ export function FilterTabs({
         {primaryFilters.map((filter) => (
           <Button
             key={filter.id}
-            variant={activeFilter === filter.id ? 'default' : 'ghost'}
+            variant={activeFilter === filter.id ? 'glass-accent' : 'glass'}
             size="sm"
             className={cn(
-              "rounded-full gap-2 transition-all",
-              activeFilter === filter.id 
-                ? "bg-card border-2 border-primary text-primary shadow-lg shadow-primary/20" 
-                : "bg-card/50 border border-border hover:bg-card hover:border-primary/50"
+              "rounded-full gap-2 transition-all duration-300",
+              activeFilter !== filter.id && "opacity-70 hover:opacity-100"
             )}
             onClick={() => onFilterChange(filter.id)}
           >
-            <filter.icon className={cn("h-4 w-4", filter.color)} />
+            <filter.icon className={cn("h-4 w-4", activeFilter === filter.id ? "text-accent" : "text-muted-foreground")} />
             {filter.label}
           </Button>
         ))}
@@ -85,13 +83,11 @@ export function FilterTabs({
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
-              variant="ghost"
+              variant={isMoreActive ? 'glass-accent' : 'glass'}
               size="sm"
               className={cn(
-                "rounded-full gap-2 border",
-                isMoreActive
-                  ? "bg-card border-2 border-primary text-primary shadow-lg shadow-primary/20"
-                  : "bg-card/50 border-border hover:bg-card"
+                "rounded-full gap-2 transition-all duration-300",
+                !isMoreActive && "opacity-70 hover:opacity-100"
               )}
             >
               {isMoreActive ? activeMoreLabel : 'More'}
@@ -121,13 +117,11 @@ export function FilterTabs({
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
-              variant="ghost"
+              variant={(filterOptions.onlyPositive || filterOptions.minMarketCap || filterOptions.minVolume || filterOptions.bondingCurveRange !== 'any') ? 'glass-accent' : 'glass'}
               size="sm"
               className={cn(
-                "rounded-full gap-2 border",
-                (filterOptions.onlyPositive || filterOptions.minMarketCap || filterOptions.minVolume || filterOptions.bondingCurveRange !== 'any')
-                  ? "bg-card border-primary text-primary"
-                  : "bg-card/50 border-border hover:bg-card"
+                "rounded-full gap-2 transition-all duration-300",
+                !(filterOptions.onlyPositive || filterOptions.minMarketCap || filterOptions.minVolume || filterOptions.bondingCurveRange !== 'any') && "opacity-70 hover:opacity-100"
               )}
             >
               <Filter className="h-4 w-4" />
@@ -188,13 +182,13 @@ export function FilterTabs({
           </DropdownMenuContent>
         </DropdownMenu>
 
-        <div className="flex rounded-full border border-border bg-card/50 p-1">
+        <div className="flex rounded-full border border-border/40 bg-black/40 backdrop-blur-md p-1">
           <Button
             variant="ghost"
             size="icon"
             className={cn(
-              "h-7 w-7 rounded-full",
-              viewMode === 'grid' && "bg-primary text-primary-foreground"
+              "h-7 w-7 rounded-full transition-all duration-300",
+              viewMode === 'grid' ? "bg-accent/20 text-accent shadow-lg" : "text-muted-foreground hover:text-foreground"
             )}
             onClick={() => onViewModeChange('grid')}
           >
@@ -204,8 +198,8 @@ export function FilterTabs({
             variant="ghost"
             size="icon"
             className={cn(
-              "h-7 w-7 rounded-full",
-              viewMode === 'list' && "bg-primary text-primary-foreground"
+              "h-7 w-7 rounded-full transition-all duration-300",
+              viewMode === 'list' ? "bg-accent/20 text-accent shadow-lg" : "text-muted-foreground hover:text-foreground"
             )}
             onClick={() => onViewModeChange('list')}
           >

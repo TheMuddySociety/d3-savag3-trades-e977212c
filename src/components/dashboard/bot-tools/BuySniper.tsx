@@ -4,10 +4,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { Crosshair, Zap, Shield, Rocket } from "lucide-react";
+import { Crosshair, Zap, Shield, Rocket, OctagonX, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { JupiterUltraService } from "@/services/jupiter/ultra";
+import { cn } from "@/lib/utils";
 import { LiveTradeConfirmDialog } from "./LiveTradeConfirmDialog";
 import { isValidSolanaAddress } from "@/utils/validateSolanaAddress";
 
@@ -253,15 +254,18 @@ export const BuySniper = ({ killSignal = 0 }: Props) => {
         <Button
           onClick={handleArm}
           disabled={isLoading}
-          className={`w-full ${isArmed ? 'bg-destructive hover:bg-destructive/90' : 'bg-destructive hover:bg-destructive/90'} text-destructive-foreground`}
-          size="sm"
+          variant="glass"
+          className={cn(
+            "w-full text-xs font-bold gap-2 h-9 rounded-lg transition-all duration-300",
+            isArmed ? "border-destructive/40 text-destructive bg-destructive/10" : "border-accent/40 text-accent bg-accent/5 hover:bg-accent/10"
+          )}
         >
           {isLoading ? (
-            <><div className="animate-spin rounded-full h-3 w-3 border-b-2 border-current mr-2" /> Processing...</>
+            <><Loader2 className="h-3.5 w-3.5 animate-spin mr-2" /> Processing...</>
           ) : isArmed ? (
-            <><Crosshair className="h-4 w-4 mr-2" /> Disarm Sniper</>
+            <><OctagonX className="h-3.5 w-3.5 mr-1" /> Disarm Sniper</>
           ) : (
-            <><Zap className="h-4 w-4 mr-2" /> Arm Sniper (LIVE)</>
+            <><Zap className="h-3.5 w-3.5 mr-1" /> Arm Sniper (LIVE)</>
           )}
         </Button>
       </div>

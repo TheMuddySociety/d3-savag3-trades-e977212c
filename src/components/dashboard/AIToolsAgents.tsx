@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Bot, Search } from "lucide-react";
 import { tools, categoryLabels, categoryIcons, type ToolCategory } from "./ai-tools/toolsData";
 import { ToolCard } from "./ai-tools/ToolCard";
+import { cn } from "@/lib/utils";
 
 export function AIToolsAgents() {
   const [activeCategory, setActiveCategory] = useState<ToolCategory>("all");
@@ -34,7 +35,7 @@ export function AIToolsAgents() {
   }, []);
 
   return (
-    <Card className="border-border/50 bg-card/80 backdrop-blur-sm">
+    <Card className="border-border/40 bg-card/40 backdrop-blur-md shadow-2xl">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="text-base flex items-center gap-2">
@@ -61,12 +62,11 @@ export function AIToolsAgents() {
             <Button
               key={cat}
               size="sm"
-              variant={activeCategory === cat ? "default" : "ghost"}
-              className={`h-7 text-xs px-2.5 gap-1 ${
-                activeCategory === cat
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
+              variant={activeCategory === cat ? "glass-accent" : "glass"}
+              className={cn(
+                "h-7 text-xs px-2.5 gap-1 transition-all duration-300",
+                activeCategory !== cat && "opacity-70 hover:opacity-100"
+              )}
               onClick={() => setActiveCategory(cat)}
             >
               {categoryIcons[cat]}
@@ -95,4 +95,3 @@ export function AIToolsAgents() {
     </Card>
   );
 }
-
