@@ -13,7 +13,7 @@
         "@capacitor/splash-screen": "^8.0.1",
         "@hookform/resolvers": "^3.9.0",
         "@jup-ag/jup-mobile-adapter": "^0.0.2",
-        "@jup-ag/plugin": "^1.0.13",
+        "@jup-ag/plugin": "1.0.13",
         "@jup-ag/wallet-adapter": "^0.2.3",
         "@metaplex-foundation/mpl-agent-registry": "^0.2.1",
         "@metaplex-foundation/mpl-core": "^1.3.0",
@@ -341,7 +341,7 @@
 
     "@jup-ag/jup-mobile-adapter": ["@jup-ag/jup-mobile-adapter@0.0.2", "", { "peerDependencies": { "@reown/appkit": ">=1.6.0", "@reown/appkit-adapter-solana": ">=1.6.0", "@reown/appkit-wallet-button": ">=1.6.0", "@solana/wallet-adapter-base": ">=0.9.0", "@solana/web3.js": ">=1.95.0", "react": ">=18" } }, "sha512-1KSRELKHOji+p0wmSvfmw8r7AC/k5qPBCidK3qvIxQCgz073goSWQ6T/iNifL1oWVMDoeMbo3wQbER61XQC2Nw=="],
 
-    "@jup-ag/plugin": ["@jup-ag/plugin@1.0.14", "", { "dependencies": { "@jup-ag/wallet-adapter": "0.2.3", "@popperjs/core": "^2.11.8", "@solana/wallet-adapter-wallets": "0.19.33", "@tanstack/react-query": "5.85.5", "bn.js": "5.2.1", "clsx": "^2.1.1", "decimal.js": "10.4.3", "jotai": "^2.8.3", "jsbi": "4.3.0", "lodash.debounce": "^4.0.8", "next": "13.5.6", "next-seo": "5.15.0", "react-colorful": "^5.6.1", "react-hook-form": "7.42.1", "react-number-format": "5.1.3", "react-popper": "^2.3.0", "react-syntax-highlighter": "^15.5.0", "react-use": "^17.5.0", "react-virtualized-auto-sizer": "1.0.7", "react-window": "1.8.8", "superstruct": "1.0.3", "tailwind-merge": "^2.5.2", "tailwindcss-animate": "^1.0.7" }, "peerDependencies": { "@solana/spl-token": "^0.1.8", "@solana/web3.js": "^1.87.6", "react": "^18", "react-dom": "^18" } }, "sha512-26l/cklQPZCOIz153y6kzFz2wfaXbbhxfydCqxSZ0QxwCwGMXXIjYq16YZXqEpKIJe6YwmBBDylql3jNwhxvmA=="],
+    "@jup-ag/plugin": ["@jup-ag/plugin@1.0.13", "", { "dependencies": { "@jup-ag/wallet-adapter": "0.2.3", "@popperjs/core": "^2.11.8", "@solana/wallet-adapter-wallets": "0.19.33", "@tanstack/react-query": "5.85.5", "bn.js": "5.2.1", "clsx": "^2.1.1", "decimal.js": "10.4.3", "jotai": "^2.8.3", "jsbi": "4.3.0", "lodash.debounce": "^4.0.8", "next": "13.5.6", "next-seo": "5.15.0", "react-colorful": "^5.6.1", "react-hook-form": "7.42.1", "react-number-format": "5.1.3", "react-popper": "^2.3.0", "react-syntax-highlighter": "^15.5.0", "react-use": "^17.5.0", "react-virtualized-auto-sizer": "1.0.7", "react-window": "1.8.8", "superstruct": "1.0.3", "tailwind-merge": "^2.5.2", "tailwindcss-animate": "^1.0.7" }, "peerDependencies": { "@solana/spl-token": "^0.1.8", "@solana/web3.js": "^1.87.6", "react": "^18", "react-dom": "^18" } }, "sha512-apRW9GJTRgN8j2gfOvBcJGeAAaPKrnaYXcrOITcCA1iJe3XLzmHu+3Wr44TbhsNx+KUIfDmk4B27O2AYL6JVuQ=="],
 
     "@jup-ag/react-hook": ["@jup-ag/react-hook@6.2.0", "", { "dependencies": { "@jup-ag/api": "6.0.29", "@jup-ag/common": "6.1.0", "@mercurial-finance/optimist": "0.4.0", "@solana/spl-token": "0.1.8", "promise-retry": "2.0.1", "superstruct": "~1.0.3" }, "peerDependencies": { "@solana/web3.js": ">=1.15.0", "bn.js": ">=5.2.0", "react": ">=16" } }, "sha512-8LQoVfLnj1QPI2kzNPgoZiJWh2oGC81k0X0ZUuHux01qH3+xwnJrEPDsO7SKABzw7AV3Q0tP0lxiv2CaliQUFw=="],
 
@@ -797,7 +797,7 @@
 
     "@solana/signers": ["@solana/signers@5.5.1", "", { "dependencies": { "@solana/addresses": "5.5.1", "@solana/codecs-core": "5.5.1", "@solana/errors": "5.5.1", "@solana/instructions": "5.5.1", "@solana/keys": "5.5.1", "@solana/nominal-types": "5.5.1", "@solana/offchain-messages": "5.5.1", "@solana/transaction-messages": "5.5.1", "@solana/transactions": "5.5.1" }, "peerDependencies": { "typescript": "^5.0.0" } }, "sha512-FY0IVaBT2kCAze55vEieR6hag4coqcuJ31Aw3hqRH7mv6sV8oqwuJmUrx+uFwOp1gwd5OEAzlv6N4hOOple4sQ=="],
 
-    "@solana/spl-token": ["@solana/spl-token@0.4.14", "", { "dependencies": { "@solana/buffer-layout": "^4.0.0", "@solana/buffer-layout-utils": "^0.2.0", "@solana/spl-token-group": "^0.0.7", "@solana/spl-token-metadata": "^0.1.6", "buffer": "^6.0.3" }, "peerDependencies": { "@solana/web3.js": "^1.95.5" } }, "sha512-u09zr96UBpX4U685MnvQsNzlvw9TiY005hk1vJmJr7gMJldoPG1eYU5/wNEyOA5lkMLiR/gOi9SFD4MefOYEsA=="],
+    "@solana/spl-token": ["@solana/spl-token@0.1.8", "", { "dependencies": { "@babel/runtime": "^7.10.5", "@solana/web3.js": "^1.21.0", "bn.js": "^5.1.0", "buffer": "6.0.3", "buffer-layout": "^1.2.0", "dotenv": "10.0.0" } }, "sha512-LZmYCKcPQDtJgecvWOgT/cnoIQPWjdH+QVyzPcFvyDUiT0DiRjZaam4aqNUyvchLFhzgunv3d9xOoyE34ofdoQ=="],
 
     "@solana/spl-token-group": ["@solana/spl-token-group@0.0.7", "", { "dependencies": { "@solana/codecs": "2.0.0-rc.1" }, "peerDependencies": { "@solana/web3.js": "^1.95.3" } }, "sha512-V1N/iX7Cr7H0uazWUT2uk27TMqlqedpXHRqqAbVO2gvmJyT0E0ummMEAVQeXZ05ZhQ/xF39DLSdBp90XebWEug=="],
 
@@ -2753,15 +2753,11 @@
 
     "@jup-ag/common/@mercurial-finance/optimist": ["@mercurial-finance/optimist@0.3.2", "", { "dependencies": { "@metaplex-foundation/mpl-token-metadata": "~2.13.0", "promise-retry": "2.0.1" }, "peerDependencies": { "@coral-xyz/anchor": ">=0.29.0", "@solana/spl-token": "<0.2.0", "@solana/web3.js": ">=1.15.0", "bn.js": ">=5.2.0" } }, "sha512-zdYrPOPKUVXcCuEpiPGKYO8amO1Tg8LdhHPZaJblnyxeUgQOGgyp+DmAqrBASIE77l5KteUgbvMx4LKq3dWkNQ=="],
 
-    "@jup-ag/common/@solana/spl-token": ["@solana/spl-token@0.1.8", "", { "dependencies": { "@babel/runtime": "^7.10.5", "@solana/web3.js": "^1.21.0", "bn.js": "^5.1.0", "buffer": "6.0.3", "buffer-layout": "^1.2.0", "dotenv": "10.0.0" } }, "sha512-LZmYCKcPQDtJgecvWOgT/cnoIQPWjdH+QVyzPcFvyDUiT0DiRjZaam4aqNUyvchLFhzgunv3d9xOoyE34ofdoQ=="],
-
     "@jup-ag/plugin/react-hook-form": ["react-hook-form@7.42.1", "", { "peerDependencies": { "react": "^16.8.0 || ^17 || ^18" } }, "sha512-2UIGqwMZksd5HS55crTT1ATLTr0rAI4jS7yVuqTaoRVDhY2Qc4IyjskCmpnmdYqUNOYFy04vW253tb2JRVh+IQ=="],
 
-    "@jup-ag/plugin/tailwind-merge": ["tailwind-merge@2.6.0", "", {}, "sha512-P+Vu1qXfzediirmHOC3xKGAYeZtPcV9g76X+xg2FD4tYgR71ewMA35Y3sCz3zhiN/dwefRpJX0yBcgwi1fXNQA=="],
+    "@jup-ag/plugin/tailwind-merge": ["tailwind-merge@2.6.1", "", {}, "sha512-Oo6tHdpZsGpkKG88HJ8RR1rg/RdnEkQEfMoEk2x1XRI3F1AxeU+ijRXpiVUF4UbLfcxxRGw6TbUINKYdWVsQTQ=="],
 
     "@jup-ag/react-hook/@jup-ag/api": ["@jup-ag/api@6.0.29", "", {}, "sha512-1gUY1txmL/gG14VDZMjeKVqhSzeg4L2cImdC7dGLYB5DP5D5lwpR+FarvhqehEi+63/RWOUKTTU4fablGpeIUQ=="],
-
-    "@jup-ag/react-hook/@solana/spl-token": ["@solana/spl-token@0.1.8", "", { "dependencies": { "@babel/runtime": "^7.10.5", "@solana/web3.js": "^1.21.0", "bn.js": "^5.1.0", "buffer": "6.0.3", "buffer-layout": "^1.2.0", "dotenv": "10.0.0" } }, "sha512-LZmYCKcPQDtJgecvWOgT/cnoIQPWjdH+QVyzPcFvyDUiT0DiRjZaam4aqNUyvchLFhzgunv3d9xOoyE34ofdoQ=="],
 
     "@jup-ag/react-hook/superstruct": ["superstruct@1.0.4", "", {}, "sha512-7JpaAoX2NGyoFlI9NBh66BQXGONc+uE+MRS5i2iOBKuS4e+ccgMDjATgZldkah+33DakBxDHiss9kvUcGAO8UQ=="],
 
@@ -2787,13 +2783,15 @@
 
     "@mercurial-finance/dynamic-amm-sdk/@project-serum/anchor": ["@project-serum/anchor@0.24.2", "", { "dependencies": { "@project-serum/borsh": "^0.2.5", "@solana/web3.js": "^1.36.0", "base64-js": "^1.5.1", "bn.js": "^5.1.2", "bs58": "^4.0.1", "buffer-layout": "^1.2.2", "camelcase": "^5.3.1", "cross-fetch": "^3.1.5", "crypto-hash": "^1.3.0", "eventemitter3": "^4.0.7", "js-sha256": "^0.9.0", "pako": "^2.0.3", "snake-case": "^3.0.4", "toml": "^3.0.0" } }, "sha512-0/718g8/DnEuwAidUwh5wLYphUYXhUbiClkuRNhvNoa+1Y8a4g2tJyxoae+emV+PG/Gikd/QUBNMkIcimiIRTA=="],
 
+    "@mercurial-finance/dynamic-amm-sdk/@solana/spl-token": ["@solana/spl-token@0.4.14", "", { "dependencies": { "@solana/buffer-layout": "^4.0.0", "@solana/buffer-layout-utils": "^0.2.0", "@solana/spl-token-group": "^0.0.7", "@solana/spl-token-metadata": "^0.1.6", "buffer": "^6.0.3" }, "peerDependencies": { "@solana/web3.js": "^1.95.5" } }, "sha512-u09zr96UBpX4U685MnvQsNzlvw9TiY005hk1vJmJr7gMJldoPG1eYU5/wNEyOA5lkMLiR/gOi9SFD4MefOYEsA=="],
+
     "@mercurial-finance/dynamic-amm-sdk/dotenv": ["dotenv@16.6.1", "", {}, "sha512-uBq4egWHTcTt33a72vpSG0z3HnPuIl6NqYcTrKEg2azoEyl2hpW0zqlxysq2pK9HlDIHyHyakeYaYnSAwd8bow=="],
 
     "@mercurial-finance/optimist/@metaplex-foundation/mpl-token-metadata": ["@metaplex-foundation/mpl-token-metadata@2.13.0", "", { "dependencies": { "@metaplex-foundation/beet": "^0.7.1", "@metaplex-foundation/beet-solana": "^0.4.0", "@metaplex-foundation/cusper": "^0.0.2", "@solana/spl-token": "^0.3.6", "@solana/web3.js": "^1.66.2", "bn.js": "^5.2.0", "debug": "^4.3.4" } }, "sha512-Fl/8I0L9rv4bKTV/RAl5YIbJe9SnQPInKvLz+xR1fEc4/VQkuCn3RPgypfUMEKWmCznzaw4sApDxy6CFS4qmJw=="],
 
-    "@mercurial-finance/optimist/@solana/spl-token": ["@solana/spl-token@0.3.11", "", { "dependencies": { "@solana/buffer-layout": "^4.0.0", "@solana/buffer-layout-utils": "^0.2.0", "@solana/spl-token-metadata": "^0.1.2", "buffer": "^6.0.3" }, "peerDependencies": { "@solana/web3.js": "^1.88.0" } }, "sha512-bvohO3rIMSVL24Pb+I4EYTJ6cL82eFpInEXD/I8K8upOGjpqHsKUoAempR/RnUlI1qSFNyFlWJfu6MNUgfbCQQ=="],
-
     "@mercurial-finance/vault-sdk/@coral-xyz/anchor": ["@coral-xyz/anchor@0.28.0", "", { "dependencies": { "@coral-xyz/borsh": "^0.28.0", "@solana/web3.js": "^1.68.0", "base64-js": "^1.5.1", "bn.js": "^5.1.2", "bs58": "^4.0.1", "buffer-layout": "^1.2.2", "camelcase": "^6.3.0", "cross-fetch": "^3.1.5", "crypto-hash": "^1.3.0", "eventemitter3": "^4.0.7", "js-sha256": "^0.9.0", "pako": "^2.0.3", "snake-case": "^3.0.4", "superstruct": "^0.15.4", "toml": "^3.0.0" } }, "sha512-kQ02Hv2ZqxtWP30WN1d4xxT4QqlOXYDxmEd3k/bbneqhV3X5QMO4LAtoUFs7otxyivOgoqam5Il5qx81FuI4vw=="],
+
+    "@mercurial-finance/vault-sdk/@solana/spl-token": ["@solana/spl-token@0.4.14", "", { "dependencies": { "@solana/buffer-layout": "^4.0.0", "@solana/buffer-layout-utils": "^0.2.0", "@solana/spl-token-group": "^0.0.7", "@solana/spl-token-metadata": "^0.1.6", "buffer": "^6.0.3" }, "peerDependencies": { "@solana/web3.js": "^1.95.5" } }, "sha512-u09zr96UBpX4U685MnvQsNzlvw9TiY005hk1vJmJr7gMJldoPG1eYU5/wNEyOA5lkMLiR/gOi9SFD4MefOYEsA=="],
 
     "@mercurial-finance/vault-sdk/decimal.js": ["decimal.js@10.3.1", "", {}, "sha512-V0pfhfr8suzyPGOx3nmq4aHqabehUZn6Ch9kyFpV79TGDTWFmHqUqXdabR7QHqxzrYolF4+tVmJhUG4OURg5dQ=="],
 
@@ -2820,6 +2818,8 @@
     "@radix-ui/react-use-effect-event/@radix-ui/react-use-layout-effect": ["@radix-ui/react-use-layout-effect@1.1.1", "", { "peerDependencies": { "@types/react": "*", "react": "^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc" } }, "sha512-RbJRS4UWQFkzHTTwVymMTUv8EqYhOp8dOOviLj2ugtTiXRaRQS7GLGxZTLL1jWhMeoSCf5zmcZkqTl9IiYfXcQ=="],
 
     "@reown/appkit/bs58": ["bs58@6.0.0", "", { "dependencies": { "base-x": "^5.0.0" } }, "sha512-PD0wEnEYg6ijszw/u8s+iI3H17cTymlrwkKhDhPZq+Sokl3AU4htyBFTjAeNAlCCmg0f53g6ih3jATyCKftTfw=="],
+
+    "@reown/appkit-adapter-solana/@solana/spl-token": ["@solana/spl-token@0.4.14", "", { "dependencies": { "@solana/buffer-layout": "^4.0.0", "@solana/buffer-layout-utils": "^0.2.0", "@solana/spl-token-group": "^0.0.7", "@solana/spl-token-metadata": "^0.1.6", "buffer": "^6.0.3" }, "peerDependencies": { "@solana/web3.js": "^1.95.5" } }, "sha512-u09zr96UBpX4U685MnvQsNzlvw9TiY005hk1vJmJr7gMJldoPG1eYU5/wNEyOA5lkMLiR/gOi9SFD4MefOYEsA=="],
 
     "@reown/appkit-adapter-solana/@solana/wallet-adapter-base": ["@solana/wallet-adapter-base@0.9.27", "", { "dependencies": { "@solana/wallet-standard-features": "^1.3.0", "@wallet-standard/base": "^1.1.0", "@wallet-standard/features": "^1.1.0", "eventemitter3": "^5.0.1" }, "peerDependencies": { "@solana/web3.js": "^1.98.0" } }, "sha512-kXjeNfNFVs/NE9GPmysBRKQ/nf+foSaq3kfVSeMcO/iVgigyRmB551OjU3WyAolLG/1jeEfKLqF9fKwMCRkUqg=="],
 
@@ -3215,6 +3215,8 @@
 
     "jupiverse-kit/@radix-ui/react-dialog": ["@radix-ui/react-dialog@1.1.15", "", { "dependencies": { "@radix-ui/primitive": "1.1.3", "@radix-ui/react-compose-refs": "1.1.2", "@radix-ui/react-context": "1.1.2", "@radix-ui/react-dismissable-layer": "1.1.11", "@radix-ui/react-focus-guards": "1.1.3", "@radix-ui/react-focus-scope": "1.1.7", "@radix-ui/react-id": "1.1.1", "@radix-ui/react-portal": "1.1.9", "@radix-ui/react-presence": "1.1.5", "@radix-ui/react-primitive": "2.1.3", "@radix-ui/react-slot": "1.2.3", "@radix-ui/react-use-controllable-state": "1.2.2", "aria-hidden": "^1.2.4", "react-remove-scroll": "^2.6.3" }, "peerDependencies": { "@types/react": "*", "@types/react-dom": "*", "react": "^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc", "react-dom": "^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc" } }, "sha512-TCglVRtzlffRNxRMEyR36DGBLJpeusFcgMVD9PZEzAKnUs1lKCgX5u9BmC2Yg+LL9MgZDugFFs1Vl+Jp4t/PGw=="],
 
+    "jupiverse-kit/@solana/spl-token": ["@solana/spl-token@0.4.14", "", { "dependencies": { "@solana/buffer-layout": "^4.0.0", "@solana/buffer-layout-utils": "^0.2.0", "@solana/spl-token-group": "^0.0.7", "@solana/spl-token-metadata": "^0.1.6", "buffer": "^6.0.3" }, "peerDependencies": { "@solana/web3.js": "^1.95.5" } }, "sha512-u09zr96UBpX4U685MnvQsNzlvw9TiY005hk1vJmJr7gMJldoPG1eYU5/wNEyOA5lkMLiR/gOi9SFD4MefOYEsA=="],
+
     "jupiverse-kit/lucide-react": ["lucide-react@0.469.0", "", { "peerDependencies": { "react": "^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0" } }, "sha512-28vvUnnKQ/dBwiCQtwJw7QauYnE7yd2Cyp4tTTJpvglX4EMpbflcdBgrgToX2j71B3YvugK/NH3BGUk+E/p/Fw=="],
 
     "lru-cache/yallist": ["yallist@3.1.1", "", {}, "sha512-a4UGQaWPH59mOXUYnAG2ewncQS4i4F43Tv3JoAM+s2VDAmS9NsK8GpDMLrCHPksFT7h3K6TOoUNn2pb7RoXx4g=="],
@@ -3374,6 +3376,8 @@
     "@mercurial-finance/dynamic-amm-sdk/@mercurial-finance/vault-sdk/decimal.js": ["decimal.js@10.3.1", "", {}, "sha512-V0pfhfr8suzyPGOx3nmq4aHqabehUZn6Ch9kyFpV79TGDTWFmHqUqXdabR7QHqxzrYolF4+tVmJhUG4OURg5dQ=="],
 
     "@mercurial-finance/dynamic-amm-sdk/@project-serum/anchor/camelcase": ["camelcase@5.3.1", "", {}, "sha512-L28STB170nwWS63UjtlEOE3dldQApaJXZkOI1uMFfzf3rRuPegHaHesyee+YxQ+W6SvRDQV6UrdOdRiR153wJg=="],
+
+    "@mercurial-finance/optimist/@metaplex-foundation/mpl-token-metadata/@solana/spl-token": ["@solana/spl-token@0.3.11", "", { "dependencies": { "@solana/buffer-layout": "^4.0.0", "@solana/buffer-layout-utils": "^0.2.0", "@solana/spl-token-metadata": "^0.1.2", "buffer": "^6.0.3" }, "peerDependencies": { "@solana/web3.js": "^1.88.0" } }, "sha512-bvohO3rIMSVL24Pb+I4EYTJ6cL82eFpInEXD/I8K8upOGjpqHsKUoAempR/RnUlI1qSFNyFlWJfu6MNUgfbCQQ=="],
 
     "@mercurial-finance/vault-sdk/@coral-xyz/anchor/@coral-xyz/borsh": ["@coral-xyz/borsh@0.28.0", "", { "dependencies": { "bn.js": "^5.1.2", "buffer-layout": "^1.2.0" }, "peerDependencies": { "@solana/web3.js": "^1.68.0" } }, "sha512-/u1VTzw7XooK7rqeD7JLUSwOyRSesPUk0U37BV9zK0axJc1q0nRbKFGFLYCQ16OtdOJTTwGfGp11Lx9B45bRCQ=="],
 
