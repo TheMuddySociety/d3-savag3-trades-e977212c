@@ -103,8 +103,8 @@ export function TokenLaunchWizard() {
         tokenImageContentType: imageFile.type as any,
       };
 
-      const result = await JupiterStudioService.launchToken(
-        walletAdapter,
+      // 1 & 2. Prepare assets (TX + Image + Metadata)
+      const prepareResult = await JupiterStudioService.prepareLaunchAssets(
         params,
         imageFile,
         {
@@ -117,8 +117,37 @@ export function TokenLaunchWizard() {
         }
       );
 
-      if (result) {
-        setLaunchResult({ mint: result.mint });
+      if (!prepareResult) return;
+
+      // 3. Sign the transaction
+      const signedTx = await JupiterStudioService.signTransaction(walletAdapter, prepareResult.transaction);
+      if (!signedTx) return;
+
+      // 4. Submit or Queue
+      if (backgroundLaunch) {
+        console.log('[Wizard] Queueing background launch...');
+        await backgroundTaskService.queueLaunch({
+          wallet_address: publicKey.toBase58(),
+          token_name: tokenName,
+          token_symbol: tokenSymbol,
+          description: description,
+          signed_tx: signedTx,
+          image_url: prepareResult.imageUrl,
+          curve_preset: preset
+        });
+        
+        toast.success("🚀 Background Launch Queued! D3MON Dan will handle the rest.");
+        setLaunchResult({ mint: prepareResult.mint }); // Show success screen with mint
+      } else {
+        console.log('[Wizard] Submitting immediate launch...');
+        const result = await JupiterStudioService.submitSignedToken(
+          publicKey.toBase58(),
+          signedTx,
+          ''
+        );
+        if (result) {
+          setLaunchResult({ mint: prepareResult.mint });
+        }
       }
     } catch (e) {
       console.error("Launch error:", e);

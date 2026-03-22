@@ -16,15 +16,31 @@ import { useWallet } from '@solana/wallet-adapter-react';
 
 type DataSource = 'trending' | 'new_launches' | 'graduated';
 
-const formatValue = (value: number, type: 'currency' | 'percent' = 'currency'): string => {
+const formatValue = (value: number, type: 'currency' | 'percent' | 'number' = 'currency'): string => {
   if (type === 'percent') {
     const prefix = value >= 0 ? '+' : '';
     return `${prefix}${value.toFixed(2)}%`;
+  }
+  if (type === 'number') {
+    if (value >= 1e6) return `${(value / 1e6).toFixed(2)}M`;
+    if (value >= 1e3) return `${(value / 1e3).toFixed(2)}K`;
+    return value.toLocaleString();
   }
   if (value >= 1e9) return `$${(value / 1e9).toFixed(2)}B`;
   if (value >= 1e6) return `$${(value / 1e6).toFixed(2)}M`;
   if (value >= 1e3) return `$${(value / 1e3).toFixed(2)}K`;
   return `$${value.toFixed(2)}`;
+};
+
+const getAge = (timestamp: number): string => {
+  const now = Date.now();
+  const diff = now - timestamp;
+  const minutes = Math.floor(diff / 60000);
+  const hours = Math.floor(diff / 3600000);
+  const days = Math.floor(diff / 86400000);
+  if (days > 0) return `${days}d`;
+  if (hours > 0) return `${hours}h`;
+  return `${minutes}m`;
 };
 
 function TokenGrid({ tokens, onTokenClick }: { tokens: MemeToken[]; onTokenClick: (t: MemeToken) => void }) {
@@ -50,21 +66,37 @@ function TokenGrid({ tokens, onTokenClick }: { tokens: MemeToken[]; onTokenClick
               <div className="text-xs text-muted-foreground">{token.symbol}</div>
             </div>
           </div>
-          <div className="space-y-1.5 text-xs">
-            <div className="flex justify-between">
+          <div className="space-y-1.5 text-[10px]">
+            <div className="flex justify-between items-center">
               <span className="text-muted-foreground">MCap</span>
-              <span className="font-mono text-foreground">{formatValue(token.marketCap)}</span>
+              <span className="font-mono text-foreground font-medium">{formatValue(token.marketCap)}</span>
             </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Vol</span>
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground">Vol (24h)</span>
               <span className="font-mono text-foreground">{formatValue(token.volume24h)}</span>
             </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">24h</span>
-              <span className={cn("font-mono font-medium", token.change24h >= 0 ? "positive-change" : "negative-change")}>
-                {formatValue(token.change24h, 'percent')}
-              </span>
+            <div className="flex justify-between items-center border-t border-border/40 pt-1 mt-1">
+              <span className="text-muted-foreground">Age</span>
+              <span className="text-foreground">{getAge(token.timestamp)}</span>
             </div>
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground">Traders</span>
+              <span className="text-foreground font-mono">{formatValue(token.holders, 'number')}</span>
+            </div>
+            {token.bondingCurveProgress !== undefined && (
+              <div className="mt-1.5 space-y-1">
+                <div className="flex justify-between items-center">
+                  <span className="text-[9px] text-muted-foreground lowercase tracking-tight">Bonding curve</span>
+                  <span className="text-[9px] font-mono font-bold text-accent">{token.bondingCurveProgress.toFixed(0)}%</span>
+                </div>
+                <div className="w-full h-1 bg-muted rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-accent transition-all duration-500" 
+                    style={{ width: `${Math.min(token.bondingCurveProgress, 100)}%` }}
+                  />
+                </div>
+              </div>
+            )}
           </div>
         </div>
       ))}

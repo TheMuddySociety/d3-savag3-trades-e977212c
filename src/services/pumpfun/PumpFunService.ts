@@ -112,7 +112,9 @@ class PumpFunService {
       ].filter(Boolean),
       timestamp: token.pairCreatedAt || Date.now(),
       status: token.graduated ? 'graduated' : 'active',
-      bondingCurveProgress: token.graduated ? 100 : undefined,
+      bondingCurveProgress: token.graduated 
+        ? 100 
+        : (token.address.endsWith('pump') ? Math.min((token.marketCap / 69000) * 100, 99) : undefined),
     };
   }
 

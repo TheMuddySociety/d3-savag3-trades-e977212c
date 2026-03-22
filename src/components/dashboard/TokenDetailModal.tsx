@@ -15,12 +15,15 @@ import {
 import {
   ExternalLink, TrendingUp, TrendingDown, Users, Droplets,
   BarChart3, Clock, Copy, ArrowUpRight, ArrowDownRight, Loader2,
-  ArrowRightLeft, ChevronDown, ChevronUp, Bell,
+  ArrowRightLeft, ChevronDown, ChevronUp, Bell, Brain, Rocket,
 } from 'lucide-react';
 import { MemeToken } from '@/types/memeToken';
 import { TokenSafetyCard } from './TokenSafetyCard';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
+import { useWallet } from '@solana/wallet-adapter-react';
+import { backgroundTaskService } from '@/services/d3mon/BackgroundTaskService';
+import { useToast } from '@/hooks/use-toast';
 
 interface TokenDetailModalProps {
   token: MemeToken | null;
@@ -191,6 +194,9 @@ export function TokenDetailModal({ token, open, onOpenChange, onSetAlert }: Toke
 
   const [showSwap, setShowSwap] = useState(false);
   const [selectedAmount, setSelectedAmount] = useState<number | null>(null);
+  const [isQueueing, setIsQueueing] = useState(false);
+  const { publicKey } = useWallet();
+  const { toast } = useToast();
   const swapContainerId = `modal-swap-${token?.id || 'none'}`;
 
   const QUICK_BUY_AMOUNTS = [0.1, 0.5, 1, 5];
@@ -226,6 +232,42 @@ export function TokenDetailModal({ token, open, onOpenChange, onSetAlert }: Toke
   const handleQuickBuy = (amount: number) => {
     setSelectedAmount(amount);
     if (!showSwap) setShowSwap(true);
+  };
+
+  const handleBackgroundOrder = async () => {
+    if (!publicKey || !token?.tokenAddress || !selectedAmount) {
+      toast({
+        title: "Missing Information",
+        description: "Please connect wallet and select an amount to continue.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsQueueing(true);
+    try {
+      await backgroundTaskService.queueTrade({
+        wallet_address: publicKey.toBase58(),
+        input_mint: "So11111111111111111111111111111111111111112",
+        output_mint: token.tokenAddress,
+        amount: selectedAmount,
+        slippage_bps: 300 // Default 3%
+      });
+      
+      toast({
+        title: "🚀 Background Task Queued",
+        description: `D3MON Dan is now watching for an entry to buy ${selectedAmount} SOL of ${token.symbol}. Check the 'Tasks' tab for status.`,
+      });
+    } catch (error) {
+      console.error('Failed to queue background trade:', error);
+      toast({
+        title: "Queue Failed",
+        description: error instanceof Error ? error.message : "Failed to queue background task.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsQueueing(false);
+    }
   };
 
   if (!token) return null;
@@ -491,14 +533,39 @@ export function TokenDetailModal({ token, open, onOpenChange, onSetAlert }: Toke
                       </p>
                     )}
                   </div>
-                  <div
-                    id={swapContainerId}
-                    className="min-h-[380px] w-full p-3"
-                  />
-                </div>
-              )}
-            </div>
-          )}
+                    <div
+                      id={swapContainerId}
+                      className="min-h-[380px] w-full p-3"
+                    />
+                    
+                    {/* Background Order Trigger */}
+                    <div className="p-3 pt-0 border-t border-border/20 bg-accent/5">
+                      <div className="flex flex-col gap-2 p-3 rounded-lg border border-accent/20 bg-background/50">
+                        <div className="flex items-center justify-between text-[11px]">
+                          <span className="text-muted-foreground font-medium flex items-center gap-1.5">
+                            <Brain className="h-3 w-3 text-accent" />
+                            D3MON Autonomous Entry
+                          </span>
+                          <Badge variant="outline" className="text-[9px] text-accent border-accent/30 h-4">BETA</Badge>
+                        </div>
+                        <p className="text-[10px] text-muted-foreground">
+                          Queue this trade to execute via D3MON background engine. No need to keep the tab open.
+                        </p>
+                        <Button 
+                          size="sm"
+                          className="w-full h-8 text-[11px] bg-accent hover:bg-accent/90 gap-2 mt-1"
+                          onClick={handleBackgroundOrder}
+                          disabled={!selectedAmount || isQueueing}
+                        >
+                          {isQueueing ? <Loader2 className="h-3 w-3 animate-spin" /> : <Rocket className="h-3 w-3" />}
+                          {selectedAmount ? `Queue ${selectedAmount} SOL Background Buy` : 'Select amount above to queue'}
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
           {/* Action Buttons */}
           <div className="flex gap-2">

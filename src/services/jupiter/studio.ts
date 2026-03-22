@@ -189,13 +189,12 @@ export class JupiterStudioService {
   }
 
   /**
-   * Step 3: Sign the transaction and submit it
+   * Step 3: Sign the transaction and return the signed base64 string
    */
-  static async submitToken(
+  static async signTransaction(
     wallet: any,
-    txBase64: string,
-    content?: string
-  ): Promise<any> {
+    txBase64: string
+  ): Promise<string | null> {
     try {
       if (!wallet.publicKey || !wallet.signTransaction) {
         toast.error('Wallet not connected');
@@ -207,13 +206,30 @@ export class JupiterStudioService {
       const transaction = VersionedTransaction.deserialize(txBuf);
       const signedTx = await wallet.signTransaction(transaction);
       const signedTxBase64 = Buffer.from(signedTx.serialize()).toString('base64');
+      
+      return signedTxBase64;
+    } catch (error) {
+      console.error('[Studio] signTransaction error:', error);
+      toast.error(`Signing failed: ${error instanceof Error ? error.message : 'Unknown'}`);
+      return null;
+    }
+  }
 
+  /**
+   * Step 4: Submit a pre-signed transaction
+   */
+  static async submitSignedToken(
+    ownerAddress: string,
+    signedTxBase64: string,
+    content?: string
+  ): Promise<any> {
+    try {
       console.log('[Studio] Submitting signed transaction...');
       const { data, error } = await supabase.functions.invoke('jupiter-studio', {
         body: {
           action: 'submit_token',
           signedTransaction: signedTxBase64,
-          owner: wallet.publicKey.toBase58(),
+          owner: ownerAddress,
           content: content || '',
         },
       });
@@ -225,8 +241,55 @@ export class JupiterStudioService {
       toast.success('Token launched successfully! 🚀');
       return data.data;
     } catch (error) {
-      console.error('[Studio] submitToken error:', error);
+      console.error('[Studio] submitSignedToken error:', error);
       toast.error(`Token launch failed: ${error instanceof Error ? error.message : 'Unknown'}`);
+      return null;
+    }
+  }
+
+  /**
+   * Legacy Step 3: Sign the transaction and submit it
+   */
+  static async submitToken(
+    wallet: any,
+    txBase64: string,
+    content?: string
+  ): Promise<any> {
+    const signedTx = await this.signTransaction(wallet, txBase64);
+    if (!signedTx) return null;
+    return this.submitSignedToken(wallet.publicKey.toBase58(), signedTx, content);
+  }
+
+  /**
+   * Internal helper to prepare assets (Step 1 + 2)
+   */
+  static async prepareLaunchAssets(
+    params: TokenCreateParams,
+    imageFile: File,
+    metadata: Omit<TokenMetadata, 'image'>
+  ): Promise<CreateTxResponse | null> {
+    try {
+      // 1. Create transaction + get presigned URLs
+      const createResult = await this.createTokenTransaction(params);
+      if (!createResult) return null;
+
+      // 2. Upload image and metadata in parallel
+      const [imgOk, metaOk] = await Promise.all([
+        this.uploadTokenImage(createResult.imagePresignedUrl, imageFile),
+        this.uploadTokenMetadata(createResult.metadataPresignedUrl, {
+          ...metadata,
+          image: createResult.imageUrl,
+        }),
+      ]);
+
+      if (!imgOk || !metaOk) {
+        toast.error('Failed to upload token assets');
+        return null;
+      }
+
+      return createResult;
+    } catch (error) {
+      console.error('[Studio] prepareLaunchAssets error:', error);
       return null;
     }
   }

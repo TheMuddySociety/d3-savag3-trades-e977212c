@@ -30,3 +30,4 @@ export { ConnectionStatus } from './ConnectionStatus';
 export { TokenDetailModal } from './TokenDetailModal';
 export { TokenSafetyCard } from './TokenSafetyCard';
 export { SettingsDialog } from './SettingsDialog';
+export { BackgroundTaskMonitor } from './background/BackgroundTaskMonitor';

@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Bot, Clock, Crosshair, BarChart3, Brain, Wallet, OctagonX, Layers, Eye, List, TrendingUp, Rocket, Coins, Flame } from "lucide-react";
+import { Bot, Clock, Crosshair, BarChart3, Brain, Wallet, OctagonX, Layers, Eye, List, TrendingUp, Rocket, Coins, Flame, History } from "lucide-react";
 import { D3monDanHero } from "./bot-tools/D3monDanHero";
 import { DCABot } from "./bot-tools/DCABot";
 import { BuySniper } from "./bot-tools/BuySniper";
@@ -16,6 +16,7 @@ import { GridBot } from "./bot-tools/GridBot";
 import { TokenLaunchWizard } from "./bot-tools/TokenLaunchWizard";
 import { FeeDashboard } from "./bot-tools/FeeDashboard";
 import { ProfitSimulator } from "./analytics/ProfitSimulator";
+import { BackgroundTaskMonitor } from './background/BackgroundTaskMonitor';
 import { useWallet } from "@solana/wallet-adapter-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -25,6 +26,15 @@ export const BotAccess = () => {
   const { toast } = useToast();
   const [killSignal, setKillSignal] = useState(0);
   const [activeTab, setActiveTab] = useState("d3mon");
+  const [isD3monHired, setIsD3monHired] = useState(false);
+
+  const handleHireD3mon = useCallback(() => {
+    setIsD3monHired(true);
+    toast({
+      title: "🔥 D3MON Dan Hired!",
+      description: "Your AI agent is now active and watching the markets 24/7.",
+    });
+  }, [toast]);
 
   // Listen for navigation events from AI Tools cards
   useEffect(() => {
@@ -121,6 +131,10 @@ export const BotAccess = () => {
               <Rocket className="h-3 w-3" />
               <span className="hidden sm:inline">Launch</span>
             </TabsTrigger>
+            <TabsTrigger value="tasks" className="text-[10px] gap-0.5 data-[state=active]:bg-accent/20 px-2 shrink-0 snap-start">
+              <History className="h-3 w-3" />
+              <span className="hidden sm:inline">Tasks</span>
+            </TabsTrigger>
             <TabsTrigger value="fees" className="text-[10px] gap-0.5 data-[state=active]:bg-accent/20 px-2 shrink-0 snap-start">
               <Coins className="h-3 w-3" />
               <span className="hidden sm:inline">Fees</span>
@@ -132,7 +146,7 @@ export const BotAccess = () => {
           </TabsList>
 
           <TabsContent value="d3mon" className="mt-0">
-            <D3monDanHero />
+            <D3monDanHero onHire={handleHireD3mon} isHired={isD3monHired} />
           </TabsContent>
           <TabsContent value="sniper" className="mt-0">
             <BuySniper killSignal={killSignal} />
