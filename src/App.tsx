@@ -7,9 +7,8 @@ import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "@/hooks/use-theme";
 import { TradingModeProvider } from "@/hooks/useTradingMode";
-import { JupiverseKitProvider } from "jupiverse-kit";
-import "jupiverse-kit/dist/index.css";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { NetworkProvider } from "@/providers/NetworkProvider";
 import "@/providers/ReownAppKit"; // Initialize Reown AppKit (side-effect)
 
 const Landing = lazy(() => import("./pages/Landing"));
@@ -33,20 +32,7 @@ const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider defaultTheme="dark">
-          <JupiverseKitProvider
-            endpoint={RPC_PROXY}
-            autoConnect={true}
-            lang="en"
-            env="mainnet-beta"
-            theme="dark"
-            walletConnectProjectId="336bea3a7584798217797f3b46943ac5"
-            metadata={{
-              name: "SAVAG3BOT",
-              description: "Solana Memecoin Trading Terminal",
-              url: "https://memebot-profit-finder.lovable.app",
-              iconUrls: ["https://memebot-profit-finder.lovable.app/savag3bot-logo.png"],
-            }}
-          >
+          <NetworkProvider>
             <TradingModeProvider>
             <TooltipProvider>
               <Toaster />
@@ -66,7 +52,7 @@ const App = () => {
               </ErrorBoundary>
             </TooltipProvider>
             </TradingModeProvider>
-          </JupiverseKitProvider>
+          </NetworkProvider>
       </ThemeProvider>
     </QueryClientProvider>
   );

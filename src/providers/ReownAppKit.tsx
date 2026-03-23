@@ -1,6 +1,6 @@
 import { createAppKit } from '@reown/appkit/react';
 import { SolanaAdapter } from '@reown/appkit-adapter-solana/react';
-import { solana, solanaDevnet } from '@reown/appkit/networks';
+import { solana, solanaDevnet, solanaTestnet } from '@reown/appkit/networks';
 
 const projectId = import.meta.env.VITE_REOWN_PROJECT_ID || '336bea3a7584798217797f3b46943ac5';
 
@@ -9,7 +9,7 @@ const solanaAdapter = new SolanaAdapter();
 
 createAppKit({
   projectId,
-  networks: [solana, solanaDevnet] as any,
+  networks: [solana, solanaDevnet, solanaTestnet] as any,
   adapters: [solanaAdapter],
   metadata: {
     name: 'D3S Agent',
