@@ -141,7 +141,7 @@ serve(async (req: Request) => {
     } else if (budget.currency === 'USDC' && platformPrivateKey) {
       // USDC SPL token transfer
       try {
-        const { Connection, PublicKey, Keypair, Transaction } = await import("https://esm.sh/@solana/web3.js@1.95.3");
+        const { Connection, PublicKey, Keypair, Transaction } = await import("https://esm.sh/@solana/web3.js@1.98.4");
         const { getAssociatedTokenAddress, createTransferInstruction, getAccount, createAssociatedTokenAccountInstruction } = await import("https://esm.sh/@solana/spl-token@0.4.6");
         const bs58 = (await import("https://esm.sh/bs58@5.0.0")).default;
 
