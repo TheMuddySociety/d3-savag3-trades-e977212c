@@ -47,7 +47,7 @@ serve(async (req) => {
     });
   } catch (error) {
     console.error('[PumpFun API] Error:', error);
-    return new Response(JSON.stringify({ error: error.message, tokens: [] }), {
+    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error', tokens: [] }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
