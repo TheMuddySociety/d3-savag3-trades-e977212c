@@ -13,6 +13,8 @@ import { NFTCollectionTracker } from "@/components/admin/NFTCollectionTracker";
 import { ReferralEarningsTracker } from "@/components/admin/ReferralEarningsTracker";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { useAdminCheck } from "@/hooks/useAdminCheck";
+import { RPCLogViewer } from "@/components/admin/RPCLogViewer";
+import { Activity } from "lucide-react";
 
 interface PaymentRecord {
   id: string;
@@ -93,11 +95,15 @@ const Admin = () => {
           </section>
 
           <Tabs defaultValue="tokens" className="w-full max-w-5xl mx-auto">
-            <TabsList className="grid w-full grid-cols-4 mb-8">
+            <TabsList className="grid w-full grid-cols-5 mb-8">
               <TabsTrigger value="tokens">Dev Token Tracker</TabsTrigger>
               <TabsTrigger value="collections">NFT Scam Tracker</TabsTrigger>
               <TabsTrigger value="referral">Referral Earnings</TabsTrigger>
               <TabsTrigger value="payments">Access Payments</TabsTrigger>
+              <TabsTrigger value="rpc" className="flex items-center gap-1.5">
+                <Activity className="h-3.5 w-3.5" />
+                RPC Monitoring
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="tokens">
@@ -201,6 +207,20 @@ const Admin = () => {
                       </tbody>
                     </table>
                   </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="rpc">
+              <Card className="border-accent/20 bg-card/40 backdrop-blur-md">
+                <CardHeader>
+                  <CardTitle className="text-xl flex items-center gap-2 text-accent">
+                    <Activity className="h-5 w-5" />
+                    RPC Diagnostic Hub
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <RPCLogViewer />
                 </CardContent>
               </Card>
             </TabsContent>
