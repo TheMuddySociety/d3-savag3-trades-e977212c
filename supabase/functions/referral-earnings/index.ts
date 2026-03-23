@@ -7,7 +7,7 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-const REFERRAL_WALLET = "ETz1CboRkEJZDZcstd6bjHtjhRsydHQNHPEYMuhcYK2Z";
+const REFERRAL_WALLET = "89MakU1zuaQKBrtFXXMgGxf8nKZ9Pbq52KtUwgNhCiBS";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -129,7 +129,7 @@ serve(async (req) => {
           totalTrades: count || trades.length,
           totalInputUsd,
           totalOutputUsd,
-          estimatedFees: totalOutputUsd * 0.005,
+          estimatedFees: totalOutputUsd * 0.01,
         };
       }
     } catch {

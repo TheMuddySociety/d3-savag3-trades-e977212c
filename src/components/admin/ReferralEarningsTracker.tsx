@@ -13,6 +13,9 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { PLATFORM_CONFIG } from "@/config/platform";
+import { useConnection, useWallet } from "@solana/wallet-adapter-react";
+import { PublicKey, Transaction } from "@solana/web3.js";
 
 interface TokenBalance {
   mint: string;
@@ -40,6 +43,24 @@ export function ReferralEarningsTracker() {
   const [referralData, setReferralData] = useState<ReferralData | null>(null);
   const [tradeStats, setTradeStats] = useState<TradeStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [initMint, setInitMint] = useState("");
+  const [isInitializing, setIsInitializing] = useState(false);
+  const { connection } = useConnection();
+  const { publicKey, sendTransaction } = useWallet();
+
+  const REFERRAL_PROGRAM_ID = new PublicKey("REFER4ZgYk9G3LyucubvRthSDRY7pY6S77S6N4UckH");
+
+  const getReferralTokenAccount = (mint: PublicKey, referralAccount: PublicKey) => {
+    const [address] = PublicKey.findProgramAddressSync(
+      [
+        Buffer.from("referral_token_account"),
+        referralAccount.toBuffer(),
+        mint.toBuffer(),
+      ],
+      REFERRAL_PROGRAM_ID
+    );
+    return address;
+  };
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -114,7 +135,7 @@ export function ReferralEarningsTracker() {
           />
           <SummaryCard
             icon={<Coins className="h-8 w-8 text-accent" />}
-            label="Est. Fees Earned (0.5%)"
+            label="Est. Fees Earned (1.0%)"
             loading={loading}
             value={
               tradeStats ? `$${fmt(tradeStats.estimatedFees)}` : "$0.00"
@@ -128,7 +149,7 @@ export function ReferralEarningsTracker() {
           />
           <SummaryCard
             icon={<Wallet className="h-8 w-8 text-primary" />}
-            label="Wallet SOL Balance"
+            label="Referral SOL"
             loading={loading}
             value={
               referralData
@@ -235,6 +256,47 @@ export function ReferralEarningsTracker() {
               </table>
             </div>
           )}
+        </div>
+
+        {/* Action: Initialize New Token */}
+        <div className="border-t border-border pt-6 mt-6">
+          <h3 className="text-sm font-semibold text-foreground mb-3">
+            Initialize Fee Account for New Token
+          </h3>
+          <div className="flex flex-col md:flex-row gap-3">
+            <input
+              type="text"
+              placeholder="Enter Token Mint Address"
+              className="flex-1 bg-muted/50 border border-border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+              value={initMint}
+              onChange={(e) => setInitMint(e.target.value)}
+            />
+            <Button 
+              onClick={async () => {
+                if (!initMint) {
+                  toast.error("Please enter a mint address");
+                  return;
+                }
+                setIsInitializing(true);
+                try {
+                  new PublicKey(initMint);
+                  // Guide to Jupiter Dashboard for initialization
+                  window.open(`https://referral.jup.ag/dashboard`, "_blank");
+                  toast.success("Redirecting to Jupiter Dashboard to finalize account initialization.");
+                } catch (err) {
+                  toast.error("Invalid Mint Address");
+                } finally {
+                  setIsInitializing(false);
+                }
+              }}
+              disabled={isInitializing}
+            >
+              {isInitializing ? "Processing..." : "Open Fee Account"}
+            </Button>
+          </div>
+          <p className="text-[10px] text-muted-foreground mt-2">
+            Opening an account allows you to collect fees for this specific token. It costs a small amount of SOL for rent.
+          </p>
         </div>
 
         <p className="text-xs text-muted-foreground">
