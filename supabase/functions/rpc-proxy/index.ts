@@ -18,8 +18,8 @@ const ALLOWED_METHODS = new Set([
 const MAX_BODY_SIZE = 10240; // 10KB
 
 // --- Sliding window rate limiter (in-memory, per-isolate) ---
-const RATE_LIMIT_WINDOW_MS = 60_000; // 60 seconds
-const RATE_LIMIT_MAX_REQUESTS = 60;   // 60 requests per window
+const RATE_LIMIT_WINDOW_MS = 60_000;
+const RATE_LIMIT_MAX_REQUESTS = 60;
 
 interface SlidingWindow {
   timestamps: number[];
@@ -27,7 +27,6 @@ interface SlidingWindow {
 
 const rateLimitMap = new Map<string, SlidingWindow>();
 
-// Periodic cleanup to prevent unbounded memory growth
 const CLEANUP_INTERVAL_MS = 120_000;
 let lastCleanup = Date.now();
 
@@ -51,7 +50,6 @@ function checkRateLimit(userId: string): { allowed: boolean; remaining: number; 
     rateLimitMap.set(userId, window);
   }
 
-  // Trim timestamps outside the sliding window
   const cutoff = now - RATE_LIMIT_WINDOW_MS;
   while (window.timestamps.length > 0 && window.timestamps[0] <= cutoff) {
     window.timestamps.shift();
@@ -67,16 +65,66 @@ function checkRateLimit(userId: string): { allowed: boolean; remaining: number; 
   return { allowed: true, remaining: RATE_LIMIT_MAX_REQUESTS - window.timestamps.length };
 }
 
+// --- Audit logging (non-blocking, fire-and-forget) ---
+function logRequest(
+  supabaseUrl: string,
+  serviceRoleKey: string,
+  entry: {
+    user_id: string | null;
+    rpc_method: string;
+    status_code: number;
+    latency_ms: number;
+    error_message?: string;
+    ip_hint?: string;
+  }
+) {
+  try {
+    const adminClient = createClient(supabaseUrl, serviceRoleKey);
+    adminClient
+      .from("rpc_request_logs")
+      .insert({
+        user_id: entry.user_id,
+        rpc_method: entry.rpc_method,
+        status_code: entry.status_code,
+        latency_ms: entry.latency_ms,
+        error_message: entry.error_message || null,
+        ip_hint: entry.ip_hint || null,
+      })
+      .then(({ error }) => {
+        if (error) console.warn("Audit log insert failed:", error.message);
+      });
+  } catch (e) {
+    console.warn("Audit log error:", e);
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
+
+  const startTime = performance.now();
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
+  // Extract a hashed IP hint from headers (privacy-preserving)
+  const forwardedFor = req.headers.get("x-forwarded-for");
+  const ipHint = forwardedFor
+    ? forwardedFor.split(",")[0].trim().replace(/\d+$/, "x") // mask last octet
+    : undefined;
+
+  let method = "unknown";
+  let userId: string | null = null;
 
   try {
     const body = await req.text();
 
     // Size guard
     if (body.length > MAX_BODY_SIZE) {
+      const latency = Math.round(performance.now() - startTime);
+      logRequest(supabaseUrl, serviceRoleKey, {
+        user_id: null, rpc_method: "oversized_request", status_code: 413, latency_ms: latency, ip_hint: ipHint,
+      });
       return new Response(JSON.stringify({ error: "Request too large" }), {
         status: 413, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -85,28 +133,35 @@ serve(async (req) => {
     let parsedBody: any;
     try { parsedBody = JSON.parse(body); } catch { parsedBody = {}; }
 
+    method = parsedBody?.method || "unknown";
+
     // Method whitelist
-    const method = parsedBody?.method;
-    if (method && !ALLOWED_METHODS.has(method)) {
+    if (method !== "unknown" && !ALLOWED_METHODS.has(method)) {
+      const latency = Math.round(performance.now() - startTime);
+      logRequest(supabaseUrl, serviceRoleKey, {
+        user_id: null, rpc_method: method, status_code: 403, latency_ms: latency,
+        error_message: "Method not allowed", ip_hint: ipHint,
+      });
       return new Response(JSON.stringify({ error: "Method not allowed" }), {
         status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Allow unauthenticated health checks (no rate limit)
     const isHealthCheck = method === "getHealth";
-
-    let userId = "anonymous";
 
     if (!isHealthCheck) {
       const authHeader = req.headers.get("Authorization");
       if (!authHeader) {
+        const latency = Math.round(performance.now() - startTime);
+        logRequest(supabaseUrl, serviceRoleKey, {
+          user_id: null, rpc_method: method, status_code: 401, latency_ms: latency,
+          error_message: "Missing Authorization header", ip_hint: ipHint,
+        });
         return new Response(JSON.stringify({ error: "Missing Authorization header" }), {
           status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
 
-      const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
       const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
       const supabase = createClient(supabaseUrl, anonKey, {
         global: { headers: { Authorization: authHeader } },
@@ -116,6 +171,11 @@ serve(async (req) => {
       const { data: { user }, error: authError } = await supabase.auth.getUser(token);
 
       if (authError || !user) {
+        const latency = Math.round(performance.now() - startTime);
+        logRequest(supabaseUrl, serviceRoleKey, {
+          user_id: null, rpc_method: method, status_code: 401, latency_ms: latency,
+          error_message: "Invalid token", ip_hint: ipHint,
+        });
         return new Response(JSON.stringify({ error: "Invalid token" }), {
           status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
@@ -126,6 +186,11 @@ serve(async (req) => {
       // Per-user rate limiting
       const { allowed, remaining, retryAfterMs } = checkRateLimit(userId);
       if (!allowed) {
+        const latency = Math.round(performance.now() - startTime);
+        logRequest(supabaseUrl, serviceRoleKey, {
+          user_id: userId, rpc_method: method, status_code: 429, latency_ms: latency,
+          error_message: "Rate limit exceeded", ip_hint: ipHint,
+        });
         return new Response(JSON.stringify({ error: "Rate limit exceeded. Try again shortly." }), {
           status: 429,
           headers: {
@@ -165,6 +230,11 @@ serve(async (req) => {
         body,
       });
       const fallbackData = await fallbackRes.text();
+      const latency = Math.round(performance.now() - startTime);
+      logRequest(supabaseUrl, serviceRoleKey, {
+        user_id: userId, rpc_method: method, status_code: fallbackRes.status, latency_ms: latency,
+        error_message: `Helius ${rpcRes.status}, used fallback`, ip_hint: ipHint,
+      });
       return new Response(fallbackData, {
         status: fallbackRes.status,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -172,12 +242,24 @@ serve(async (req) => {
     }
 
     const data = await rpcRes.text();
+    const latency = Math.round(performance.now() - startTime);
+
+    // Log successful request
+    logRequest(supabaseUrl, serviceRoleKey, {
+      user_id: userId, rpc_method: method, status_code: rpcRes.status, latency_ms: latency, ip_hint: ipHint,
+    });
+
     return new Response(data, {
       status: rpcRes.status,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Unknown error";
+    const latency = Math.round(performance.now() - startTime);
+    logRequest(supabaseUrl, serviceRoleKey, {
+      user_id: userId, rpc_method: method, status_code: 500, latency_ms: latency,
+      error_message: message, ip_hint: ipHint,
+    });
     return new Response(JSON.stringify({ error: message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
