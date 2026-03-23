@@ -17,7 +17,7 @@ export function NetworkProvider({ children }: NetworkProviderProps) {
       lang="en"
       env={jupiterEnv as any}
       theme="dark"
-      walletConnectProjectId={import.meta.env.VITE_REOWN_PROJECT_ID || "336bea3a7584798217797f3b46943ac5"}
+      walletConnectProjectId={import.meta.env.VITE_REOWN_PROJECT_ID || "5b36451f84329b89549bb3c7b5826795"}
       metadata={{
         name: "D3S Agent",
         description: "Solana Memecoin Trading Terminal",
