@@ -14,10 +14,8 @@ function getDefaultRpcUrl(): string {
     }
   } catch {}
 
-  // Fall back to Reown Blockchain API or public RPC
-  return import.meta.env.VITE_REOWN_PROJECT_ID 
-    ? `https://rpc.walletconnect.org/v1/?chainId=solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp&projectId=${import.meta.env.VITE_REOWN_PROJECT_ID}`
-    : "https://api.mainnet-beta.solana.com";
+  // Default to public Solana RPC
+  return "https://api.mainnet-beta.solana.com";
 }
 
 export const PLATFORM_CONFIG = {

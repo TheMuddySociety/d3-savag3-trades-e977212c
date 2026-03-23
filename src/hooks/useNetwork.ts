@@ -26,8 +26,7 @@ export function useNetwork() {
       case 'testnet':
         return 'https://api.testnet.solana.com';
       default:
-        // Use Helius proxy for Mainnet if available, or fallback to public
-        return `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/rpc-proxy`;
+        return 'https://api.mainnet-beta.solana.com';
     }
   }, [network]);
 
