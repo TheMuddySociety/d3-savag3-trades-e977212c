@@ -25,6 +25,11 @@ export const PLATFORM_CONFIG = {
   WALLET_ADDRESS: "ETz1CboRkEJZDZcstd6bjHtjhRsydHQNHPEYMuhcYK2Z",
   
   /**
+   * Jupiter Referral Account for platform fees
+   */
+  REFERRAL_ACCOUNT: "89MakU1zuaQKBrtFXXMgGxf8nKZ9Pbq52KtUwgNhCiBS",
+  
+  /**
    * RPC URL for Solana connection — uses user's custom RPC if configured
    */
   get RPC_URL() {

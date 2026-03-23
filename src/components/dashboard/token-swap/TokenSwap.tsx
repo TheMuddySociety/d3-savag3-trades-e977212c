@@ -16,13 +16,15 @@ export function TokenSwap() {
           displayMode: "integrated",
           integratedTargetId: "target-container",
           defaultExplorer: "Solscan",
+          // Enable Swap + Trigger (Limit Order, DCA)
+          enabledTabs: ['swap', 'limit', 'dca'],
           formProps: {
             initialAmount: "100",
             swapMode: "ExactInOrOut",
             initialInputMint: PLATFORM_CONFIG.SOL_MINT,
             initialOutputMint: PLATFORM_CONFIG.USDC_MINT,
-            referralAccount: PLATFORM_CONFIG.WALLET_ADDRESS,
-            referralFee: 50,
+            referralAccount: PLATFORM_CONFIG.REFERRAL_ACCOUNT,
+            referralFee: 100, // 100 bps = 1% platform fee
           },
           branding: {
             name: "SAVAG3 D3 Tradez",
