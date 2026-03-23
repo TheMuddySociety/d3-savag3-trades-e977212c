@@ -395,6 +395,39 @@ export type Database = {
         }
         Relationships: []
       }
+      rpc_request_logs: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          id: string
+          ip_hint: string | null
+          latency_ms: number | null
+          rpc_method: string
+          status_code: number
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          ip_hint?: string | null
+          latency_ms?: number | null
+          rpc_method: string
+          status_code: number
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          ip_hint?: string | null
+          latency_ms?: number | null
+          rpc_method?: string
+          status_code?: number
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       sim_bot_configs: {
         Row: {
           bot_type: string
