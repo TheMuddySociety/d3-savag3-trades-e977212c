@@ -17,6 +17,56 @@ const ALLOWED_METHODS = new Set([
 
 const MAX_BODY_SIZE = 10240; // 10KB
 
+// --- Sliding window rate limiter (in-memory, per-isolate) ---
+const RATE_LIMIT_WINDOW_MS = 60_000; // 60 seconds
+const RATE_LIMIT_MAX_REQUESTS = 60;   // 60 requests per window
+
+interface SlidingWindow {
+  timestamps: number[];
+}
+
+const rateLimitMap = new Map<string, SlidingWindow>();
+
+// Periodic cleanup to prevent unbounded memory growth
+const CLEANUP_INTERVAL_MS = 120_000;
+let lastCleanup = Date.now();
+
+function cleanupStaleEntries(now: number) {
+  if (now - lastCleanup < CLEANUP_INTERVAL_MS) return;
+  lastCleanup = now;
+  for (const [key, window] of rateLimitMap) {
+    if (window.timestamps.length === 0 || window.timestamps[window.timestamps.length - 1] < now - RATE_LIMIT_WINDOW_MS) {
+      rateLimitMap.delete(key);
+    }
+  }
+}
+
+function checkRateLimit(userId: string): { allowed: boolean; remaining: number; retryAfterMs?: number } {
+  const now = Date.now();
+  cleanupStaleEntries(now);
+
+  let window = rateLimitMap.get(userId);
+  if (!window) {
+    window = { timestamps: [] };
+    rateLimitMap.set(userId, window);
+  }
+
+  // Trim timestamps outside the sliding window
+  const cutoff = now - RATE_LIMIT_WINDOW_MS;
+  while (window.timestamps.length > 0 && window.timestamps[0] <= cutoff) {
+    window.timestamps.shift();
+  }
+
+  if (window.timestamps.length >= RATE_LIMIT_MAX_REQUESTS) {
+    const oldestInWindow = window.timestamps[0];
+    const retryAfterMs = oldestInWindow + RATE_LIMIT_WINDOW_MS - now;
+    return { allowed: false, remaining: 0, retryAfterMs };
+  }
+
+  window.timestamps.push(now);
+  return { allowed: true, remaining: RATE_LIMIT_MAX_REQUESTS - window.timestamps.length };
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -43,8 +93,10 @@ serve(async (req) => {
       });
     }
 
-    // Allow unauthenticated health checks
+    // Allow unauthenticated health checks (no rate limit)
     const isHealthCheck = method === "getHealth";
+
+    let userId = "anonymous";
 
     if (!isHealthCheck) {
       const authHeader = req.headers.get("Authorization");
@@ -66,6 +118,23 @@ serve(async (req) => {
       if (authError || !user) {
         return new Response(JSON.stringify({ error: "Invalid token" }), {
           status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      userId = user.id;
+
+      // Per-user rate limiting
+      const { allowed, remaining, retryAfterMs } = checkRateLimit(userId);
+      if (!allowed) {
+        return new Response(JSON.stringify({ error: "Rate limit exceeded. Try again shortly." }), {
+          status: 429,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json",
+            "Retry-After": String(Math.ceil((retryAfterMs || 1000) / 1000)),
+            "X-RateLimit-Limit": String(RATE_LIMIT_MAX_REQUESTS),
+            "X-RateLimit-Remaining": "0",
+          },
         });
       }
     }
@@ -107,8 +176,9 @@ serve(async (req) => {
       status: rpcRes.status,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-  } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), {
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return new Response(JSON.stringify({ error: message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
