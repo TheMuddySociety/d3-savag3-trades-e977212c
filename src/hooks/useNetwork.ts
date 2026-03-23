@@ -8,7 +8,7 @@ export function useNetwork() {
 
   // Map CAIP network IDs to Solana networks
   const network = useMemo((): SolanaNetwork => {
-    if (!caipNetwork) return 'mainnet-beta';
+    if (!caipNetwork || !caipNetwork.id) return 'mainnet-beta';
     
     // AppKit Solana CAIP IDs
     const id = String(caipNetwork.id);

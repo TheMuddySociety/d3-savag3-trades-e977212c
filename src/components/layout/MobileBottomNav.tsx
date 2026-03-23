@@ -1,4 +1,4 @@
-import { ArrowLeftRight, BarChart3, Bot, Bell, MessageSquare } from 'lucide-react';
+import { ArrowLeftRight, BarChart3, Bot, Bell, MessageSquare, Flame } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export type MobileTab = 'trade' | 'tokens' | 'bots' | 'alerts' | 'chat';
@@ -11,7 +11,7 @@ interface MobileBottomNavProps {
 const tabs = [
   { id: 'trade' as MobileTab, label: 'Trade', icon: ArrowLeftRight },
   { id: 'tokens' as MobileTab, label: 'Tokens', icon: BarChart3 },
-  { id: 'bots' as MobileTab, label: 'Bots', icon: Bot },
+  { id: 'bots' as MobileTab, label: 'Agent', icon: Flame },
   { id: 'alerts' as MobileTab, label: 'Alerts', icon: Bell },
   { id: 'chat' as MobileTab, label: 'AI Chat', icon: MessageSquare },
 ];

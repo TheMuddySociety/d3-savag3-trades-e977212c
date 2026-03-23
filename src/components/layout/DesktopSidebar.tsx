@@ -33,7 +33,7 @@ const navItems = [
   { id: 'portfolio' as DesktopPanel, label: 'Portfolio', icon: Wallet, section: 'Trade' },
   { id: 'tokens' as DesktopPanel, label: 'Tokens', icon: BarChart3, section: 'Market' },
   { id: 'signals' as DesktopPanel, label: 'Signals', icon: Zap, section: 'Market' },
-  { id: 'd3mon' as DesktopPanel, label: 'D3S Agent', icon: Flame, section: 'Automation', color: 'text-accent' },
+  { id: 'bots' as DesktopPanel, label: 'D3S Agent', icon: Flame, section: 'Automation', color: 'text-accent' },
   { id: 'alerts' as DesktopPanel, label: 'Alerts', icon: Bell, section: 'Automation' },
   { id: 'chat' as DesktopPanel, label: 'AI Chat', icon: MessageSquare, section: 'AI' },
 ];
