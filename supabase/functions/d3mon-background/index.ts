@@ -54,8 +54,36 @@ serve(async (req) => {
 
     const serviceClient = createClient(supabaseUrl, supabaseServiceKey);
 
+    // Fetch the trusted wallet_address for the authenticated user
+    const { data: profile } = await serviceClient
+      .from('profiles')
+      .select('wallet_address')
+      .eq('id', user.id)
+      .single();
+      
+    const authWallet = profile?.wallet_address;
+
     const body = await req.json();
     const { action } = body;
+
+    // ── Enforce Wallet Identity Constraint ────────────────────────
+    if (['queue_trade', 'queue_launch', 'get_tasks'].includes(action)) {
+      if (!authWallet) {
+        return new Response(JSON.stringify({ error: 'Wallet profile strictly required for this action' }), {
+          status: 403,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      
+      if (body.wallet_address && body.wallet_address !== authWallet) {
+        return new Response(JSON.stringify({ error: 'Unauthorized wallet manipulation detected' }), {
+          status: 403,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      // Guarantee the payload uses the authenticated, trusted wallet
+      body.wallet_address = authWallet;
+    }
 
     switch (action) {
       // ── Queue a background trade ──────────────────────────────
