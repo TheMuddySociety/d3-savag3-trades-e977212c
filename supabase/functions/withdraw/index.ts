@@ -94,7 +94,7 @@ serve(async (req: Request) => {
     if (budget.currency === 'SOL' && platformPrivateKey) {
       try {
         // Dynamic imports for Solana
-        const { Connection, PublicKey, Keypair, SystemProgram, Transaction } = await import("https://esm.sh/@solana/web3.js@1.95.3");
+        const { Connection, PublicKey, Keypair, SystemProgram, Transaction } = await import("https://esm.sh/@solana/web3.js@1.98.4");
         const bs58 = (await import("https://esm.sh/bs58@5.0.0")).default;
 
         const projectId = (globalThis as any).Deno.env.get('VITE_REOWN_PROJECT_ID');
