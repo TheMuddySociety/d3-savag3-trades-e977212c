@@ -17,6 +17,7 @@ import { TokenLaunchWizard } from "./bot-tools/TokenLaunchWizard";
 import { FeeDashboard } from "./bot-tools/FeeDashboard";
 import { ProfitSimulator } from "./analytics/ProfitSimulator";
 import { BackgroundTaskMonitor } from './background/BackgroundTaskMonitor';
+import { BeachModePanel } from './bot-tools/BeachModePanel';
 import { AgentService } from "@/services/solana/agentService";
 import { backgroundTaskService } from "@/services/d3mon/BackgroundTaskService";
 import { useWallet } from "@solana/wallet-adapter-react";
