@@ -86,7 +86,6 @@ export const AutoStrategies = ({ killSignal = 0 }: Props) => {
   const [pendingTrades, setPendingTrades] = useState<PendingTrade[]>([]);
   const [isAgentHired, setIsAgentHired] = useState(false);
   const [isHiring, setIsHiring] = useState(false);
-  const [isHiring, setIsHiring] = useState(false);
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
   const pendingPollRef = useRef<NodeJS.Timeout | null>(null);
   const { startAgent, stopAgent, evaluateFrame, lastResult } = useD3SAgent();
