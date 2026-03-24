@@ -62,7 +62,8 @@ serve(async (req: Request) => {
 
     // ====================== UNIFIED ACTION ======================
     if (action === "full_token_profile") {
-      const cacheKey = `full_profile:${targetMint}`;
+      const { interval = "5m" } = body;
+      const cacheKey = `full_profile:${targetMint}:${interval}`;
       const cacheTTL = 45;
 
       // Try Redis cache
@@ -75,7 +76,7 @@ serve(async (req: Request) => {
       }
 
       const [priceHistory, holdersData, tradesData, currentPrice] = await Promise.allSettled([
-        fetchBirdeyeOHLCV(targetMint),
+        fetchBirdeyeOHLCV(targetMint, interval),
         fetchTokenHoldersWithRiskAnalysis(targetMint),
         fetchRecentTrades(targetMint),
         getCurrentPrice(targetMint),
@@ -147,22 +148,44 @@ serve(async (req: Request) => {
 
 // ====================== HELPERS (same as before) ======================
 
-async function fetchBirdeyeOHLCV(mint: string) {
+async function fetchBirdeyeOHLCV(mint: string, interval: string = "5m") {
   if (!BIRDEYE_API_KEY) throw new Error("Birdeye API key not set");
   const now = Math.floor(Date.now() / 1000);
-  const url = `https://public-api.birdeye.so/defi/v3/ohlcv?address=${mint}&type=5m&time_from=${now - 86400}&time_to=${now}&currency=usd`;
+  const timeFrom = now - 86400; // 24 hours ago
 
-  const res = await fetch(url, {
-    headers: { "X-API-KEY": BIRDEYE_API_KEY, "x-chain": "solana" },
+  const url = new URL("https://public-api.birdeye.so/defi/v3/ohlcv");
+  url.searchParams.append("address", mint);
+  url.searchParams.append("type", interval);
+  url.searchParams.append("time_from", timeFrom.toString());
+  url.searchParams.append("time_to", now.toString());
+  url.searchParams.append("currency", "usd");
+
+  const res = await fetch(url.toString(), {
+    headers: { 
+      "X-API-KEY": BIRDEYE_API_KEY, 
+      "x-chain": "solana",
+      "accept": "application/json"
+    },
   });
+
+  if (res.status === 429) {
+    console.warn(`[Birdeye] Rate limit hit for ${mint} – using Redis cache fallback`);
+    throw new Error("Birdeye rate limit exceeded");
+  }
 
   if (!res.ok) throw new Error(`Birdeye failed: ${res.status}`);
   const data = await res.json();
+  
   return (data.data?.items || []).map((c: any[]) => ({
     timestamp: c[0] * 1000,
+    unixTime: c[0],
     time: new Date(c[0] * 1000).toISOString().slice(11, 16),
-    open: c[1], high: c[2], low: c[3], close: c[4], volume: c[5] || 0,
-    value: c[4] // Important for Recharts mapping which expects 'value'
+    open: Number(c[1]), 
+    high: Number(c[2]), 
+    low: Number(c[3]), 
+    close: Number(c[4]), 
+    volume: Number(c[5]) || 0,
+    value: Number(c[4]) // Important for Recharts mapping which expects 'value'
   })).reverse();
 }
 
