@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Bot, Clock, Crosshair, BarChart3, Brain, Wallet, OctagonX, Layers, Eye, List, TrendingUp, Rocket, Coins, Flame, History } from "lucide-react";
+import { Bot, Clock, Crosshair, BarChart3, Brain, Wallet, OctagonX, Layers, Eye, List, TrendingUp, Rocket, Coins, Flame, History, Palmtree } from "lucide-react";
 import { D3SAgentHero } from "./bot-tools/D3SAgentHero";
 import { DCABot } from "./bot-tools/DCABot";
 import { BuySniper } from "./bot-tools/BuySniper";
@@ -17,6 +17,7 @@ import { TokenLaunchWizard } from "./bot-tools/TokenLaunchWizard";
 import { FeeDashboard } from "./bot-tools/FeeDashboard";
 import { ProfitSimulator } from "./analytics/ProfitSimulator";
 import { BackgroundTaskMonitor } from './background/BackgroundTaskMonitor';
+import { BeachModePanel } from './bot-tools/BeachModePanel';
 import { AgentService } from "@/services/solana/agentService";
 import { backgroundTaskService } from "@/services/d3mon/BackgroundTaskService";
 import { useWallet } from "@solana/wallet-adapter-react";
@@ -184,6 +185,9 @@ export const BotAccess = () => {
 
           <TabsContent value="agent" className="mt-0">
             <D3SAgentHero onHire={handleActivateAgent} isHired={isAgentHired} isHiring={isHiring} />
+            <div className="mt-4">
+              <BeachModePanel />
+            </div>
           </TabsContent>
           <TabsContent value="sniper" className="mt-0">
             <BuySniper killSignal={killSignal} />

@@ -122,6 +122,63 @@ export type Database = {
         }
         Relationships: []
       }
+      beach_mode_sessions: {
+        Row: {
+          ai_autonomy_level: string
+          created_at: string
+          daily_cap_sol: number
+          daily_reset_at: string
+          daily_spent_sol: number
+          delegation_status: string
+          delegation_tx: string | null
+          id: string
+          is_active: boolean
+          last_evaluation_at: string | null
+          max_trade_sol: number
+          strategies: Json
+          total_pnl_sol: number
+          total_trades: number
+          updated_at: string
+          wallet_address: string
+        }
+        Insert: {
+          ai_autonomy_level?: string
+          created_at?: string
+          daily_cap_sol?: number
+          daily_reset_at?: string
+          daily_spent_sol?: number
+          delegation_status?: string
+          delegation_tx?: string | null
+          id?: string
+          is_active?: boolean
+          last_evaluation_at?: string | null
+          max_trade_sol?: number
+          strategies?: Json
+          total_pnl_sol?: number
+          total_trades?: number
+          updated_at?: string
+          wallet_address: string
+        }
+        Update: {
+          ai_autonomy_level?: string
+          created_at?: string
+          daily_cap_sol?: number
+          daily_reset_at?: string
+          daily_spent_sol?: number
+          delegation_status?: string
+          delegation_tx?: string | null
+          id?: string
+          is_active?: boolean
+          last_evaluation_at?: string | null
+          max_trade_sol?: number
+          strategies?: Json
+          total_pnl_sol?: number
+          total_trades?: number
+          updated_at?: string
+          wallet_address?: string
+        }
+        Relationships: []
+      }
       chat_messages: {
         Row: {
           content: string
