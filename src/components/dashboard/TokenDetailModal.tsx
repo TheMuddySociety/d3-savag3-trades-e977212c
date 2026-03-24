@@ -91,7 +91,7 @@ function useTokenDetail(token: MemeToken | null, open: boolean) {
 
       // Fetch full profile in one request
       const response = await supabase.functions.invoke('token-prices', {
-        body: { action: 'full_token_profile', address },
+        body: { action: 'full_token_profile', mint: address },
       });
 
       if (cancelled) return;

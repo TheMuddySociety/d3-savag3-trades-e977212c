@@ -431,60 +431,54 @@ export default function TokenDetail() {
     const fetchDetails = async () => {
       setTradesLoading(true);
 
-      const [priceResult, holderResult, tradeResult] = await Promise.allSettled([
-        supabase.functions.invoke('token-prices', {
-          body: { action: 'price_history', address, interval: '30m' },
-        }),
-        supabase.functions.invoke('token-prices', {
-          body: { action: 'token_holders', address },
-        }),
-        supabase.functions.invoke('token-prices', {
-          body: { action: 'token_trades', address, limit: 30 },
-        }),
-      ]);
+      const { data, error } = await supabase.functions.invoke('token-prices', {
+        body: { action: 'full_token_profile', mint: address }
+      });
 
       if (cancelled) return;
 
-      // Price history
-      if (priceResult.status === 'fulfilled' && priceResult.value.data?.success && priceResult.value.data.data?.length > 0) {
-        setPriceData(
-          priceResult.value.data.data.map((p: { unixTime: number; value: number }) => ({
-            time: new Date(p.unixTime * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            price: p.value,
-          }))
-        );
-      }
+      if (data && data.success) {
+        // Price history
+        if (data.price_history?.data?.length > 0) {
+          setPriceData(
+            data.price_history.data.map((p: { unixTime: number; value: number }) => ({
+              time: new Date(p.unixTime * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              price: p.value,
+            }))
+          );
+        }
 
-      // Holders
-      if (holderResult.status === 'fulfilled' && holderResult.value.data?.success && holderResult.value.data.data?.distribution) {
-        setHolders(
-          holderResult.value.data.data.distribution.map((d: { name: string; value: number }, i: number) => ({
-            ...d,
-            value: +d.value.toFixed(1),
-            color: HOLDER_COLORS[i] || HOLDER_COLORS[3],
-          }))
-        );
-      }
+        // Holders
+        if (data.holders?.data?.distribution) {
+          setHolders(
+            data.holders.data.distribution.map((d: { name: string; value: number }, i: number) => ({
+              ...d,
+              value: +d.value.toFixed(1),
+              color: HOLDER_COLORS[i] || HOLDER_COLORS[3],
+            }))
+          );
+        }
 
-      // Trades
-      if (tradeResult.status === 'fulfilled' && tradeResult.value.data?.success && Array.isArray(tradeResult.value.data.data)) {
-        setTrades(
-          tradeResult.value.data.data.slice(0, 30).map((t: any, i: number) => {
-            const isBuy = t.side === 'buy';
-            const solAmt = isBuy ? t.from?.uiAmount || 0 : t.to?.uiAmount || 0;
-            const tokenAmt = isBuy ? t.to?.uiAmount || 0 : t.from?.uiAmount || 0;
-            return {
-              id: i,
-              type: isBuy ? ('buy' as const) : ('sell' as const),
-              amount: tokenAmt,
-              solAmount: +solAmt.toFixed(3),
-              price: tokenAmt > 0 ? (solAmt * 88) / tokenAmt : 0,
-              time: new Date(t.blockUnixTime * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-              wallet: t.owner ? `${t.owner.slice(0, 4)}...${t.owner.slice(-4)}` : 'unknown',
-              txHash: t.txHash || '',
-            };
-          })
-        );
+        // Trades
+        if (Array.isArray(data.trades?.data) && data.trades.data.length > 0) {
+          setTrades(
+            data.trades.data.slice(0, 30).map((t: any, i: number) => {
+              const isBuy = t.side === 'buy';
+              const solAmt = isBuy ? t.from?.uiAmount || 0 : t.to?.uiAmount || 0;
+              const tokenAmt = isBuy ? t.to?.uiAmount || 0 : t.from?.uiAmount || 0;
+              return {
+                id: i,
+                type: isBuy ? ('buy' as const) : ('sell' as const),
+                amount: tokenAmt,
+                solAmount: +solAmt.toFixed(3),
+                price: tokenAmt > 0 ? (solAmt * 88) / tokenAmt : 0,
+                time: new Date(t.blockUnixTime * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+                wallet: t.owner ? `${t.owner.slice(0, 4)}...${t.owner.slice(-4)}` : 'unknown',
+                txHash: t.txHash || '',
+              };
+            })
+          );
+        }
       }
 
       setTradesLoading(false);
