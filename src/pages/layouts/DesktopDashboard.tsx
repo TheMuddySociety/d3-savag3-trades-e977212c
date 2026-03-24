@@ -26,107 +26,83 @@ export function DesktopDashboard() {
   const sidebarWidth = sidebarCollapsed ? 56 : 200;
 
   const renderMainPanel = () => {
-    switch (activePanel) {
-      case 'swap':
-        return (
+    return (
+      <>
+        <div className={activePanel === 'swap' ? 'block' : 'hidden'}>
           <div className="space-y-4">
             <TokenSwap />
             <PortfolioTracker />
           </div>
-        );
-      case 'portfolio':
-        return (
+        </div>
+        <div className={activePanel === 'portfolio' ? 'block' : 'hidden'}>
           <div className="space-y-4">
             <PortfolioTracker />
             <MiniChart title="SOL/USD" />
             <Leaderboard />
           </div>
-        );
-      case 'tokens':
-        return (
+        </div>
+        <div className={activePanel === 'tokens' ? 'block' : 'hidden'}>
           <div className="space-y-4">
             <TopMemecoins />
             <Leaderboard />
           </div>
-        );
-      case 'signals':
-        return (
+        </div>
+        <div className={activePanel === 'signals' ? 'block' : 'hidden'}>
           <div className="space-y-4">
             <LiveSignalFeed />
             <MemeScanner />
           </div>
-        );
-      case 'bots':
-        return (
+        </div>
+        <div className={activePanel === 'bots' ? 'block' : 'hidden'}>
           <div className="space-y-4">
             <BotAccess />
             <AIToolsAgents />
           </div>
-        );
-      case 'alerts':
-        return (
+        </div>
+        <div className={activePanel === 'alerts' ? 'block' : 'hidden'}>
           <div className="space-y-4">
             <PriceAlerts walletAddress={walletAddress} />
             <LiveSignalFeed />
           </div>
-        );
-      case 'chat':
-        return <JupiterAIChat />;
-      default:
-        return <TopMemecoins />;
-    }
+        </div>
+        <div className={activePanel === 'chat' ? 'block' : 'hidden'}>
+          <JupiterAIChat />
+        </div>
+      </>
+    );
   };
 
   const renderRightPanel = () => {
-    switch (activePanel) {
-      case 'swap':
-      case 'portfolio':
-        return (
-          <>
-            <PriceAlerts walletAddress={walletAddress} />
-            <LiveSignalFeed />
-          </>
-        );
-      case 'tokens':
-        return (
-          <>
-            <MiniChart title="SOL/USD" />
-            <TokenSwap />
-            <MemeScanner />
-          </>
-        );
-      case 'signals':
-        return (
-          <>
-            <MiniChart title="SOL/USD" />
-            <PriceAlerts walletAddress={walletAddress} />
-          </>
-        );
-      case 'bots':
-        return (
-          <>
-            <MiniChart title="SOL/USD" />
-            <PriceAlerts walletAddress={walletAddress} />
-          </>
-        );
-      case 'alerts':
-        return (
-          <>
-            <MiniChart title="SOL/USD" />
-            <MemeScanner />
-          </>
-        );
-      case 'chat':
-        return (
-          <>
-            <MiniChart title="SOL/USD" />
-            <LiveSignalFeed />
-            <PriceAlerts walletAddress={walletAddress} />
-          </>
-        );
-      default:
-        return null;
-    }
+    return (
+      <>
+        <div className={activePanel === 'swap' || activePanel === 'portfolio' ? 'space-y-4' : 'hidden'}>
+          <PriceAlerts walletAddress={walletAddress} />
+          <LiveSignalFeed />
+        </div>
+        <div className={activePanel === 'tokens' ? 'space-y-4' : 'hidden'}>
+          <MiniChart title="SOL/USD" />
+          <TokenSwap />
+          <MemeScanner />
+        </div>
+        <div className={activePanel === 'signals' ? 'space-y-4' : 'hidden'}>
+          <MiniChart title="SOL/USD" />
+          <PriceAlerts walletAddress={walletAddress} />
+        </div>
+        <div className={activePanel === 'bots' ? 'space-y-4' : 'hidden'}>
+          <MiniChart title="SOL/USD" />
+          <PriceAlerts walletAddress={walletAddress} />
+        </div>
+        <div className={activePanel === 'alerts' ? 'space-y-4' : 'hidden'}>
+          <MiniChart title="SOL/USD" />
+          <MemeScanner />
+        </div>
+        <div className={activePanel === 'chat' ? 'space-y-4' : 'hidden'}>
+          <MiniChart title="SOL/USD" />
+          <LiveSignalFeed />
+          <PriceAlerts walletAddress={walletAddress} />
+        </div>
+      </>
+    );
   };
 
   return (

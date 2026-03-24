@@ -91,6 +91,25 @@ serve(async (req) => {
     }
 
     switch (action) {
+      case 'full_token_profile':
+        if (!address) return err('address is required', 400);
+        
+        // Let the backend handle the parallel fetches!
+        const [priceRes, holdersRes, tradesRes] = await Promise.allSettled([
+          fetchPriceHistory(address, body.interval || '30m', body.time_from, body.time_to, JUPITER_API_KEY),
+          fetchTokenHolders(address, HELIUS_API_KEY),
+          fetchTokenTrades(address, HELIUS_API_KEY, body.limit || 20)
+        ]);
+
+        const fullProfile = {
+          price_history: priceRes.status === 'fulfilled' ? priceRes.value : [],
+          holders: holdersRes.status === 'fulfilled' ? holdersRes.value : null,
+          trades: tradesRes.status === 'fulfilled' ? tradesRes.value : [],
+          last_updated: Date.now()
+        };
+        
+        return ok(fullProfile, cacheKey);
+
       case 'prices':
         return ok(await fetchJupiterPrices(addresses, JUPITER_API_KEY), cacheKey);
 

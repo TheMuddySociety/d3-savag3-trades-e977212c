@@ -87,75 +87,71 @@ function useTokenDetail(token: MemeToken | null, open: boolean) {
         return;
       }
 
-      // Fetch all three in parallel, fallback to mock on failure
-      const [priceResult, holderResult, tradeResult] = await Promise.allSettled([
-        supabase.functions.invoke('token-prices', {
-          body: { action: 'price_history', address, interval: '30m' },
-        }),
-        supabase.functions.invoke('token-prices', {
-          body: { action: 'token_holders', address },
-        }),
-        supabase.functions.invoke('token-prices', {
-          body: { action: 'token_trades', address, limit: 20 },
-        }),
-      ]);
+      // Fetch full profile in one request
+      const response = await supabase.functions.invoke('token-prices', {
+        body: { action: 'full_token_profile', address },
+      });
 
       if (cancelled) return;
 
+      const fullData = response.data;
       let usedLive = false;
 
-      // Price history
-      if (priceResult.status === 'fulfilled' && priceResult.value.data?.success && priceResult.value.data.data?.length > 0) {
-        const items = priceResult.value.data.data;
-        setPriceData(items.map((p: { unixTime: number; value: number }) => ({
-          time: new Date(p.unixTime * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          price: p.value,
-        })));
-        usedLive = true;
-      } else {
-        setPriceData([]);
-      }
+      if (fullData) {
+        // Price history
+        if (fullData.price_history && fullData.price_history.data && fullData.price_history.data.success && fullData.price_history.data.data?.length > 0) {
+          const items = fullData.price_history.data.data;
+          setPriceData(items.map((p: { unixTime: number; value: number }) => ({
+            time: new Date(p.unixTime * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            price: p.value,
+            unixTime: p.unixTime
+          })));
+          usedLive = true;
+        } else {
+          setPriceData([]);
+        }
 
-      // Holders
-      if (holderResult.status === 'fulfilled' && holderResult.value.data?.success && holderResult.value.data.data?.distribution) {
-        const dist = holderResult.value.data.data.distribution;
-        setHolders(dist.map((d: { name: string; value: number }, i: number) => ({
-          ...d,
-          value: +d.value.toFixed(1),
-          color: HOLDER_COLORS[i] || HOLDER_COLORS[3],
-        })));
-        usedLive = true;
-      } else {
-        setHolders([]);
-      }
+        // Holders
+        if (fullData.holders && fullData.holders.data && fullData.holders.data.success && fullData.holders.data.data?.distribution) {
+          const dist = fullData.holders.data.data.distribution;
+          setHolders(dist.map((d: { name: string; value: number }, i: number) => ({
+            ...d,
+            value: +d.value.toFixed(1),
+            color: HOLDER_COLORS[i] || HOLDER_COLORS[3],
+          })));
+          usedLive = true;
+        } else {
+          setHolders([]);
+        }
 
-      // Trades
-      if (tradeResult.status === 'fulfilled' && tradeResult.value.data?.success && Array.isArray(tradeResult.value.data.data) && tradeResult.value.data.data.length > 0) {
-        const rawTrades = tradeResult.value.data.data;
-        setTrades(rawTrades.slice(0, 15).map((t: {
-          txHash: string;
-          side: string;
-          from: { amount: number; symbol: string; decimals: number; uiAmount: number };
-          to: { amount: number; symbol: string; decimals: number; uiAmount: number };
-          blockUnixTime: number;
-          owner: string;
-        }, i: number) => {
-          const isBuy = t.side === 'buy';
-          const solAmt = isBuy ? t.from?.uiAmount || 0 : t.to?.uiAmount || 0;
-          const tokenAmt = isBuy ? t.to?.uiAmount || 0 : t.from?.uiAmount || 0;
-          return {
-            id: i,
-            type: isBuy ? 'buy' as const : 'sell' as const,
-            amount: tokenAmt,
-            solAmount: +solAmt.toFixed(3),
-            price: tokenAmt > 0 ? solAmt * 67 / tokenAmt : 0,
-            time: new Date(t.blockUnixTime * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-            wallet: t.owner ? `${t.owner.slice(0, 4)}...${t.owner.slice(-4)}` : 'unknown',
-          };
-        }));
-        usedLive = true;
-      } else {
-        setTrades([]);
+        // Trades
+        if (fullData.trades && fullData.trades.data && fullData.trades.data.success && Array.isArray(fullData.trades.data.data) && fullData.trades.data.data.length > 0) {
+          const rawTrades = fullData.trades.data.data;
+          setTrades(rawTrades.slice(0, 15).map((t: {
+            txHash: string;
+            side: string;
+            from: { amount: number; symbol: string; decimals: number; uiAmount: number };
+            to: { amount: number; symbol: string; decimals: number; uiAmount: number };
+            blockUnixTime: number;
+            owner: string;
+          }, i: number) => {
+            const isBuy = t.side === 'buy';
+            const solAmt = isBuy ? t.from?.uiAmount || 0 : t.to?.uiAmount || 0;
+            const tokenAmt = isBuy ? t.to?.uiAmount || 0 : t.from?.uiAmount || 0;
+            return {
+              id: i,
+              type: isBuy ? 'buy' as const : 'sell' as const,
+              amount: tokenAmt,
+              solAmount: +solAmt.toFixed(3),
+              price: tokenAmt > 0 ? solAmt * 67 / tokenAmt : 0,
+              time: new Date(t.blockUnixTime * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+              wallet: t.owner ? `${t.owner.slice(0, 4)}...${t.owner.slice(-4)}` : 'unknown',
+            };
+          }));
+          usedLive = true;
+        } else {
+          setTrades([]);
+        }
       }
 
       setDataSource(usedLive ? 'live' : 'mock');
@@ -163,7 +159,44 @@ function useTokenDetail(token: MemeToken | null, open: boolean) {
     };
 
     fetchAll();
-    return () => { cancelled = true; };
+    
+    // Lightweight price polling every 5s
+    const interval = setInterval(async () => {
+      if (!token.tokenAddress || cancelled) return;
+      const res = await supabase.functions.invoke('token-prices', {
+        body: { action: 'prices', addresses: [token.tokenAddress] },
+      });
+      if (res.data?.success && res.data.data && res.data.data[token.tokenAddress]) {
+        const latestInfo = res.data.data[token.tokenAddress];
+        if (latestInfo.price) {
+          setPriceData(prev => {
+            const newChart = [...prev];
+            // Only add if it's been more than a minute, otherwise update last tick
+            if (newChart.length > 0) {
+              const last = newChart[newChart.length - 1];
+              const now = Date.now() / 1000;
+              if (last.unixTime && (now - last.unixTime < 60)) {
+                // Just update the latest point
+                last.price = latestInfo.price;
+              } else {
+                newChart.push({
+                   time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                   price: latestInfo.price,
+                   unixTime: now
+                });
+                if (newChart.length > 50) newChart.shift(); // keep size manageable
+              }
+            }
+            return newChart;
+          });
+        }
+      }
+    }, 5000);
+
+    return () => { 
+      cancelled = true; 
+      clearInterval(interval);
+    };
   }, [token?.id, open]);
 
   return { priceData, holders, trades, loading, dataSource };
@@ -201,9 +234,11 @@ export function TokenDetailModal({ token, open, onOpenChange, onSetAlert }: Toke
 
   const QUICK_BUY_AMOUNTS = [0.1, 0.5, 1, 5];
 
-  // Initialize Jupiter swap when panel opens or amount changes
+  const [isJupiterLoaded, setIsJupiterLoaded] = useState(false);
+
+  // Initialize Jupiter swap ONLY once when panel is first opened
   useEffect(() => {
-    if (!showSwap || !token?.tokenAddress) return;
+    if (!showSwap || !token?.tokenAddress || isJupiterLoaded) return;
 
     const timer = setTimeout(() => {
       import("@jup-ag/plugin").then((mod) => {
@@ -223,11 +258,12 @@ export function TokenDetailModal({ token, open, onOpenChange, onSetAlert }: Toke
             logoUri: "https://ibb.co/0VFDBzYQ",
           },
         });
+        setIsJupiterLoaded(true);
       }).catch(console.error);
     }, 100);
 
     return () => clearTimeout(timer);
-  }, [showSwap, token?.tokenAddress, swapContainerId, selectedAmount]);
+  }, [showSwap, token?.tokenAddress, swapContainerId, isJupiterLoaded]);
 
   const handleQuickBuy = (amount: number) => {
     setSelectedAmount(amount);
@@ -504,66 +540,64 @@ export function TokenDetailModal({ token, open, onOpenChange, onSetAlert }: Toke
                 </div>
                 {showSwap ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
               </button>
-              {showSwap && (
-                <div className="border-t border-border/30">
-                  {/* Quick Buy Presets */}
-                  <div className="px-3 pt-3 pb-1">
-                    <p className="text-[11px] text-muted-foreground mb-2">⚡ Quick Buy</p>
-                    <div className="flex gap-2">
-                      {QUICK_BUY_AMOUNTS.map((amount) => (
-                        <Button
-                          key={amount}
-                          size="sm"
-                          variant={selectedAmount === amount ? "default" : "outline"}
-                          className={cn(
-                            "flex-1 h-9 text-xs font-mono gap-1 transition-all",
-                            selectedAmount === amount
-                              ? "bg-primary text-primary-foreground shadow-sm shadow-primary/20"
-                              : "border-border/50 hover:border-primary/50 hover:bg-primary/5"
-                          )}
-                          onClick={() => handleQuickBuy(amount)}
-                        >
-                          {amount} SOL
-                        </Button>
-                      ))}
-                    </div>
-                    {selectedAmount && token.price > 0 && (
-                      <p className="text-[10px] text-muted-foreground mt-1.5 text-center">
-                        ≈ {((selectedAmount * 67) / token.price).toLocaleString(undefined, { maximumFractionDigits: 0 })} {token.symbol} at current price
-                      </p>
-                    )}
+              <div className={cn("border-t border-border/30 transition-all duration-300", showSwap ? "block" : "hidden")}>
+                {/* Quick Buy Presets */}
+                <div className="px-3 pt-3 pb-1">
+                  <p className="text-[11px] text-muted-foreground mb-2">⚡ Quick Buy</p>
+                  <div className="flex gap-2">
+                    {QUICK_BUY_AMOUNTS.map((amount) => (
+                      <Button
+                        key={amount}
+                        size="sm"
+                        variant={selectedAmount === amount ? "default" : "outline"}
+                        className={cn(
+                          "flex-1 h-9 text-xs font-mono gap-1 transition-all",
+                          selectedAmount === amount
+                            ? "bg-primary text-primary-foreground shadow-sm shadow-primary/20"
+                            : "border-border/50 hover:border-primary/50 hover:bg-primary/5"
+                        )}
+                        onClick={() => handleQuickBuy(amount)}
+                      >
+                        {amount} SOL
+                      </Button>
+                    ))}
                   </div>
-                    <div
-                      id={swapContainerId}
-                      className="min-h-[380px] w-full p-3"
-                    />
-                    
-                    {/* Background Order Trigger */}
-                    <div className="p-3 pt-0 border-t border-border/20 bg-accent/5">
-                      <div className="flex flex-col gap-2 p-3 rounded-lg border border-accent/20 bg-background/50">
-                        <div className="flex items-center justify-between text-[11px]">
-                          <span className="text-muted-foreground font-medium flex items-center gap-1.5">
-                            <Brain className="h-3 w-3 text-accent" />
-                            D3S Agent Autonomous Entry
-                          </span>
-                          <Badge variant="outline" className="text-[9px] text-accent border-accent/30 h-4">BETA</Badge>
-                        </div>
-                        <p className="text-[10px] text-muted-foreground">
-                          Queue this trade to execute via D3S Agent background engine. No need to keep the tab open.
-                        </p>
-                        <Button 
-                          size="sm"
-                          className="w-full h-8 text-[11px] bg-accent hover:bg-accent/90 gap-2 mt-1"
-                          onClick={handleBackgroundOrder}
-                          disabled={!selectedAmount || isQueueing}
-                        >
-                          {isQueueing ? <Loader2 className="h-3 w-3 animate-spin" /> : <Rocket className="h-3 w-3" />}
-                          {selectedAmount ? `Queue ${selectedAmount} SOL Background Buy` : 'Select amount above to queue'}
-                        </Button>
-                      </div>
+                  {selectedAmount && token.price > 0 && (
+                    <p className="text-[10px] text-muted-foreground mt-1.5 text-center">
+                      ≈ {((selectedAmount * 67) / token.price).toLocaleString(undefined, { maximumFractionDigits: 0 })} {token.symbol} at current price
+                    </p>
+                  )}
+                </div>
+                <div
+                  id={swapContainerId}
+                  className="min-h-[380px] w-full p-3"
+                />
+                
+                {/* Background Order Trigger */}
+                <div className="p-3 pt-0 border-t border-border/20 bg-accent/5">
+                  <div className="flex flex-col gap-2 p-3 rounded-lg border border-accent/20 bg-background/50">
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="text-muted-foreground font-medium flex items-center gap-1.5">
+                        <Brain className="h-3 w-3 text-accent" />
+                        D3S Agent Autonomous Entry
+                      </span>
+                      <Badge variant="outline" className="text-[9px] text-accent border-accent/30 h-4">BETA</Badge>
                     </div>
+                    <p className="text-[10px] text-muted-foreground">
+                      Queue this trade to execute via D3S Agent background engine. No need to keep the tab open.
+                    </p>
+                    <Button 
+                      size="sm"
+                      className="w-full h-8 text-[11px] bg-accent hover:bg-accent/90 gap-2 mt-1"
+                      onClick={handleBackgroundOrder}
+                      disabled={!selectedAmount || isQueueing}
+                    >
+                      {isQueueing ? <Loader2 className="h-3 w-3 animate-spin" /> : <Rocket className="h-3 w-3" />}
+                      {selectedAmount ? `Queue ${selectedAmount} SOL Background Buy` : 'Select amount above to queue'}
+                    </Button>
                   </div>
-                )}
+                </div>
+              </div>
               </div>
             )}
 

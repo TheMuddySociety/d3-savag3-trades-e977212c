@@ -95,45 +95,48 @@ export function MobileDashboard() {
         <PullIndicator pullDistance={pullDistance} refreshing={refreshing} progress={progress} />
         <div className="px-3 space-y-2.5">
           <ConnectionStatus />
+          
+          {/* STATIC LAYERS (Jupiter Singleton) */}
+          <div className={activeTab === 'trade' ? 'block space-y-2.5 mb-1' : 'hidden'}>
+            <TokenSwap key={`swap-${refreshKey}`} />
+            <MiniChart title="SOL/USD" key={`chart-${refreshKey}`} />
+            <PortfolioTracker key={`portfolio-${refreshKey}`} />
+          </div>
+
           <AnimatePresence mode="wait">
-            <motion.div
-              key={activeTab}
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.2, ease: 'easeOut' }}
-              className="space-y-2.5"
-            >
-              {activeTab === 'trade' && (
-                <>
-                  <TokenSwap key={`swap-${refreshKey}`} />
-                  <MiniChart title="SOL/USD" key={`chart-${refreshKey}`} />
-                  <PortfolioTracker key={`portfolio-${refreshKey}`} />
-                </>
-              )}
-              {activeTab === 'tokens' && (
-                <>
-                  <TopMemecoins key={`meme-${refreshKey}`} />
-                  <Leaderboard key={`leader-${refreshKey}`} />
-                  <MemeScanner key={`scanner-${refreshKey}`} />
-                </>
-              )}
-              {activeTab === 'bots' && (
-                <>
-                  <BotAccess />
-                  <AIToolsAgents />
-                </>
-              )}
-              {activeTab === 'alerts' && (
-                <>
-                  <PriceAlerts walletAddress={walletAddress} key={`alerts-${refreshKey}`} />
-                  <LiveSignalFeed key={`signals-${refreshKey}`} />
-                </>
-              )}
-              {activeTab === 'chat' && (
-                <JupiterAIChat />
-              )}
-            </motion.div>
+            {activeTab !== 'trade' && (
+              <motion.div
+                key={activeTab}
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.2, ease: 'easeOut' }}
+                className="space-y-2.5"
+              >
+                {activeTab === 'tokens' && (
+                  <>
+                    <TopMemecoins key={`meme-${refreshKey}`} />
+                    <Leaderboard key={`leader-${refreshKey}`} />
+                    <MemeScanner key={`scanner-${refreshKey}`} />
+                  </>
+                )}
+                {activeTab === 'bots' && (
+                  <>
+                    <BotAccess />
+                    <AIToolsAgents />
+                  </>
+                )}
+                {activeTab === 'alerts' && (
+                  <>
+                    <PriceAlerts walletAddress={walletAddress} key={`alerts-${refreshKey}`} />
+                    <LiveSignalFeed key={`signals-${refreshKey}`} />
+                  </>
+                )}
+                {activeTab === 'chat' && (
+                  <JupiterAIChat />
+                )}
+              </motion.div>
+            )}
           </AnimatePresence>
         </div>
       </div>

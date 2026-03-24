@@ -68,7 +68,25 @@ interface Props {
 }
 
 // In-memory peak price tracking (updated each cycle)
-const peakPrices = new Map<string, number>();
+interface PeakData {
+  price: number;
+  lastUpdated: number;
+}
+const peakPrices = new Map<string, PeakData>();
+
+// Background Garbage Collection for peak prices (Memory Leak Fix)
+setInterval(() => {
+  const now = Date.now();
+  let pruned = 0;
+  for (const [mint, data] of peakPrices.entries()) {
+    // Drop tracking if not updated in 48 hours
+    if (now - data.lastUpdated > 48 * 60 * 60 * 1000) {
+      peakPrices.delete(mint);
+      pruned++;
+    }
+  }
+  if (pruned > 0) console.log(`[D3S GC] Pruned ${pruned} stale peak price records`);
+}, 60 * 60 * 1000); // Run hourly
 
 export const AutoStrategies = ({ killSignal = 0 }: Props) => {
   const { toast } = useToast();
@@ -424,17 +442,22 @@ export const AutoStrategies = ({ killSignal = 0 }: Props) => {
   const updatePeakPrices = useCallback(async (holdings: LiveHolding[]) => {
     if (!wallet.publicKey) return;
     const walletAddr = wallet.publicKey.toBase58();
+    const now = Date.now();
     for (const h of holdings) {
       if (h.price <= 0) continue;
-      const currentPeak = peakPrices.get(h.mint) || 0;
+      const currentData = peakPrices.get(h.mint);
+      const currentPeak = currentData ? currentData.price : 0;
       if (h.price > currentPeak) {
-        peakPrices.set(h.mint, h.price);
+        peakPrices.set(h.mint, { price: h.price, lastUpdated: now });
         try {
           await (supabase.from('auto_trade_entry_prices' as any) as any)
             .update({ peak_price: h.price })
             .eq('wallet_address', walletAddr)
             .eq('token_mint', h.mint);
         } catch { /* ignore */ }
+      } else if (currentData) {
+        // Just update timestamp so GC doesn't prune active holdings
+        currentData.lastUpdated = now;
       }
     }
   }, [wallet.publicKey]);
@@ -493,9 +516,11 @@ export const AutoStrategies = ({ killSignal = 0 }: Props) => {
       }
 
       // Sync peak prices from DB
+      const now = Date.now();
       for (const [mint, peak] of dbPeakMap) {
-        const currentPeak = peakPrices.get(mint) || 0;
-        if (peak > currentPeak) peakPrices.set(mint, peak);
+        const currentData = peakPrices.get(mint);
+        const currentPeak = currentData ? currentData.price : 0;
+        if (peak > currentPeak) peakPrices.set(mint, { price: peak, lastUpdated: now });
       }
 
       // Track new tokens
@@ -570,7 +595,8 @@ export const AutoStrategies = ({ killSignal = 0 }: Props) => {
               for (const h of holdings) {
                 if (h.price <= 0) continue;
 
-                const peak = peakPrices.get(h.mint) || h.price;
+                const peakData = peakPrices.get(h.mint);
+                const peak = peakData ? peakData.price : h.price;
                 const dropFromPeak = peak > 0 ? ((h.price - peak) / peak) * 100 : 0;
                 const entryPrice = entryPriceMap.get(h.mint) || h.price;
                 const pnlFromEntry = entryPrice > 0 ? ((h.price - entryPrice) / entryPrice) * 100 : 0;
