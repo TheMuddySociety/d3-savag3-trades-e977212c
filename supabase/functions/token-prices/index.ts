@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { Redis } from "https://deno.land/x/upstash_redis@v1.19.3/mod.ts";
+import { Redis } from "npm:@upstash/redis@1.34.3";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -53,7 +53,7 @@ serve(async (req: Request) => {
 
     console.log(`[token-prices] Received action: ${action}, targetMint: ${targetMint}`);
 
-    if (!targetMint && action !== "health" && action !== "trending") {
+    if (!targetMint && action !== "health" && action !== "trending" && action !== "recent_launches") {
       return new Response(JSON.stringify({ success: false, error: "mint/address is required for this action" }), {
         status: 400,
         headers: corsHeaders,
@@ -129,6 +129,31 @@ serve(async (req: Request) => {
     
     if (action === "trending") {
        return new Response(JSON.stringify({ success: true, data: [] }), { headers: corsHeaders });
+    }
+
+    if (action === "recent_launches") {
+      try {
+        const res = await fetch("https://frontend-api-v2.pump.fun/coins/latest?limit=10&includeNsfw=false");
+        if (!res.ok) throw new Error(`Pump.fun API error: ${res.status}`);
+        const coins = await res.json();
+        const mapped = (Array.isArray(coins) ? coins : []).map((c: any) => ({
+          address: c.mint || c.address || '',
+          name: c.name || 'Unknown',
+          symbol: c.symbol || '???',
+          logo: c.image_uri || c.uri || '/placeholder.svg',
+          timestamp: c.created_timestamp ? c.created_timestamp : Date.now(),
+          marketCap: c.market_cap || c.usd_market_cap || 0,
+          liquidity: 0,
+          tradeCount: c.reply_count || 0,
+          bondingCurveProgress: c.bonding_curve_progress || 0,
+          status: c.complete ? 'graduated' : 'bonding',
+          description: c.description || '',
+        }));
+        return new Response(JSON.stringify({ success: true, data: mapped }), { headers: corsHeaders });
+      } catch (e: any) {
+        console.error("[token-prices] recent_launches error:", e.message);
+        return new Response(JSON.stringify({ success: true, data: [] }), { headers: corsHeaders });
+      }
     }
 
     // Unknown action
