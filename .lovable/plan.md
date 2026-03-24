@@ -1,49 +1,37 @@
 
 
-## Plan: Harden the RPC Proxy Edge Function
+## Plan: Fix Build Errors + Deploy detect-new-launches + Harden useD3SAgent
 
-The existing `rpc-proxy` edge function already serves as a private RPC endpoint. The build error (`Could not find npm:@solana/web3.js@1.95.3`) is in `auto-trader` and `withdraw` functions, not `rpc-proxy` — but we should fix those too. The main improvements needed:
+Three issues to resolve, plus the new edge function deployment.
 
-### Problem Summary
-1. **Build errors** in `auto-trader/index.ts` and `withdraw/index.ts` using `npm:@solana/web3.js@1.95.3` specifier that Deno can't resolve
-2. **Auth bug** in `rpc-proxy` — `supabase.auth.getClaims()` doesn't exist on the Supabase JS client, causing 401 errors for authenticated calls
-3. **No rate limiting or request validation** on the proxy
+### 1. Fix duplicate `isHiring` declaration in AutoStrategies.tsx (line 89)
 
-### Changes
+Remove the duplicate line 89 (`const [isHiring, setIsHiring] = useState(false);`) — it's identical to line 88.
 
-#### 1. Fix `rpc-proxy/index.ts` — Auth + Hardening
-- Replace broken `getClaims()` with `supabase.auth.getUser()` for JWT validation
-- Add an allowlist of safe JSON-RPC methods (e.g., `getHealth`, `getBalance`, `getTokenAccountsByOwner`, `getLatestBlockhash`, `getTransaction`, `sendTransaction`, `getAccountInfo`, `getSlot`, `getSignaturesForAddress`, `getBlock`, `simulateTransaction`, etc.) — reject unknown methods
-- Add request-size guard (reject bodies > 10KB)
-- Keep health-check unauthenticated for connection monitoring
+### 2. Fix missing React imports and syntax error in useD3SAgent.ts
 
-#### 2. Fix `auto-trader/index.ts` and `withdraw/index.ts` — npm specifier
-- Change `import("npm:@solana/web3.js@1.95.3")` → `import("https://esm.sh/@solana/web3.js@1.95.3")` (esm.sh works reliably in Deno edge functions)
-- Same for `npm:bs58@5.0.0` → `https://esm.sh/bs58@5.0.0`
-- Same for `npm:@solana/spl-token@0.4.6` → `https://esm.sh/@solana/spl-token@0.4.6`
+- Add missing `import { useRef, useState, useCallback, useEffect } from 'react';`
+- Fix `useCallback() =>` syntax on line 10 — should be `useCallback(() =>`
 
-#### 3. Redeploy all three functions
-- Deploy `rpc-proxy`, `auto-trader`, `withdraw`
-- Test `rpc-proxy` with a `getHealth` call to verify
+### 3. Deploy detect-new-launches edge function
+
+The function already exists at `supabase/functions/detect-new-launches/index.ts`. Deploy it so it can broadcast new launches via Realtime.
+
+### 4. Verify edge function works
+
+Test the deployed function with an invocation to confirm it returns launch data and broadcasts correctly.
 
 ### Technical Details
 
-**Allowed RPC methods whitelist:**
-```
-getHealth, getBalance, getTokenAccountsByOwner, getLatestBlockhash,
-getTransaction, sendTransaction, getAccountInfo, getSlot, getBlock,
-getSignaturesForAddress, simulateTransaction, getRecentBlockhash,
-getTokenAccountBalance, getProgramAccounts, getMultipleAccounts,
-getSignatureStatuses, getFeeForMessage, getMinimumBalanceForRentExemption,
-isBlockhashValid, getBlockHeight
-```
+**AutoStrategies.tsx line 89** — simple deletion of duplicate line.
 
-**Auth fix:**
+**useD3SAgent.ts fixes:**
 ```typescript
-// Before (broken):
-const { data, error } = await supabase.auth.getClaims(token);
-// After (correct):
-const { data: { user }, error } = await supabase.auth.getUser(token);
-if (error || !user) { return 401; }
+// Add at top:
+import { useRef, useState, useCallback, useEffect } from 'react';
+
+// Fix line 10 syntax:
+const startAgent = useCallback(() => {
+//                             ^ was missing opening paren
 ```
 
