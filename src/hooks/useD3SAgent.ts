@@ -1,3 +1,4 @@
+import { useRef, useState, useCallback, useEffect } from 'react';
 import type { AgentConfig, PortfolioData, EvaluationResult, WorkerPayload } from '../workers/d3s-agent-worker';
 import { supabase } from "@/integrations/supabase/client";
 
