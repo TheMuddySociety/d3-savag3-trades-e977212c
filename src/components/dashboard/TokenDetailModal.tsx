@@ -24,6 +24,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { backgroundTaskService } from '@/services/d3mon/BackgroundTaskService';
 import { useToast } from '@/hooks/use-toast';
+import { useJupiterPlugin } from '@/hooks/useJupiterPlugin';
 
 interface TokenDetailModalProps {
   token: MemeToken | null;
@@ -66,6 +67,7 @@ const HOLDER_COLORS = [
 function useTokenDetail(token: MemeToken | null, open: boolean) {
   const [priceData, setPriceData] = useState<PricePoint[]>([]);
   const [holders, setHolders] = useState<HolderSegment[]>([]);
+  const [holdersRisk, setHoldersRisk] = useState({ top10RiskPercent: 0, isHighRisk: false });
   const [trades, setTrades] = useState<Trade[]>([]);
   const [loading, setLoading] = useState(false);
   const [dataSource, setDataSource] = useState<'live' | 'mock'>('mock');
@@ -119,9 +121,14 @@ function useTokenDetail(token: MemeToken | null, open: boolean) {
             value: +d.value.toFixed(1),
             color: HOLDER_COLORS[i] || HOLDER_COLORS[3],
           })));
+          setHoldersRisk({
+            top10RiskPercent: fullData.holders.data.data.top10RiskPercent || 0,
+            isHighRisk: fullData.holders.data.data.isHighRisk || false
+          });
           usedLive = true;
         } else {
           setHolders([]);
+          setHoldersRisk({ top10RiskPercent: 0, isHighRisk: false });
         }
 
         // Trades
@@ -199,7 +206,7 @@ function useTokenDetail(token: MemeToken | null, open: boolean) {
     };
   }, [token?.id, open]);
 
-  return { priceData, holders, trades, loading, dataSource };
+  return { priceData, holders, holdersRisk, trades, loading, dataSource };
 }
 
 // ── Formatting ──────────────────────────────────────────────────────
@@ -223,47 +230,28 @@ const fmt = (v: number, type: 'usd' | 'compact' | 'pct' = 'usd') => {
 
 export function TokenDetailModal({ token, open, onOpenChange, onSetAlert }: TokenDetailModalProps) {
   const navigate = useNavigate();
-  const { priceData, holders, trades, loading, dataSource } = useTokenDetail(token, open);
+  const { priceData, holders, holdersRisk, trades, loading, dataSource } = useTokenDetail(token, open);
 
   const [showSwap, setShowSwap] = useState(false);
   const [selectedAmount, setSelectedAmount] = useState<number | null>(null);
   const [isQueueing, setIsQueueing] = useState(false);
   const { publicKey } = useWallet();
   const { toast } = useToast();
-  const swapContainerId = `modal-swap-${token?.id || 'none'}`;
+  const swapContainerId = 'modal-swap-singleton';
 
   const QUICK_BUY_AMOUNTS = [0.1, 0.5, 1, 5];
 
-  const [isJupiterLoaded, setIsJupiterLoaded] = useState(false);
+  // Initialize Jupiter via the new intelligent singleton Hook
+  const { containerRef, isReady, error, show, hide } = useJupiterPlugin(token?.tokenAddress || null, swapContainerId);
 
-  // Initialize Jupiter swap ONLY once when panel is first opened
+  // Sync visibility with state
   useEffect(() => {
-    if (!showSwap || !token?.tokenAddress || isJupiterLoaded) return;
-
-    const timer = setTimeout(() => {
-      import("@jup-ag/plugin").then((mod) => {
-        mod.init({
-          displayMode: "integrated",
-          integratedTargetId: swapContainerId,
-          formProps: {
-            fixedMint: undefined,
-            initialInputMint: "So11111111111111111111111111111111111111112",
-            initialOutputMint: token.tokenAddress,
-            initialAmount: selectedAmount ? String(selectedAmount * 1e9) : undefined,
-            referralAccount: "F4qYkXAcogrjQHw3ngKWjisMmmRFR4Ea6c9DCCpK5gBr",
-            referralFee: 150,
-          },
-          branding: {
-            name: "D3 SAVAGE SWAP",
-            logoUri: "https://ibb.co/0VFDBzYQ",
-          },
-        });
-        setIsJupiterLoaded(true);
-      }).catch(console.error);
-    }, 100);
-
-    return () => clearTimeout(timer);
-  }, [showSwap, token?.tokenAddress, swapContainerId, isJupiterLoaded]);
+    if (showSwap) {
+      show();
+    } else {
+      hide();
+    }
+  }, [showSwap, show, hide]);
 
   const handleQuickBuy = (amount: number) => {
     setSelectedAmount(amount);
@@ -383,7 +371,12 @@ export function TokenDetailModal({ token, open, onOpenChange, onSetAlert }: Toke
         <div className="p-5 space-y-5">
           {/* Safety Analysis */}
           {token.tokenAddress && (
-            <TokenSafetyCard tokenAddress={token.tokenAddress} tokenName={token.name} />
+            <TokenSafetyCard 
+              tokenAddress={token.tokenAddress} 
+              tokenName={token.name} 
+              top10RiskPercent={holdersRisk.top10RiskPercent}
+              isHighRisk={holdersRisk.isHighRisk}
+            />
           )}
           {/* Stats Row */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">

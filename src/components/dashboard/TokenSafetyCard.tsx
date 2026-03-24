@@ -32,6 +32,8 @@ interface TokenSafetyCardProps {
   tokenAddress: string;
   tokenName?: string;
   compact?: boolean;
+  top10RiskPercent?: number;
+  isHighRisk?: boolean;
 }
 
 const RISK_CONFIG = {
@@ -61,7 +63,7 @@ const RISK_CONFIG = {
   },
 };
 
-export function TokenSafetyCard({ tokenAddress, tokenName, compact = false }: TokenSafetyCardProps) {
+export function TokenSafetyCard({ tokenAddress, tokenName, compact = false, top10RiskPercent, isHighRisk }: TokenSafetyCardProps) {
   const [result, setResult] = useState<ShieldResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -164,6 +166,16 @@ export function TokenSafetyCard({ tokenAddress, tokenName, compact = false }: To
 
         {/* Recommendation */}
         <p className="text-xs text-muted-foreground">{result.recommendation}</p>
+
+        {/* Dynamic Risk Warning from Edge Function */}
+        {isHighRisk && top10RiskPercent && (
+          <div className="flex items-start gap-2 p-2 rounded-md bg-destructive/10 border border-destructive/30">
+            <AlertTriangle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
+            <div className="text-xs text-destructive flex-1">
+              <strong>High Concentration Risk:</strong> {top10RiskPercent}% of supply is held by unverified top holders (excluding known liquidity pools). Rug pull risk elevated.
+            </div>
+          </div>
+        )}
 
         {/* Quick flags */}
         <div className="flex flex-wrap gap-1.5">

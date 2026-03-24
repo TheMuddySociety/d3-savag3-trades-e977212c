@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { Redis } from "https://deno.land/x/upstash_redis@v1.19.3/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -40,14 +41,33 @@ async function rpcFetchWithFallback(apiKey: string, body: unknown): Promise<any>
   return json;
 }
 
-// ── Isolate Cache ───────────────────────────────────────────────────
+// ── Isolate Cache + Optional Global Upstash Redis ───────────────────
+let redisClient: Redis | null = null;
+try {
+  const url = Deno.env.get("UPSTASH_REDIS_REST_URL");
+  const token = Deno.env.get("UPSTASH_REDIS_REST_TOKEN");
+  if (url && token) {
+    redisClient = new Redis({ url, token });
+  }
+} catch (e) {
+  console.error("Failed to initialize Redis:", e);
+}
+
 const cacheMap = new Map<string, { data: string; expiry: number }>();
 const CACHE_TTL = 30_000; // 30 seconds TTL for prices and metadata
+const REDIS_TTL = 45;     // 45 seconds TTL for Redis global cache
 
-function ok(data: unknown, cacheKey?: string) {
+async function ok(data: unknown, cacheKey?: string) {
   const bodyStr = JSON.stringify({ success: true, data });
   if (cacheKey) {
     cacheMap.set(cacheKey, { data: bodyStr, expiry: Date.now() + CACHE_TTL });
+    if (redisClient) {
+      try {
+        await redisClient.set(cacheKey, bodyStr, { ex: REDIS_TTL });
+      } catch (e) {
+        console.error("Redis set error:", e);
+      }
+    }
   }
   return new Response(bodyStr, {
     headers: { ...corsHeaders, 'Content-Type': 'application/json', 'X-Cache': cacheKey ? 'MISS' : 'BYPASS' },
@@ -60,6 +80,15 @@ function err(message: string, status = 500) {
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });
 }
+
+// ── Known DEX / LP / CEX addresses (Exclude from Risk Analysis) ────
+const KNOWN_NON_RISK_ADDRESSES = new Set([
+  // Raydium AMM Authority
+  "5Q544fKrFoe6tsEbD7S8EmxGTJYAKtTVhAW5Q5pge4j1", 
+  // Pump.fun Curve
+  "TSLvdd1pWpHVjahSpsvCXUbgwsL3JAcvokwaNdTjDaM",
+  // Meteora / Orca common vaults would go here
+]);
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -83,10 +112,32 @@ serve(async (req) => {
     // ── Check Cache BEFORE processing ─────────────────────────────
     // We only cache GET-style data lookups, not mutations (which don't exist here anyway)
     const cacheKey = JSON.stringify(body);
-    const cached = cacheMap.get(cacheKey);
-    if (cached && Date.now() < cached.expiry) {
-      return new Response(cached.data, {
-        headers: { ...corsHeaders, "Content-Type": "application/json", "X-Cache": "HIT" }
+    let cachedData = null;
+    let cacheSource = "NONE";
+
+    if (redisClient) {
+      try {
+        const val = await redisClient.get(cacheKey);
+        if (val) {
+          cachedData = typeof val === 'string' ? val : JSON.stringify(val);
+          cacheSource = "HIT-REDIS";
+        }
+      } catch (e) {
+        console.error("Redis get error:", e);
+      }
+    }
+
+    if (!cachedData) {
+      const isolateHit = cacheMap.get(cacheKey);
+      if (isolateHit && Date.now() < isolateHit.expiry) {
+        cachedData = isolateHit.data;
+        cacheSource = "HIT-ISOLATE";
+      }
+    }
+
+    if (cachedData) {
+      return new Response(cachedData, {
+        headers: { ...corsHeaders, "Content-Type": "application/json", "X-Cache": cacheSource }
       });
     }
 
@@ -556,25 +607,33 @@ async function fetchTokenTrades(address: string, apiKey: string, limit: number) 
   return trades.slice(0, limit);
 }
 
-// ── Price History ───────────────────────────────────────────────────
+// ── Price History (Birdeye OHLCV) ───────────────────────────────────
 
 async function fetchPriceHistory(address: string, _interval: string, _timeFrom?: number, _timeTo?: number, jupiterApiKey?: string) {
   try {
-    // Try Birdeye history first
+    // Try Birdeye V3 OHLCV history first (True Candlestick Data)
     const BIRDEYE_API_KEY = Deno.env.get('BIRDEYE_API_KEY');
     if (BIRDEYE_API_KEY) {
       const now = Math.floor(Date.now() / 1000);
       const timeFrom = _timeFrom || now - 86400; // default 24h
       const timeTo = _timeTo || now;
       const birdeyeResp = await fetch(
-        `https://public-api.birdeye.so/defi/history_price?address=${address}&address_type=token&type=1H&time_from=${timeFrom}&time_to=${timeTo}`,
-        { headers: { 'X-API-KEY': BIRDEYE_API_KEY, 'x-chain': 'solana' } }
+        `https://public-api.birdeye.so/defi/v3/ohlcv?address=${address}&type=5m&time_from=${timeFrom}&time_to=${timeTo}`,
+        { headers: { 'X-API-KEY': BIRDEYE_API_KEY, 'x-chain': 'solana', 'accept': 'application/json' } }
       );
       if (birdeyeResp.ok) {
         const birdeyeData = await birdeyeResp.json();
         const items = birdeyeData?.data?.items;
         if (Array.isArray(items) && items.length > 0) {
-          return items.map((p: any) => ({ unixTime: p.unixTime, value: p.value }));
+          // Recharts AreaChart expects `unixTime` and `value` (which we map to 'close').
+          return items.map((c: any) => ({ 
+            unixTime: c.unixTime || c.time || c[0], 
+            value: c.close || c[4] || c.value,
+            open: c.open || c[1],
+            high: c.high || c[2],
+            low: c.low || c[3],
+            volume: c.volume || c[5] || 0
+          })).reverse();
         }
       }
     }
@@ -622,7 +681,7 @@ async function fetchPriceHistory(address: string, _interval: string, _timeFrom?:
   } catch { return []; }
 }
 
-// ── Token Holders ───────────────────────────────────────────────────
+// ── Token Holders with Risk Analysis ───────────────────────────────────
 
 async function fetchTokenHolders(address: string, apiKey: string) {
   try {
@@ -635,6 +694,22 @@ async function fetchTokenHolders(address: string, apiKey: string) {
     const top200 = accounts.slice(50, 200).reduce((sum: number, acc: { uiAmount: number }) => sum + (acc.uiAmount || 0), 0);
     const others = Math.max(0, totalInTop - top10 - top50 - top200);
 
+    // Grok's Risk Analysis Calculation
+    const processedHolders = accounts.map((acc: any) => {
+      const amount = parseFloat(acc.uiAmountString || "0");
+      return {
+        address: acc.address,
+        amount,
+        percent: totalInTop > 0 ? (amount / totalInTop) * 100 : 0,
+        isRisky: !KNOWN_NON_RISK_ADDRESSES.has(acc.address)
+      };
+    });
+
+    const top10RiskPercent = processedHolders
+      .filter((h: any) => h.isRisky)
+      .slice(0, 10)
+      .reduce((sum: number, h: any) => sum + h.percent, 0);
+
     return {
       totalAccounts: accounts.length,
       distribution: [
@@ -643,15 +718,24 @@ async function fetchTokenHolders(address: string, apiKey: string) {
         { name: 'Top 51-200', value: totalInTop > 0 ? (top200 / totalInTop) * 100 : 0 },
         { name: 'Others', value: totalInTop > 0 ? (others / totalInTop) * 100 : 0 },
       ],
-      topHolders: accounts.slice(0, 20).map((acc: { address: string; uiAmount: number }) => ({
+      topHolders: processedHolders.slice(0, 20).map((acc: any) => ({
         address: acc.address,
-        amount: acc.uiAmount || 0,
-        percentage: totalInTop > 0 ? ((acc.uiAmount || 0) / totalInTop) * 100 : 0,
+        amount: acc.amount || 0,
+        percentage: acc.percent,
+        isRisky: acc.isRisky
       })),
+      top10RiskPercent: Math.round(top10RiskPercent * 100) / 100,
+      isHighRisk: top10RiskPercent > 60 // adjustable limit
     };
   } catch (e) {
     console.warn('fetchTokenHolders failed, returning empty:', e);
-    return { totalAccounts: 0, distribution: [], topHolders: [] };
+    return { 
+      totalAccounts: 0, 
+      distribution: [], 
+      topHolders: [],
+      top10RiskPercent: 0,
+      isHighRisk: false
+    };
   }
 }
 
