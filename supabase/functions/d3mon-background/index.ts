@@ -1,5 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { Connection, PublicKey, Keypair, VersionedTransaction } from "https://esm.sh/@solana/web3.js@1.98.4";
+import bs58 from "https://esm.sh/bs58@5.0.0";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -190,7 +192,7 @@ serve(async (req) => {
           let result: any = {};
 
           if (task.task_type === 'background_trade') {
-            result = await executeBackgroundTrade(task.params);
+            result = await executeBackgroundTrade(task.params, serviceClient);
           } else if (task.task_type === 'background_launch') {
             result = await executeBackgroundLaunch(task.params, supabaseUrl, supabaseServiceKey);
           }
@@ -238,9 +240,96 @@ serve(async (req) => {
 });
 
 // ─── Background Trade Execution ─────────────────────────────────────
-async function executeBackgroundTrade(params: Record<string, any>) {
-  const { input_mint, output_mint, amount, slippage_bps } = params;
+async function executeBackgroundTrade(params: Record<string, any>, supabase: any) {
+  const { wallet_address, input_mint, output_mint, amount, slippage_bps } = params;
 
+  // 1. Check if user has a deposit budget
+  const { data: budget } = await supabase
+    .from('auto_trade_budgets')
+    .select('*')
+    .eq('wallet_address', wallet_address)
+    .eq('currency', input_mint === 'So11111111111111111111111111111111111111112' ? 'SOL' : 'USDC')
+    .eq('budget_mode', 'deposit')
+    .eq('is_active', true)
+    .single();
+
+  const platformPrivateKey = Deno.env.get('PLATFORM_WALLET_PRIVATE_KEY');
+
+  if (budget && budget.remaining_amount >= amount && platformPrivateKey) {
+    // 🚀 AUTONOMOUS SIGNING MODE (Deposit Budget Available)
+    console.log(`Executing autonomous trade for ${wallet_address} using platform wallet...`);
+    
+    try {
+      const platformKeypair = Keypair.fromSecretKey(bs58.decode(platformPrivateKey));
+      const rpcUrl = Deno.env.get('SOLANA_RPC_URL') || "https://api.mainnet-beta.solana.com";
+      const connection = new Connection(rpcUrl);
+
+      // Get Quote & Transaction from Jupiter
+      const quoteRes = await fetch(
+        `https://quote-api.jup.ag/v6/quote?inputMint=${input_mint}&outputMint=${output_mint}&amount=${Math.floor(amount * (input_mint.includes('So11') ? 1e9 : 1e6))}&slippageBps=${slippage_bps || 100}`
+      );
+      const quote = await quoteRes.json();
+      
+      const swapRes = await fetch('https://quote-api.jup.ag/v6/swap', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          quoteResponse: quote,
+          userPublicKey: platformKeypair.publicKey.toString(),
+          wrapAndUnwrapSol: true,
+        }),
+      });
+      const { swapTransaction } = await swapRes.json();
+
+      // Sign and Send
+      const transactionBuf = Buffer.from(swapTransaction, 'base64');
+      const transaction = VersionedTransaction.deserialize(transactionBuf);
+      
+      const { blockhash } = await connection.getLatestBlockhash();
+      transaction.message.recentBlockhash = blockhash;
+      transaction.sign([platformKeypair]);
+
+      const signature = await connection.sendRawTransaction(transaction.serialize());
+      await connection.confirmTransaction(signature);
+
+      // Update budget
+      await supabase
+        .from('auto_trade_budgets')
+        .update({
+          spent_amount: (budget.spent_amount || 0) + amount,
+          remaining_amount: budget.remaining_amount - amount,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', budget.id);
+
+      // Log trade
+      await supabase.from('live_trades').insert({
+        wallet_address,
+        tx_signature: signature,
+        input_mint,
+        output_mint,
+        input_amount: amount,
+        output_amount: parseFloat(quote.outAmount) / (output_mint.includes('So11') ? 1e9 : 1e6),
+        input_usd_value: 0, // Should fetch if needed
+        output_usd_value: 0,
+        status: 'success',
+        trade_type: 'background_auto',
+        bot_type: 'd3s_agent'
+      });
+
+      return {
+        success: true,
+        signature,
+        mode: 'autonomous',
+        note: 'Trade executed autonomously via platform wallet (Deposit Mode)'
+      };
+    } catch (err: any) {
+      console.error('Autonomous trade failed:', err);
+      throw new Error(`Autonomous execution failed: ${err.message}`);
+    }
+  }
+
+  // 2. Fallback to Hybrid Mode (User signatures required)
   // Use Jupiter Ultra API (gasless) for the swap
   const orderResp = await fetch('https://ultra-api.jup.ag/v1/order', {
     method: 'POST',
@@ -248,24 +337,40 @@ async function executeBackgroundTrade(params: Record<string, any>) {
     body: JSON.stringify({
       inputMint: input_mint,
       outputMint: output_mint,
-      amount: Math.floor(amount * 1e9), // Convert SOL to lamports
+      amount: Math.floor(amount * (input_mint.includes('So11') ? 1e9 : 1e6)), 
       taker: params.wallet_address,
-      slippageBps: slippage_bps,
+      slippageBps: slippage_bps || 300,
     }),
   });
 
   if (!orderResp.ok) {
-    throw new Error(`Jupiter order failed: ${orderResp.status}`);
+    const errText = await orderResp.text();
+    throw new Error(`Jupiter order failed: ${orderResp.status} - ${errText}`);
   }
 
   const order = await orderResp.json();
+  
+  // Insert into pending_auto_trades for frontend pickup
+  await supabase.from('pending_auto_trades').insert({
+    wallet_address: params.wallet_address,
+    token_mint: output_mint,
+    token_symbol: 'Pending',
+    side: 'buy',
+    amount_raw: Math.floor(amount * (input_mint.includes('So11') ? 1e9 : 1e6)).toString(),
+    decimals: input_mint.includes('So11') ? 9 : 6,
+    strategy: 'd3s_agent',
+    reason: 'Hybrid Mode Execution (Requires Signature)',
+    status: 'pending'
+  });
+
   return {
     order_id: order.requestId,
     input_mint,
     output_mint,
     amount,
     status: 'order_created',
-    note: 'Trade order created. User must sign the transaction to complete.',
+    mode: 'hybrid',
+    note: 'Deposit budget unavailable. Trade queued for manual signature in frontend.',
   };
 }
 

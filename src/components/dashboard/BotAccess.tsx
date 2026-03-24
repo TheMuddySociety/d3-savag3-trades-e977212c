@@ -15,6 +15,7 @@ import { LiveTradeHistory } from "./bot-tools/LiveTradeHistory";
 import { GridBot } from "./bot-tools/GridBot";
 import { TokenLaunchWizard } from "./bot-tools/TokenLaunchWizard";
 import { FeeDashboard } from "./bot-tools/FeeDashboard";
+import { ReferralEarningsTracker } from "../admin/ReferralEarningsTracker";
 import { ProfitSimulator } from "./analytics/ProfitSimulator";
 import { BackgroundTaskMonitor } from './background/BackgroundTaskMonitor';
 import { BeachModePanel } from './bot-tools/BeachModePanel';
@@ -216,8 +217,21 @@ export const BotAccess = () => {
           <TabsContent value="launch" className="mt-0">
             <TokenLaunchWizard />
           </TabsContent>
-          <TabsContent value="fees" className="mt-0">
-            <FeeDashboard />
+          <TabsContent value="fees" className="mt-0 space-y-6">
+            <div className="grid grid-cols-1 gap-6">
+              <ReferralEarningsTracker />
+              <Card className="border-border/40 bg-card/20 backdrop-blur-md shadow-lg overflow-hidden">
+                <CardHeader className="pb-2 border-b border-border/10 bg-accent/5">
+                  <div className="flex items-center gap-2">
+                    <Coins className="h-4 w-4 text-accent" />
+                    <CardTitle className="text-sm font-bold">Jupiter Studio LP Fees</CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent className="pt-4">
+                  <FeeDashboard />
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
           <TabsContent value="trades" className="mt-0">
             <LiveTradeHistory />

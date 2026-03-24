@@ -535,10 +535,31 @@ export const AutoStrategies = ({ killSignal = 0 }: Props) => {
 
       for (const action of lastResult.actions) {
         if (action.type === 'sell' && action.amountToSell && action.decimals) {
-          await executeLiveSell({ mint: action.mint, symbol: action.symbol, amount: action.amountToSell, decimals: action.decimals }, action.reason);
+          if (beachMode) {
+            addLog(`🏝️ Beach Mode: Offloading SELL ${action.symbol} to Cloud Agent...`);
+            await backgroundTaskService.queueTrade({
+              wallet_address: wallet.publicKey!.toBase58(),
+              input_mint: action.mint,
+              output_mint: SOL_MINT,
+              amount: action.amountToSell,
+              slippage_bps: 100 // Tighter slippage for auto-sells
+            });
+          } else {
+            await executeLiveSell({ mint: action.mint, symbol: action.symbol, amount: action.amountToSell, decimals: action.decimals }, action.reason);
+          }
         } else if (action.type === 'buy' && action.amountToBuySOL) {
-          const success = await executeLiveBuy(action.mint, action.symbol, action.amountToBuySOL, action.reason);
-          if (success && action.autoSellTimer && action.autoSellTimer > 0 && !launchAutoSellTimers.current.has(action.mint)) {
+          if (beachMode) {
+            addLog(`🏝️ Beach Mode: Offloading BUY ${action.symbol} to Cloud Agent...`);
+            await backgroundTaskService.queueTrade({
+              wallet_address: wallet.publicKey!.toBase58(),
+              input_mint: SOL_MINT,
+              output_mint: action.mint,
+              amount: action.amountToBuySOL,
+              slippage_bps: 300
+            });
+          } else {
+            const success = await executeLiveBuy(action.mint, action.symbol, action.amountToBuySOL, action.reason);
+            if (success && action.autoSellTimer && action.autoSellTimer > 0 && !launchAutoSellTimers.current.has(action.mint)) {
             addLog(`⏱️ Auto-sell timer set: ${action.symbol} in ${action.autoSellTimer}s`);
             const timer = setTimeout(async () => {
               launchAutoSellTimers.current.delete(action.mint);
@@ -552,12 +573,13 @@ export const AutoStrategies = ({ killSignal = 0 }: Props) => {
               }
             }, action.autoSellTimer * 1000);
             launchAutoSellTimers.current.set(action.mint, timer);
+            }
           }
         }
       }
     };
     processResults();
-  }, [lastResult, updatePeakPricesToSupabase, executeLiveSell, executeLiveBuy, fetchLiveHoldings, addLog]);
+  }, [lastResult, updatePeakPricesToSupabase, executeLiveSell, executeLiveBuy, fetchLiveHoldings, addLog, beachMode]);
   const saveBotConfig = useCallback(async (botType: string, config: Record<string, unknown>, isActive: boolean) => {
     if (!wallet.publicKey) return;
     const walletAddr = wallet.publicKey.toBase58();

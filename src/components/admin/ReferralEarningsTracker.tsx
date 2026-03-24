@@ -91,7 +91,7 @@ export function ReferralEarningsTracker() {
     });
 
   return (
-    <Card className="border-primary/20 bg-card">
+    <Card className="border-border/40 bg-card/20 backdrop-blur-xl shadow-2xl overflow-hidden">
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="text-xl flex items-center gap-2">
           <TrendingUp className="h-5 w-5 text-primary" />
@@ -328,7 +328,7 @@ function SummaryCard({
   loading: boolean;
 }) {
   return (
-    <Card className="bg-muted/50 border-border">
+    <Card className="bg-white/5 border-border/20 backdrop-blur-md hover:bg-white/10 transition-colors duration-300">
       <CardContent className="p-4 flex items-center gap-3">
         {icon}
         <div>
