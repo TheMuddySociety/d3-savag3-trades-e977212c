@@ -14,6 +14,7 @@ import { BudgetManager } from "./BudgetManager";
 import { supabase } from "@/integrations/supabase/client";
 import { AgentService } from "@/services/solana/agentService";
 import { backgroundTaskService } from "@/services/d3mon/BackgroundTaskService";
+import { useD3SAgent } from "@/hooks/useD3SAgent";
 
 const SOL_MINT = "So11111111111111111111111111111111111111112";
 
@@ -67,26 +68,8 @@ interface Props {
   killSignal?: number;
 }
 
-// In-memory peak price tracking (updated each cycle)
-interface PeakData {
-  price: number;
-  lastUpdated: number;
-}
-const peakPrices = new Map<string, PeakData>();
-
 // Background Garbage Collection for peak prices (Memory Leak Fix)
-setInterval(() => {
-  const now = Date.now();
-  let pruned = 0;
-  for (const [mint, data] of peakPrices.entries()) {
-    // Drop tracking if not updated in 48 hours
-    if (now - data.lastUpdated > 48 * 60 * 60 * 1000) {
-      peakPrices.delete(mint);
-      pruned++;
-    }
-  }
-  if (pruned > 0) console.log(`[D3S GC] Pruned ${pruned} stale peak price records`);
-}, 60 * 60 * 1000); // Run hourly
+// Handled directly inside d3s-agent-worker.ts now!
 
 export const AutoStrategies = ({ killSignal = 0 }: Props) => {
   const { toast } = useToast();
@@ -103,8 +86,10 @@ export const AutoStrategies = ({ killSignal = 0 }: Props) => {
   const [pendingTrades, setPendingTrades] = useState<PendingTrade[]>([]);
   const [isAgentHired, setIsAgentHired] = useState(false);
   const [isHiring, setIsHiring] = useState(false);
+  const [isHiring, setIsHiring] = useState(false);
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
   const pendingPollRef = useRef<NodeJS.Timeout | null>(null);
+  const { startAgent, stopAgent, evaluateFrame, lastResult } = useD3SAgent();
 
   // New Launch Hunter configurable parameters
   const [launchMinLiquidity, setLaunchMinLiquidity] = useState("100");
@@ -146,14 +131,14 @@ export const AutoStrategies = ({ killSignal = 0 }: Props) => {
       setStatusLog([]);
       setExecutingTrade(false);
       setPendingTrades([]);
-      peakPrices.clear();
+      stopAgent();
       // Clear auto-sell timers
       for (const timer of launchAutoSellTimers.current.values()) clearTimeout(timer);
       launchAutoSellTimers.current.clear();
       if (pollingRef.current) { clearInterval(pollingRef.current); pollingRef.current = null; }
       if (pendingPollRef.current) { clearInterval(pendingPollRef.current); pendingPollRef.current = null; }
     }
-  }, [killSignal]);
+  }, [killSignal, stopAgent]);
 
   // Check agent status on mount / wallet change
   const [pendingTaskCount, setPendingTaskCount] = useState(0);
@@ -239,14 +224,13 @@ export const AutoStrategies = ({ killSignal = 0 }: Props) => {
       if (result?.status === 'Success') {
         addLog(`✅ ${reason}: Sold ${holding.amount.toFixed(4)} ${holding.symbol} — tx: ${result.signature?.slice(0, 8)}...`);
         
-        // Clean up entry/peak prices
+        // Clean up entry prices
         if (wallet.publicKey) {
           await (supabase.from('auto_trade_entry_prices' as any) as any)
             .delete()
             .eq('wallet_address', wallet.publicKey.toBase58())
             .eq('token_mint', holding.mint);
         }
-        peakPrices.delete(holding.mint);
         return true;
       } else {
         addLog(`❌ ${reason}: Sell failed — ${result?.error || 'Unknown error'}`);
@@ -439,26 +423,16 @@ export const AutoStrategies = ({ killSignal = 0 }: Props) => {
   }, [wallet.publicKey]);
 
   // Update peak prices in DB for Beach Mode persistence
-  const updatePeakPrices = useCallback(async (holdings: LiveHolding[]) => {
+  const updatePeakPricesToSupabase = useCallback(async (peaksMap: Record<string, { price: number }>) => {
     if (!wallet.publicKey) return;
     const walletAddr = wallet.publicKey.toBase58();
-    const now = Date.now();
-    for (const h of holdings) {
-      if (h.price <= 0) continue;
-      const currentData = peakPrices.get(h.mint);
-      const currentPeak = currentData ? currentData.price : 0;
-      if (h.price > currentPeak) {
-        peakPrices.set(h.mint, { price: h.price, lastUpdated: now });
-        try {
-          await (supabase.from('auto_trade_entry_prices' as any) as any)
-            .update({ peak_price: h.price })
-            .eq('wallet_address', walletAddr)
-            .eq('token_mint', h.mint);
-        } catch { /* ignore */ }
-      } else if (currentData) {
-        // Just update timestamp so GC doesn't prune active holdings
-        currentData.lastUpdated = now;
-      }
+    for (const [mint, data] of Object.entries(peaksMap)) {
+      try {
+        await (supabase.from('auto_trade_entry_prices' as any) as any)
+          .update({ peak_price: data.price })
+          .eq('wallet_address', walletAddr)
+          .eq('token_mint', mint);
+      } catch { /* ignore */ }
     }
   }, [wallet.publicKey]);
 
@@ -468,19 +442,21 @@ export const AutoStrategies = ({ killSignal = 0 }: Props) => {
   const maxBudgetRef = useRef(maxBudget);
   maxBudgetRef.current = maxBudget;
 
-  // Polling loop for active strategies
+  // Polling loop for active strategies offloads to Web Worker
   useEffect(() => {
     if (!activeStrategyKey) {
       if (pollingRef.current) { clearInterval(pollingRef.current); pollingRef.current = null; }
+      stopAgent();
       return;
     }
+
+    startAgent(); // Ensure worker is alive
+
     if (pollingRef.current) { clearInterval(pollingRef.current); pollingRef.current = null; }
 
-    const evaluateStrategies = async () => {
+    const tick = async () => {
       const enabled = strategiesRef.current.filter(s => s.enabled);
       if (enabled.length === 0) return;
-
-      addLog(`Scanning ${enabled.length} strategy(ies)...`);
 
       if (!wallet.publicKey) {
         addLog("⚠️ Wallet not connected — skipping");
@@ -489,264 +465,100 @@ export const AutoStrategies = ({ killSignal = 0 }: Props) => {
 
       const holdings = await fetchLiveHoldings();
       if (holdings.length === 0 && !enabled.some(s => s.id === 'dip_buy' || s.id === 'new_launch')) {
-        addLog("No token holdings found in wallet");
+        addLog("No active trades found. Monitoring market...");
         return;
       }
 
-      if (holdings.length > 0) {
-        addLog(`Found ${holdings.length} token(s) in wallet`);
-      }
+      const trendingDips = enabled.some(s => s.id === 'dip_buy') ? await fetchTrendingForDips() : [];
+      const newLaunches = enabled.some(s => s.id === 'new_launch') ? await fetchNewLaunches() : [];
 
-      // Record entry prices to DB
       await recordEntryPrices(holdings);
 
-      // Get entry prices from DB (includes peak_price)
       const { data: entryRows } = await (supabase
         .from('auto_trade_entry_prices' as any)
         .select('*') as any)
         .eq('wallet_address', wallet.publicKey.toBase58());
 
-      const entryPriceMap = new Map<string, number>();
-      const dbPeakMap = new Map<string, number>();
+      const entryPriceMap: Record<string, number> = {};
       for (const ep of (entryRows || [])) {
-        entryPriceMap.set((ep as any).token_mint, Number((ep as any).entry_price));
-        if ((ep as any).peak_price) {
-          dbPeakMap.set((ep as any).token_mint, Number((ep as any).peak_price));
-        }
+        entryPriceMap[(ep as any).token_mint] = Number((ep as any).entry_price);
       }
 
-      // Sync peak prices from DB
-      const now = Date.now();
-      for (const [mint, peak] of dbPeakMap) {
-        const currentData = peakPrices.get(mint);
-        const currentPeak = currentData ? currentData.price : 0;
-        if (peak > currentPeak) peakPrices.set(mint, { price: peak, lastUpdated: now });
-      }
-
-      // Track new tokens
       for (const h of holdings) {
-        if (!entryPriceMap.has(h.mint) && h.price > 0) {
-          entryPriceMap.set(h.mint, h.price);
+        if (!entryPriceMap[h.mint] && h.price > 0) {
+          entryPriceMap[h.mint] = h.price;
           addLog(`📌 Tracking ${h.symbol} entry: $${h.price.toFixed(8)}`);
         }
       }
 
-      // Update peak prices
-      await updatePeakPrices(holdings);
+      // Dispatch non-blocking compute task to D3S Agent Web Worker
+      evaluateFrame({
+        portfolio: { tokens: holdings, totalValueSol: 0 },
+        entryPriceMap,
+        config: {
+          activeStrategies: enabled.map(s => s.id as any),
+          walletAddress: wallet.publicKey.toBase58(),
+          safeExitStopLoss: parseFloat(safeExitStopLossRef.current) || 15,
+          safeExitTakeProfit: parseFloat(safeExitTakeProfitRef.current) || 50,
+          scalperTarget: parseFloat(scalperTargetRef.current) || 3,
+          launchMinLiquidity: parseFloat(launchMinLiqRef.current) || 100,
+          launchMaxAge: parseInt(launchMaxAgeRef.current) || 30,
+          launchAutoSellTimer: parseInt(launchAutoSellTimerRef.current) || 0,
+          maxBudget: parseFloat(maxBudgetRef.current) || 1.0,
+        },
+        marketContext: { trendingDips, newLaunches },
+        currentPeaks: {}, // Managed inside useD3SAgent hook automatically
+      });
+    };
 
-      for (const strategy of enabled) {
-        try {
-          switch (strategy.id) {
-            // ═══════════════════════════════════════
-            // SAFE EXIT: -15% stop-loss, +50% take-profit
-            // ═══════════════════════════════════════
-            case "safe_exit": {
-              for (const h of holdings) {
-                const entryPrice = entryPriceMap.get(h.mint);
-                if (!entryPrice || h.price <= 0) continue;
-                const pnl = ((h.price - entryPrice) / entryPrice) * 100;
+    tick();
+    const hasLaunchHunter = strategiesRef.current.some(s => s.id === 'new_launch' && s.enabled);
+    pollingRef.current = setInterval(tick, hasLaunchHunter ? 10000 : 15000);
+    
+    return () => { if (pollingRef.current) { clearInterval(pollingRef.current); pollingRef.current = null; } };
+  }, [activeStrategyKey, wallet.publicKey, startAgent, stopAgent, fetchLiveHoldings, fetchTrendingForDips, fetchNewLaunches, recordEntryPrices, evaluateFrame, addLog]);
 
-                const stopLossThreshold = -parseFloat(safeExitStopLossRef.current || "15");
-                const takeProfitThreshold = parseFloat(safeExitTakeProfitRef.current || "50");
+  // Handle D3S Agent Web Worker asynchronous callbacks
+  useEffect(() => {
+    if (!lastResult) return;
+    
+    // Sync peak prices back to DB so Beach Mode has them
+    updatePeakPricesToSupabase(lastResult.updatedPeaks);
 
-                if (pnl <= stopLossThreshold) {
-                  addLog(`🛡️ Stop-Loss triggered: ${h.symbol} at ${pnl.toFixed(1)}%`);
-                  await executeLiveSell(h, "Stop-Loss");
-                } else if (pnl >= takeProfitThreshold) {
-                  addLog(`🛡️ Take-Profit triggered: ${h.symbol} at +${pnl.toFixed(1)}%`);
-                  await executeLiveSell(h, "Take-Profit");
-                } else {
-                  addLog(`🛡️ ${h.symbol}: P&L ${pnl >= 0 ? '+' : ''}${pnl.toFixed(1)}% (watching)`);
-                }
+    const processResults = async () => {
+      let isLogsAdded = false;
+
+      // Ensure logs are only added once per result processing
+      for (const log of lastResult.logs) {
+        addLog(log);
+        isLogsAdded = true;
+      }
+
+      for (const action of lastResult.actions) {
+        if (action.type === 'sell' && action.amountToSell && action.decimals) {
+          await executeLiveSell({ mint: action.mint, symbol: action.symbol, amount: action.amountToSell, decimals: action.decimals }, action.reason);
+        } else if (action.type === 'buy' && action.amountToBuySOL) {
+          const success = await executeLiveBuy(action.mint, action.symbol, action.amountToBuySOL, action.reason);
+          if (success && action.autoSellTimer && action.autoSellTimer > 0 && !launchAutoSellTimers.current.has(action.mint)) {
+            addLog(`⏱️ Auto-sell timer set: ${action.symbol} in ${action.autoSellTimer}s`);
+            const timer = setTimeout(async () => {
+              launchAutoSellTimers.current.delete(action.mint);
+              addLog(`⏱️ Auto-sell timer fired for ${action.symbol} — fetching position...`);
+              const currentHoldings = await fetchLiveHoldings();
+              const position = currentHoldings.find(h => h.mint === action.mint);
+              if (position && position.amount > 0) {
+                await executeLiveSell(position, `⏱️ Auto-Sell Timer (${action.autoSellTimer}s)`);
+              } else {
+                addLog(`⏱️ ${action.symbol} no longer in wallet — skipping auto-sell`);
               }
-              break;
-            }
-
-            // ═══════════════════════════════════════
-            // SCALPER: sell on +3% gain
-            // ═══════════════════════════════════════
-            case "scalper": {
-              const scalperThreshold = parseFloat(scalperTargetRef.current || "3");
-              for (const h of holdings) {
-                const entryPrice = entryPriceMap.get(h.mint);
-                if (!entryPrice || h.price <= 0) continue;
-                const pnl = ((h.price - entryPrice) / entryPrice) * 100;
-
-                if (pnl >= scalperThreshold) {
-                  addLog(`⚡ Scalper triggered: ${h.symbol} at +${pnl.toFixed(1)}%`);
-                  await executeLiveSell(h, "Scalper");
-                } else {
-                  addLog(`⚡ ${h.symbol}: ${pnl >= 0 ? '+' : ''}${pnl.toFixed(1)}% (target: +${scalperThreshold}%)`);
-                }
-              }
-              break;
-            }
-
-            // ═══════════════════════════════════════
-            // MOMENTUM RIDER: tracks peak, sells on >5% reversal from peak
-            // ═══════════════════════════════════════
-            case "momentum": {
-              if (holdings.length === 0) {
-                addLog(`📈 Momentum: No positions to monitor`);
-                break;
-              }
-              addLog(`📈 Momentum: Scanning ${holdings.length} position(s) for reversals`);
-
-              for (const h of holdings) {
-                if (h.price <= 0) continue;
-
-                const peakData = peakPrices.get(h.mint);
-                const peak = peakData ? peakData.price : h.price;
-                const dropFromPeak = peak > 0 ? ((h.price - peak) / peak) * 100 : 0;
-                const entryPrice = entryPriceMap.get(h.mint) || h.price;
-                const pnlFromEntry = entryPrice > 0 ? ((h.price - entryPrice) / entryPrice) * 100 : 0;
-
-                if (dropFromPeak <= -5 && pnlFromEntry > 0) {
-                  // Reversal detected: price dropped >5% from peak AND we're still in profit
-                  addLog(`📈 Momentum reversal: ${h.symbol} dropped ${dropFromPeak.toFixed(1)}% from peak $${peak.toFixed(8)} (P&L: +${pnlFromEntry.toFixed(1)}%)`);
-                  await executeLiveSell(h, `Momentum Sell (${dropFromPeak.toFixed(1)}% from peak)`);
-                } else if (dropFromPeak <= -10) {
-                  // Severe reversal: sell even at a loss
-                  addLog(`📈 Momentum crash: ${h.symbol} dropped ${dropFromPeak.toFixed(1)}% from peak — emergency sell`);
-                  await executeLiveSell(h, `Momentum Emergency (${dropFromPeak.toFixed(1)}% crash)`);
-                } else {
-                  addLog(`📈 ${h.symbol}: $${h.price.toFixed(8)} | peak: $${peak.toFixed(8)} | ${dropFromPeak >= 0 ? '📈' : '📉'} ${dropFromPeak.toFixed(1)}% from peak`);
-                }
-              }
-              break;
-            }
-
-            // ═══════════════════════════════════════
-            // DIP BUYER: buys tokens that dipped >20% and are recovering >3%
-            // ═══════════════════════════════════════
-            case "dip_buy": {
-              const budget = parseFloat(maxBudgetRef.current) || 1.0;
-              addLog(`📉 Dip Buyer: Scanning market for >20% dips with recovery (budget: ${budget} SOL)`);
-
-              try {
-                const trending = await fetchTrendingForDips();
-                if (trending.length === 0) {
-                  addLog(`📉 No trending data available`);
-                  break;
-                }
-
-                // Find tokens that dipped >20% in 1h but are showing recovery (change > -17%, meaning partial bounce)
-                const dipCandidates = trending.filter(t => {
-                  // Token dropped >20% in last hour
-                  const isDipping = t.priceChange1h <= -20;
-                  // But showing recovery (not still falling — change is less negative than -25%)
-                  const isRecovering = t.priceChange1h > -25;
-                  // Not already owned
-                  const alreadyOwned = holdings.some(h => h.mint === t.mint);
-                  return isDipping && isRecovering && !alreadyOwned;
-                });
-
-                if (dipCandidates.length === 0) {
-                  addLog(`📉 No qualifying dip candidates found`);
-                  break;
-                }
-
-                // Take the best candidate (smallest dip = closest to recovery)
-                const best = dipCandidates.sort((a, b) => b.priceChange1h - a.priceChange1h)[0];
-                
-                addLog(`📉 Dip candidate: ${best.symbol} (${best.priceChange1h.toFixed(1)}% 1h) — buying ${budget} SOL`);
-                await executeLiveBuy(
-                  best.mint,
-                  best.symbol,
-                  budget,
-                  `Dip Buy: ${best.symbol} (${best.priceChange1h.toFixed(1)}% dip)`
-                );
-              } catch (e: any) {
-                addLog(`📉 Dip Buyer error: ${e.message}`);
-              }
-              break;
-            }
-
-            // ═══════════════════════════════════════
-            // NEW LAUNCH HUNTER: snipes new Pump.fun tokens
-            // ═══════════════════════════════════════
-            case "new_launch": {
-              const budget = parseFloat(maxBudgetRef.current) || 1.0;
-              const minLiq = parseFloat(launchMinLiqRef.current) || 100;
-              const maxAge = parseInt(launchMaxAgeRef.current) || 30;
-              const autoSellSec = parseInt(launchAutoSellTimerRef.current) || 0;
-              addLog(`🔥 Launch Hunter: Scanning (budget: ${budget} SOL, liq≥$${minLiq}, age≤${maxAge}s${autoSellSec > 0 ? `, auto-sell: ${autoSellSec}s` : ''})`);
-
-              try {
-                const launches = await fetchNewLaunches();
-                if (launches.length === 0) {
-                  addLog(`🔥 No new launches detected`);
-                  break;
-                }
-
-                const snipeCandidates = launches.filter(t => {
-                  const isFresh = t.ageSeconds <= maxAge;
-                  const hasLiquidity = t.liquidity >= minLiq;
-                  const notOwned = !holdings.some(h => h.mint === t.mint);
-                  return isFresh && hasLiquidity && notOwned;
-                });
-
-                if (snipeCandidates.length === 0) {
-                  const newest = launches[0];
-                  addLog(`🔥 Newest: ${newest.symbol} (${newest.ageSeconds}s old, $${newest.liquidity.toFixed(0)} liq) — waiting for ≤${maxAge}s & ≥$${minLiq}`);
-                  break;
-                }
-
-                const target = snipeCandidates[0];
-                addLog(`🔥🎯 SNIPING: ${target.symbol} (${target.name}) — ${target.ageSeconds}s old, $${target.liquidity.toFixed(0)} liq, ${budget} SOL`);
-                
-                const success = await executeLiveBuy(
-                  target.mint,
-                  target.symbol,
-                  budget,
-                  `🔥 Launch Snipe: ${target.symbol} (${target.ageSeconds}s old)`
-                );
-
-                if (success) {
-                  addLog(`🔥✅ Sniped ${target.symbol} for ${budget} SOL!`);
-                  
-                  // D3S Agent's autonomous execution log
-                  if (autoSellSec > 0 && !launchAutoSellTimers.current.has(target.mint)) {
-                    addLog(`⏱️ Auto-sell timer set: ${target.symbol} in ${autoSellSec}s`);
-                    const timer = setTimeout(async () => {
-                      launchAutoSellTimers.current.delete(target.mint);
-                      addLog(`⏱️ Auto-sell timer fired for ${target.symbol} — fetching position...`);
-                      const currentHoldings = await fetchLiveHoldings();
-                      const position = currentHoldings.find(h => h.mint === target.mint);
-                      if (position && position.amount > 0) {
-                        await executeLiveSell(position, `⏱️ Auto-Sell Timer (${autoSellSec}s)`);
-                      } else {
-                        addLog(`⏱️ ${target.symbol} no longer in wallet — skipping auto-sell`);
-                      }
-                    }, autoSellSec * 1000);
-                    launchAutoSellTimers.current.set(target.mint, timer);
-                  }
-                }
-              } catch (e: any) {
-                addLog(`🔥 Launch Hunter error: ${e.message}`);
-              }
-              break;
-            }
-
-            case "whale_follow": {
-              addLog(`🐋 Whale Follow: Monitoring top wallets`);
-              break;
-            }
-            default:
-              addLog(`🔍 ${strategy.name}: Active`);
+            }, action.autoSellTimer * 1000);
+            launchAutoSellTimers.current.set(action.mint, timer);
           }
-        } catch (e: any) {
-          addLog(`❌ ${strategy.name}: ${e.message}`);
         }
       }
     };
-
-    evaluateStrategies();
-    // Use 10s interval when New Launch Hunter is active (needs speed), 15s otherwise
-    const hasLaunchHunter = strategiesRef.current.some(s => s.id === 'new_launch' && s.enabled);
-    pollingRef.current = setInterval(evaluateStrategies, hasLaunchHunter ? 10000 : 15000);
-    return () => { if (pollingRef.current) { clearInterval(pollingRef.current); pollingRef.current = null; } };
-  }, [activeStrategyKey, wallet.publicKey, fetchLiveHoldings, executeLiveSell, executeLiveBuy, addLog, recordEntryPrices, updatePeakPrices, fetchTrendingForDips, fetchNewLaunches]);
+    processResults();
+  }, [lastResult, updatePeakPricesToSupabase, executeLiveSell, executeLiveBuy, fetchLiveHoldings, addLog]);
   const saveBotConfig = useCallback(async (botType: string, config: Record<string, unknown>, isActive: boolean) => {
     if (!wallet.publicKey) return;
     const walletAddr = wallet.publicKey.toBase58();
