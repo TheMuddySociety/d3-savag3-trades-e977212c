@@ -8,7 +8,7 @@ export const useD3SAgent = () => {
   const [lastResult, setLastResult] = useState<EvaluationResult | null>(null);
   const [peakPrices, setPeakPrices] = useState<Record<string, { price: number; lastUpdated: number }>>({});
 
-  const startAgent = useCallback() => {
+  const startAgent = useCallback(() => {
     if (!workerRef.current) {
       // Create worker with proper Vite import
       workerRef.current = new Worker(new URL('../workers/d3s-agent-worker.ts', import.meta.url), { type: 'module' });
