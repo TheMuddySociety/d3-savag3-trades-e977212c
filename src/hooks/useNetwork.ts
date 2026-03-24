@@ -20,13 +20,18 @@ export function useNetwork() {
   }, [caipNetwork]);
 
   const rpcUrl = useMemo(() => {
+    // Ported from App.tsx - use the Helius-backed proxy for mainnet stability
+    const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+    const PROXY_URL = `${SUPABASE_URL}/functions/v1/rpc-proxy`;
+
     switch (network) {
       case 'devnet':
         return 'https://api.devnet.solana.com';
       case 'testnet':
         return 'https://api.testnet.solana.com';
       default:
-        return 'https://api.mainnet-beta.solana.com';
+        // Use proxy for mainnet to leverage Helius API key
+        return PROXY_URL;
     }
   }, [network]);
 

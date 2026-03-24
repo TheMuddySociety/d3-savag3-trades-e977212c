@@ -27,7 +27,7 @@ const formatAmount = (v: number) => {
 export const PortfolioTracker = () => {
   const { publicKey } = useWallet();
   const walletAddress = publicKey?.toBase58() || null;
-  const { portfolio, isLoading, error, refresh } = useWalletPortfolio(walletAddress);
+  const { portfolio, isLoading, error, diagnostics, refresh } = useWalletPortfolio(walletAddress);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const handleRefresh = async () => {
@@ -110,6 +110,21 @@ export const PortfolioTracker = () => {
                 <span>{portfolio.solBalance.toFixed(4)} SOL</span>
               </div>
             </div>
+
+            {/* Diagnostics Warning */}
+            {diagnostics && (
+              <div className="p-2 rounded-md bg-yellow-500/10 border border-yellow-500/20">
+                <div className="flex items-start gap-2">
+                  <div className="relative flex h-2 w-2 mt-1 shrink-0">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-yellow-500"></span>
+                  </div>
+                  <p className="text-[10px] leading-tight text-yellow-500/90 italic">
+                    {diagnostics}
+                  </p>
+                </div>
+              </div>
+            )}
 
             {/* SOL Balance */}
             <div className="flex items-center justify-between p-2.5 rounded-lg bg-muted/20 border border-border">

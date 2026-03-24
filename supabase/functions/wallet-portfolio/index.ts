@@ -22,31 +22,27 @@ serve(async (req) => {
   try {
     const authHeader = req.headers.get('Authorization');
     const body = await req.json().catch(() => ({}));
-    let { wallet_address } = body;
+    let { wallet_address, network = 'mainnet-beta' } = body;
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
 
-    // If authenticated, we can resolve the trusted wallet address
     if (authHeader) {
       const userClient = createClient(supabaseUrl, anonKey, {
         global: { headers: { Authorization: authHeader } }
       });
       const { data: { user } } = await userClient.auth.getUser();
       
-      if (user) {
-        // If no wallet_address provided, use the user's primary wallet
-        if (!wallet_address) {
-          const supabase = createClient(supabaseUrl, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('wallet_address')
-            .eq('id', user.id)
-            .single();
-          
-          if (profile) {
-            wallet_address = profile.wallet_address;
-          }
+      if (user && !wallet_address) {
+        const supabase = createClient(supabaseUrl, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('wallet_address')
+          .eq('id', user.id)
+          .single();
+        
+        if (profile) {
+          wallet_address = profile.wallet_address;
         }
       }
     }
@@ -59,201 +55,182 @@ serve(async (req) => {
     }
 
     // ── Check Isolate Cache ─────────────────────────────────────
-    const cached = portfolioCache.get(wallet_address);
+    const cacheKey = `${wallet_address}-${network}`;
+    const cached = portfolioCache.get(cacheKey);
     if (cached && Date.now() < cached.expiry) {
-      console.log(`[Cache HIT] Portfolio for ${wallet_address.substring(0, 6)}...`);
+      console.log(`[Cache HIT] Portfolio for ${wallet_address.substring(0, 6)}... (${network})`);
       return new Response(cached.data, {
         headers: { ...corsHeaders, "Content-Type": "application/json", "X-Cache": "HIT" },
       });
     }
-    console.log(`[Cache MISS] Fetching fresh portfolio for ${wallet_address.substring(0, 6)}...`);
+    console.log(`[Cache MISS] Fetching fresh portfolio for ${wallet_address.substring(0, 6)}... (${network})`);
 
     const heliusKey = Deno.env.get("HELIUS_API_KEY");
     const isInvalidHelius = !heliusKey || heliusKey.includes("REPLACE") || heliusKey.length < 10;
     
-    // Use Helius for DAS API or public RPC for standard methods
-    const rpcUrl = !isInvalidHelius 
-      ? `https://mainnet.helius-rpc.com/?api-key=${heliusKey}`
-      : "https://api.mainnet-beta.solana.com";
+    // Helius Cluster Mapping
+    const cluster = network === 'devnet' ? 'devnet' : 'mainnet';
+    const heliusUrl = !isInvalidHelius 
+      ? `https://mainnet.helius-rpc.com/?api-key=${heliusKey}` 
+      : `https://api.${cluster}-beta.solana.com`;
 
-    // 1. Fetch SOL balance + all token accounts in parallel
-    // We try Helius first, but have a public RPC logic in mind
-    const [solBalanceRes, tokenAccountsRes, token2022AccountsRes] = await Promise.all([
-      fetch(rpcUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "getBalance", params: [wallet_address] }),
-      }),
-      fetch(rpcUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          jsonrpc: "2.0", id: 2, method: "getTokenAccountsByOwner",
-          params: [wallet_address, { programId: TOKEN_PROGRAM }, { encoding: "jsonParsed" }],
-        }),
-      }),
-      fetch(rpcUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          jsonrpc: "2.0", id: 3, method: "getTokenAccountsByOwner",
-          params: [wallet_address, { programId: TOKEN_2022_PROGRAM }, { encoding: "jsonParsed" }],
-        }),
-      }),
-    ]);
+    if (network === 'devnet' && !isInvalidHelius) {
+        // Helius devnet requires different URL usually, but for standard RPC we can fallback
+    }
 
-    const solBalanceData = await solBalanceRes.json();
-    const solBalance = (solBalanceData.result?.value || 0) / 1e9;
+    // 1. Fetch SOL Balance + Token Assets (Universal DAS API)
+    const fetchWithFallback = async (method: string, params: any, id: string | number) => {
+      let res = await fetch(heliusUrl, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jsonrpc: "2.0", id, method, params }),
+      });
 
-    // Parse token accounts (resilient to missing data)
-    const parseTokenAccounts = (data: any) => {
-      const accounts = data?.result?.value || [];
-      return accounts
-        .map((acc: any) => {
+      // Fallback if Helius key is invalid/unauthorized
+      if ((res.status === 401 || res.status === 403) && !isInvalidHelius) {
+        console.error(`Helius ${res.status} Unauthorized. Falling back to public RPC.`);
+        const fallbackUrl = `https://api.${cluster}-beta.solana.com`;
+        res = await fetch(fallbackUrl, {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ jsonrpc: "2.0", id, method, params }),
+        });
+      }
+      
+      const data = await res.json();
+      if (data.error) throw new Error(`RPC Error (${method}): ${data.error.message}`);
+      return data.result;
+    };
+
+    const fetchSolBalance = async () => {
+      const result = await fetchWithFallback("getBalance", [wallet_address], 1);
+      return (result?.value || 0) / 1e9;
+    };
+
+    const fetchAssets = async () => {
+      if (isInvalidHelius) {
+        console.warn("No Helius API key — using standard RPC fallback (expect rate limits)");
+        const [tokenRes, token2022Res] = await Promise.all([
+          fetch(heliusUrl, {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ jsonrpc: "2.0", id: 2, method: "getTokenAccountsByOwner", params: [wallet_address, { programId: TOKEN_PROGRAM }, { encoding: "jsonParsed" }] }),
+          }),
+          fetch(heliusUrl, {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ jsonrpc: "2.0", id: 3, method: "getTokenAccountsByOwner", params: [wallet_address, { programId: TOKEN_2022_PROGRAM }, { encoding: "jsonParsed" }] }),
+          })
+        ]);
+        
+        const [tokenData, token2022Data] = await Promise.all([tokenRes.json(), token2022Res.json()]);
+        if (tokenData.error) throw new Error(`RPC Error (Tokens): ${tokenData.error.message}`);
+        
+        const parse = (data: any) => (data?.result?.value || []).map((acc: any) => {
           const info = acc.account?.data?.parsed?.info;
           if (!info) return null;
           const amount = parseFloat(info.tokenAmount?.uiAmountString || "0");
           if (amount <= 0) return null;
-          return {
-            mint: info.mint,
-            amount,
-            decimals: info.tokenAmount?.decimals || 0,
-          };
-        })
-        .filter(Boolean);
-    };
+          return { mint: info.mint, amount, decimals: info.tokenAmount?.decimals || 0 };
+        }).filter(Boolean);
 
-    const tokenAccountsData = await tokenAccountsRes.json();
-    const token2022Data = await token2022AccountsRes.json();
-
-    const holdings = [
-      ...parseTokenAccounts(tokenAccountsData),
-      ...parseTokenAccounts(token2022Data),
-    ];
-
-    // Deduplicate by mint
-    const holdingMap = new Map<string, any>();
-    for (const h of holdings) {
-      const existing = holdingMap.get(h.mint);
-      if (existing) {
-        existing.amount += h.amount;
-      } else {
-        holdingMap.set(h.mint, { ...h });
+        return [...parse(tokenData), ...parse(token2022Data)];
       }
-    }
-    const uniqueHoldings = Array.from(holdingMap.values());
 
-    // 2. Enriched Metadata + Prices
-    let enrichedHoldings: any[] = [];
-    let solPrice = 0;
-
-    if (uniqueHoldings.length > 0) {
-      const mintAddresses = uniqueHoldings.map((h: any) => h.mint);
-
-      // Fetch metadata from Jupiter (Reliable & Free) and prices in parallel
-      const metadataPromise = (async () => {
-        const metaMap = new Map();
-        try {
-          // Jupiter Token List API is very robust for common tokens
-          const res = await fetch(`https://tokens.jup.ag/tokens?ids=${mintAddresses.slice(0, 100).join(",")}`);
-          if (res.ok) {
-            const tokens = await res.json();
-            for (const t of tokens) {
-              metaMap.set(t.address, {
-                symbol: t.symbol,
-                name: t.name,
-                logoUrl: t.logoURI,
-              });
-            }
-          }
-        } catch (e) { console.error("Jupiter metadata error:", e); }
-        
-        // Helius Fallback for niche tokens if key is valid
-        if (metaMap.size < mintAddresses.length && !isInvalidHelius) {
-          try {
-            const hRes = await fetch(rpcUrl, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ jsonrpc: "2.0", id: 4, method: "getAssetBatch", params: { ids: mintAddresses.filter(m => !metaMap.has(m)) } }),
-            });
-            const hData = await hRes.json();
-            for (const asset of (hData.result || [])) {
-              if (asset?.id) {
-                metaMap.set(asset.id, {
-                  symbol: asset.content?.metadata?.symbol || asset.id.slice(0, 6),
-                  name: asset.content?.metadata?.name || "Unknown",
-                  logoUrl: asset.content?.links?.image || asset.content?.files?.[0]?.uri || "",
-                });
-              }
-            }
-          } catch (e) { /* skip */ }
-        }
-        return metaMap;
-      })();
-
-      const pricePromise = (async () => {
-        const priceMap: Record<string, number> = {};
-        const allMints = [SOL_MINT, ...mintAddresses];
-
-        // Jupiter price API v2
-        try {
-          const res = await fetch(`https://api.jup.ag/price/v2?ids=${allMints.slice(0, 100).join(",")}`);
-          if (res.ok) {
-            const data = await res.json();
-            if (data?.data) {
-              for (const [mint, info] of Object.entries(data.data)) {
-                const p = (info as any)?.price;
-                if (p) priceMap[mint] = parseFloat(String(p));
-              }
-            }
-          }
-        } catch (e) { console.error("Jupiter price error:", e); }
-
-        // CoinGecko fallback for SOL
-        if (!priceMap[SOL_MINT]) {
-          try {
-            const res = await fetch("https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd");
-            if (res.ok) {
-              const data = await res.json();
-              if (data?.solana?.usd) priceMap[SOL_MINT] = data.solana.usd;
-            }
-          } catch { /* skip */ }
-        }
-        return priceMap;
-      })();
-
-      const [metaMap, priceMap] = await Promise.all([metadataPromise, pricePromise]);
-
-      solPrice = priceMap[SOL_MINT] || 0;
-
-      enrichedHoldings = uniqueHoldings.map((h: any) => {
-        const meta = metaMap.get(h.mint);
-        const price = priceMap[h.mint] || 0;
-        return {
-          mint: h.mint,
-          symbol: meta?.symbol || h.mint.slice(0, 6),
-          name: meta?.name || "Unknown",
-          logoUrl: meta?.logoUrl || "",
-          amount: h.amount,
-          decimals: h.decimals,
-          price,
-          value: h.amount * price,
-        };
+      // Use Helius DAS API (Fast & Robust)
+      const res = await fetch(heliusUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          jsonrpc: "2.0", id: "assets", method: "getAssetsByOwner",
+          params: { ownerAddress: wallet_address, page: 1, limit: 100, displayOptions: { showFungible: true } },
+        }),
       });
 
-      enrichedHoldings.sort((a: any, b: any) => b.value - a.value);
-    } else {
-      // SOL Price only
-      try {
-        const res = await fetch("https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd");
-        if (res.ok) {
-          const data = await res.json();
-          if (data?.solana?.usd) solPrice = data.solana.usd;
-        }
-      } catch { /* skip */ }
+      // Special fallback for DAS if key is invalid
+      if ((res.status === 401 || res.status === 403)) {
+         console.error("DAS API Unauthorized. Falling back to standard RPC.");
+         // Re-trigger the same logic as isInvalidHelius
+         const [tokenRes, token2022Res] = await Promise.all([
+          fetch(`https://api.${cluster}-beta.solana.com`, {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ jsonrpc: "2.0", id: 2, method: "getTokenAccountsByOwner", params: [wallet_address, { programId: TOKEN_PROGRAM }, { encoding: "jsonParsed" }] }),
+          }),
+          fetch(`https://api.${cluster}-beta.solana.com`, {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ jsonrpc: "2.0", id: 3, method: "getTokenAccountsByOwner", params: [wallet_address, { programId: TOKEN_2022_PROGRAM }, { encoding: "jsonParsed" }] }),
+          })
+        ]);
+        const [tokenData, token2022Data] = await Promise.all([tokenRes.json(), token2022Res.json()]);
+        const parse = (data: any) => (data?.result?.value || []).map((acc: any) => {
+          const info = acc.account?.data?.parsed?.info;
+          if (!info) return null;
+          const amount = parseFloat(info.tokenAmount?.uiAmountString || "0");
+          if (amount <= 0) return null;
+          return { mint: info.mint, amount, decimals: info.tokenAmount?.decimals || 0 };
+        }).filter(Boolean);
+        return [...parse(tokenData), ...parse(token2022Data)];
+      }
+
+      const data = await res.json();
+      if (data.error) throw new Error(`Helius DAS Error: ${data.error.message}`);
+      
+      return (data.result?.items || [])
+        .filter((item: any) => item.interface === 'FungibleToken' || item.interface === 'FungibleAsset')
+        .map((item: any) => ({
+          mint: item.id,
+          symbol: item.content?.metadata?.symbol || item.id.slice(0, 6),
+          name: item.content?.metadata?.name || "Unknown Token",
+          logoUrl: item.content?.links?.image || "",
+          amount: (item.token_info?.balance || 0) / Math.pow(10, item.token_info?.decimals || 0),
+          decimals: item.token_info?.decimals || 0,
+          price: item.token_info?.price_info?.price_per_token || 0,
+        }))
+        .filter((h: any) => h.amount > 0);
+    };
+
+    const [solBalance, assets] = await Promise.all([fetchSolBalance(), fetchAssets()]);
+
+    // 2. Fetch/Enrich Metadata and Prices for missing items
+    let solPrice = 0;
+    const enrichedHoldings = assets;
+
+    // Jupiter Price API for all mainnet tokens
+    if (network === 'mainnet-beta' && assets.length > 0) {
+      const mintsToPrice = assets.filter((a: any) => !a.price).map((a: any) => a.mint);
+      if (mintsToPrice.length > 0 || !solPrice) {
+        const allMints = [SOL_MINT, ...mintsToPrice];
+        try {
+          const pRes = await fetch(`https://api.jup.ag/price/v2?ids=${allMints.slice(0, 100).join(",")}`);
+          if (pRes.ok) {
+            const pData = await pRes.json();
+            if (pData?.data) {
+              solPrice = pData.data[SOL_MINT]?.price ? parseFloat(pData.data[SOL_MINT].price) : 0;
+              for (const asset of enrichedHoldings) {
+                if (!asset.price && pData.data[asset.mint]) {
+                  asset.price = parseFloat(pData.data[asset.mint].price);
+                }
+              }
+            }
+          }
+        } catch (e: any) { console.warn("Jupiter price fetch failed:", e.message); }
+      }
     }
 
-    const totalTokenValueUsd = enrichedHoldings.reduce((s: number, h: any) => s + h.value, 0);
+    // CoinGecko fallback for SOL price
+    if (solPrice === 0) {
+      try {
+        const cgRes = await fetch("https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd");
+        if (cgRes.ok) {
+          const cgData = await cgRes.json();
+          solPrice = cgData?.solana?.usd || 0;
+        }
+      } catch { /* ignore */ }
+    }
+
+    // Finalize values
+    for (const h of enrichedHoldings) {
+      h.value = h.amount * (h.price || 0);
+    }
+    enrichedHoldings.sort((a: any, b: any) => (b.value || 0) - (a.value || 0));
+
+    const totalTokenValueUsd = enrichedHoldings.reduce((s: number, h: any) => s + (h.value || 0), 0);
     const solValueUsd = solBalance * solPrice;
 
     const responseData = JSON.stringify({
@@ -270,19 +247,21 @@ serve(async (req) => {
     });
 
     // Save to Cache
-    portfolioCache.set(wallet_address, {
-      data: responseData,
-      expiry: Date.now() + CACHE_TTL,
-    });
+    portfolioCache.set(cacheKey, { data: responseData, expiry: Date.now() + CACHE_TTL });
 
     return new Response(responseData, {
       headers: { ...corsHeaders, "Content-Type": "application/json", "X-Cache": "MISS" },
     });
-  } catch (err) {
-    console.error("Portfolio fetch error:", err);
+
+  } catch (err: any) {
+    console.error("Portfolio fetch critical error:", err);
     return new Response(
-      JSON.stringify({ error: err instanceof Error ? err.message : 'Unknown error' }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      JSON.stringify({ 
+        success: false, 
+        error: err instanceof Error ? err.message : 'Unknown error',
+        diagnostics: "Ensure HELIUS_API_KEY is set in Supabase secrets for reliable portfolio fetching."
+      }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });

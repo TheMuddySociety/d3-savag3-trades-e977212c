@@ -148,14 +148,16 @@ serve(async (req) => {
     }
 
     const isHealthCheck = method === "getHealth";
+    const READ_ONLY_METHODS = new Set(["getBalance", "getTokenAccountsByOwner", "getAccountInfo", "getMultipleAccounts", "getTokenAccountBalance", "getLatestBlockhash"]);
+    const isReadOnly = READ_ONLY_METHODS.has(method);
 
-    if (!isHealthCheck) {
+    if (!isHealthCheck && !isReadOnly) {
       const authHeader = req.headers.get("Authorization");
       if (!authHeader) {
         const latency = Math.round(performance.now() - startTime);
         logRequest(supabaseUrl, serviceRoleKey, {
           user_id: null, rpc_method: method, status_code: 401, latency_ms: latency,
-          error_message: "Missing Authorization header", ip_hint: ipHint,
+          error_message: "Missing Authorization header for write operation", ip_hint: ipHint,
         });
         return new Response(JSON.stringify({ error: "Missing Authorization header" }), {
           status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -182,26 +184,28 @@ serve(async (req) => {
       }
 
       userId = user.id;
+    }
 
-      // Per-user rate limiting
-      const { allowed, remaining, retryAfterMs } = checkRateLimit(userId);
-      if (!allowed) {
-        const latency = Math.round(performance.now() - startTime);
-        logRequest(supabaseUrl, serviceRoleKey, {
-          user_id: userId, rpc_method: method, status_code: 429, latency_ms: latency,
-          error_message: "Rate limit exceeded", ip_hint: ipHint,
-        });
-        return new Response(JSON.stringify({ error: "Rate limit exceeded. Try again shortly." }), {
-          status: 429,
-          headers: {
-            ...corsHeaders,
-            "Content-Type": "application/json",
-            "Retry-After": String(Math.ceil((retryAfterMs || 1000) / 1000)),
-            "X-RateLimit-Limit": String(RATE_LIMIT_MAX_REQUESTS),
-            "X-RateLimit-Remaining": "0",
-          },
-        });
-      }
+    // Rate limiting (userId if auth'd, else ipHint)
+    const limitKey = userId || ipHint || "anonymous";
+    const { allowed, remaining, retryAfterMs } = checkRateLimit(limitKey);
+    
+    if (!allowed) {
+      const latency = Math.round(performance.now() - startTime);
+      logRequest(supabaseUrl, serviceRoleKey, {
+        user_id: userId, rpc_method: method, status_code: 429, latency_ms: latency,
+        error_message: "Rate limit exceeded", ip_hint: ipHint,
+      });
+      return new Response(JSON.stringify({ error: "Rate limit exceeded. Try again shortly." }), {
+        status: 429,
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+          "Retry-After": String(Math.ceil((retryAfterMs || 1000) / 1000)),
+          "X-RateLimit-Limit": String(RATE_LIMIT_MAX_REQUESTS),
+          "X-RateLimit-Remaining": "0",
+        },
+      });
     }
 
     let heliusKey = Deno.env.get("HELIUS_API_KEY");

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useNetwork } from "./useNetwork";
 
 export interface TokenHolding {
   mint: string;
@@ -26,19 +27,28 @@ export function useWalletPortfolio(walletAddress: string | null) {
   const [portfolio, setPortfolio] = useState<WalletPortfolio | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [diagnostics, setDiagnostics] = useState<string | null>(null);
+
+  const { network } = useNetwork();
 
   const fetchPortfolio = useCallback(async (silent = false) => {
     if (!walletAddress) return;
     try {
       if (!silent) setIsLoading(true);
       setError(null);
+      setDiagnostics(null);
 
       const { data, error: fnError } = await supabase.functions.invoke("wallet-portfolio", {
-        body: { wallet_address: walletAddress },
+        body: { wallet_address: walletAddress, network },
       });
 
       if (fnError) throw new Error(fnError.message);
-      if (!data?.success) throw new Error(data?.error || "Failed to fetch portfolio");
+      if (data?.success === false) {
+        setDiagnostics(data.diagnostics);
+        console.warn("Portfolio fetch degradation:", data.error, data.diagnostics);
+        // We still set error if no data was returned at all
+        if (!data.data) throw new Error(data.error || "Failed to fetch portfolio");
+      }
 
       setPortfolio(data.data);
     } catch (err: any) {
@@ -47,7 +57,7 @@ export function useWalletPortfolio(walletAddress: string | null) {
     } finally {
       setIsLoading(false);
     }
-  }, [walletAddress]);
+  }, [walletAddress, network]);
 
   useEffect(() => {
     fetchPortfolio();
@@ -56,5 +66,5 @@ export function useWalletPortfolio(walletAddress: string | null) {
     return () => clearInterval(interval);
   }, [fetchPortfolio]);
 
-  return { portfolio, isLoading, error, refresh: fetchPortfolio };
+  return { portfolio, isLoading, error, diagnostics, refresh: () => fetchPortfolio() };
 }
