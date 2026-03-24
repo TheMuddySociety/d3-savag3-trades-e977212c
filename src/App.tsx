@@ -9,7 +9,7 @@ import { ThemeProvider } from "@/hooks/use-theme";
 import { TradingModeProvider } from "@/hooks/useTradingMode";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { NetworkProvider } from "@/providers/NetworkProvider";
-import "@/providers/ReownAppKit"; // Initialize Reown AppKit (side-effect)
+// Reown AppKit initialization now consolidated within NetworkProvider
 
 const Landing = lazy(() => import("./pages/Landing"));
 const Index = lazy(() => import("./pages/Index"));
