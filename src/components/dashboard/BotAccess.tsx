@@ -185,6 +185,9 @@ export const BotAccess = () => {
 
           <TabsContent value="agent" className="mt-0">
             <D3SAgentHero onHire={handleActivateAgent} isHired={isAgentHired} isHiring={isHiring} />
+            <div className="mt-4">
+              <BeachModePanel />
+            </div>
           </TabsContent>
           <TabsContent value="sniper" className="mt-0">
             <BuySniper killSignal={killSignal} />
