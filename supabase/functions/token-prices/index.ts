@@ -131,6 +131,31 @@ serve(async (req: Request) => {
        return new Response(JSON.stringify({ success: true, data: [] }), { headers: corsHeaders });
     }
 
+    if (action === "recent_launches") {
+      try {
+        const res = await fetch("https://frontend-api-v2.pump.fun/coins/latest?limit=10&includeNsfw=false");
+        if (!res.ok) throw new Error(`Pump.fun API error: ${res.status}`);
+        const coins = await res.json();
+        const mapped = (Array.isArray(coins) ? coins : []).map((c: any) => ({
+          address: c.mint || c.address || '',
+          name: c.name || 'Unknown',
+          symbol: c.symbol || '???',
+          logo: c.image_uri || c.uri || '/placeholder.svg',
+          timestamp: c.created_timestamp ? c.created_timestamp : Date.now(),
+          marketCap: c.market_cap || c.usd_market_cap || 0,
+          liquidity: 0,
+          tradeCount: c.reply_count || 0,
+          bondingCurveProgress: c.bonding_curve_progress || 0,
+          status: c.complete ? 'graduated' : 'bonding',
+          description: c.description || '',
+        }));
+        return new Response(JSON.stringify({ success: true, data: mapped }), { headers: corsHeaders });
+      } catch (e: any) {
+        console.error("[token-prices] recent_launches error:", e.message);
+        return new Response(JSON.stringify({ success: true, data: [] }), { headers: corsHeaders });
+      }
+    }
+
     // Unknown action
     return new Response(JSON.stringify({ success: false, error: `Invalid action: ${action}` }), {
       status: 400,
