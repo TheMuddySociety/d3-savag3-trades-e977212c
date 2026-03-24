@@ -40,9 +40,17 @@ async function rpcFetchWithFallback(apiKey: string, body: unknown): Promise<any>
   return json;
 }
 
-function ok(data: unknown) {
-  return new Response(JSON.stringify({ success: true, data }), {
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+// ── Isolate Cache ───────────────────────────────────────────────────
+const cacheMap = new Map<string, { data: string; expiry: number }>();
+const CACHE_TTL = 30_000; // 30 seconds TTL for prices and metadata
+
+function ok(data: unknown, cacheKey?: string) {
+  const bodyStr = JSON.stringify({ success: true, data });
+  if (cacheKey) {
+    cacheMap.set(cacheKey, { data: bodyStr, expiry: Date.now() + CACHE_TTL });
+  }
+  return new Response(bodyStr, {
+    headers: { ...corsHeaders, 'Content-Type': 'application/json', 'X-Cache': cacheKey ? 'MISS' : 'BYPASS' },
   });
 }
 
@@ -72,45 +80,55 @@ serve(async (req) => {
     }
     const { action, addresses, address } = body;
 
+    // ── Check Cache BEFORE processing ─────────────────────────────
+    // We only cache GET-style data lookups, not mutations (which don't exist here anyway)
+    const cacheKey = JSON.stringify(body);
+    const cached = cacheMap.get(cacheKey);
+    if (cached && Date.now() < cached.expiry) {
+      return new Response(cached.data, {
+        headers: { ...corsHeaders, "Content-Type": "application/json", "X-Cache": "HIT" }
+      });
+    }
+
     switch (action) {
       case 'prices':
-        return ok(await fetchJupiterPrices(addresses, JUPITER_API_KEY));
+        return ok(await fetchJupiterPrices(addresses, JUPITER_API_KEY), cacheKey);
 
       case 'token_info':
-        return ok(await fetchHeliusTokenInfo(addresses, HELIUS_API_KEY));
+        return ok(await fetchHeliusTokenInfo(addresses, HELIUS_API_KEY), cacheKey);
 
       case 'trending':
-        return ok(await fetchTrendingTokens());
+        return ok(await fetchTrendingTokens(), cacheKey);
 
       case 'token_overview':
         if (!address) return err('address is required', 400);
-        return ok(await fetchTokenOverview(address, HELIUS_API_KEY, JUPITER_API_KEY));
+        return ok(await fetchTokenOverview(address, HELIUS_API_KEY, JUPITER_API_KEY), cacheKey);
 
       case 'token_trades':
         if (!address) return err('address is required', 400);
-        return ok(await fetchTokenTrades(address, HELIUS_API_KEY, body.limit || 20));
+        return ok(await fetchTokenTrades(address, HELIUS_API_KEY, body.limit || 20), cacheKey);
 
       case 'price_history':
         if (!address) return err('address is required', 400);
-        return ok(await fetchPriceHistory(address, body.interval || '30m', body.time_from, body.time_to, JUPITER_API_KEY));
+        return ok(await fetchPriceHistory(address, body.interval || '30m', body.time_from, body.time_to, JUPITER_API_KEY), cacheKey);
 
       case 'token_holders':
         if (!address) return err('address is required', 400);
-        return ok(await fetchTokenHolders(address, HELIUS_API_KEY));
+        return ok(await fetchTokenHolders(address, HELIUS_API_KEY), cacheKey);
 
       // ── New actions ──────────────────────────────────────────────
       case 'sol_price':
-        return ok(await fetchSolPrice(JUPITER_API_KEY));
+        return ok(await fetchSolPrice(JUPITER_API_KEY), cacheKey);
 
       case 'market_stats':
-        return ok(await fetchMarketStats(JUPITER_API_KEY));
+        return ok(await fetchMarketStats(JUPITER_API_KEY), cacheKey);
 
       case 'shield_check':
         if (!address) return err('address is required', 400);
-        return ok(await fetchShieldCheck(address, JUPITER_API_KEY));
+        return ok(await fetchShieldCheck(address, JUPITER_API_KEY), cacheKey);
 
       case 'recent_launches':
-        return ok(await fetchRecentLaunches());
+        return ok(await fetchRecentLaunches(), cacheKey);
 
       case 'ping':
         return ok({ status: 'ok', ts: Date.now() });

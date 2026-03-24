@@ -10,6 +10,10 @@ const SOL_MINT = "So11111111111111111111111111111111111111112";
 const TOKEN_PROGRAM = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA";
 const TOKEN_2022_PROGRAM = "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb";
 
+// In-memory cache for edge function isolate (reduces RPC latency)
+const portfolioCache = new Map<string, { data: string; expiry: number }>();
+const CACHE_TTL = 30_000; // 30 seconds
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -53,6 +57,16 @@ serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    // ── Check Isolate Cache ─────────────────────────────────────
+    const cached = portfolioCache.get(wallet_address);
+    if (cached && Date.now() < cached.expiry) {
+      console.log(`[Cache HIT] Portfolio for ${wallet_address.substring(0, 6)}...`);
+      return new Response(cached.data, {
+        headers: { ...corsHeaders, "Content-Type": "application/json", "X-Cache": "HIT" },
+      });
+    }
+    console.log(`[Cache MISS] Fetching fresh portfolio for ${wallet_address.substring(0, 6)}...`);
 
     const heliusKey = Deno.env.get("HELIUS_API_KEY");
     const isInvalidHelius = !heliusKey || heliusKey.includes("REPLACE") || heliusKey.length < 10;
@@ -242,21 +256,28 @@ serve(async (req) => {
     const totalTokenValueUsd = enrichedHoldings.reduce((s: number, h: any) => s + h.value, 0);
     const solValueUsd = solBalance * solPrice;
 
-    return new Response(
-      JSON.stringify({
-        success: true,
-        data: {
-          solBalance,
-          solPrice,
-          solValueUsd,
-          tokens: enrichedHoldings,
-          totalTokenValueUsd,
-          totalPortfolioUsd: solValueUsd + totalTokenValueUsd,
-          tokenCount: enrichedHoldings.length,
-        },
-      }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    const responseData = JSON.stringify({
+      success: true,
+      data: {
+        solBalance,
+        solPrice,
+        solValueUsd,
+        tokens: enrichedHoldings,
+        totalTokenValueUsd,
+        totalPortfolioUsd: solValueUsd + totalTokenValueUsd,
+        tokenCount: enrichedHoldings.length,
+      },
+    });
+
+    // Save to Cache
+    portfolioCache.set(wallet_address, {
+      data: responseData,
+      expiry: Date.now() + CACHE_TTL,
+    });
+
+    return new Response(responseData, {
+      headers: { ...corsHeaders, "Content-Type": "application/json", "X-Cache": "MISS" },
+    });
   } catch (err) {
     console.error("Portfolio fetch error:", err);
     return new Response(

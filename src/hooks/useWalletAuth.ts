@@ -107,6 +107,19 @@ export function useWalletAuth() {
     }
   }, [connected, publicKey, signMessage, isAuthenticated, isAuthenticating, authenticate]);
 
+  // Heartbeat to clear Supabase session if wallet maliciously or silently disconnects
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!connected && session) {
+        console.log("Wallet desync detected: Disconnected in extension but Supabase session active. Signing out.");
+        await supabase.auth.signOut();
+        setIsAuthenticated(false);
+      }
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [connected]);
+
   return { isAuthenticated, isAuthenticating, authenticate, signOut };
 }
 
