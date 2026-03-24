@@ -53,7 +53,7 @@ serve(async (req: Request) => {
 
     console.log(`[token-prices] Received action: ${action}, targetMint: ${targetMint}`);
 
-    if (!targetMint && action !== "health" && action !== "trending") {
+    if (!targetMint && action !== "health" && action !== "trending" && action !== "recent_launches") {
       return new Response(JSON.stringify({ success: false, error: "mint/address is required for this action" }), {
         status: 400,
         headers: corsHeaders,
