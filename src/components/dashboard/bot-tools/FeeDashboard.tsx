@@ -13,7 +13,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { useWallet } from "@solana/wallet-adapter-react";
-import { toast } from "sonner";
+import { useToast } from "@/hooks/use-toast";
 import { JupiterStudioService, type FeeInfo, type PoolAddresses } from "@/services/jupiter/studio";
 import { cn } from "@/lib/utils";
 
@@ -26,10 +26,15 @@ export function FeeDashboard() {
   const [poolAddresses, setPoolAddresses] = useState<PoolAddresses | null>(null);
   const [feeInfo, setFeeInfo] = useState<FeeInfo | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const { toast } = useToast();
 
   const handleLookup = useCallback(async () => {
     if (!mintAddress.trim()) {
-      toast.error("Enter a token mint address");
+      toast({
+        title: "Input Required",
+        description: "Enter a token mint address",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -39,15 +44,13 @@ export function FeeDashboard() {
     setFeeInfo(null);
 
     try {
-      // 1. Get pool addresses
       const pools = await JupiterStudioService.getPoolAddresses(mintAddress.trim());
       if (!pools?.dbcPoolAddress) {
-        setError("No Studio pool found for this token. Only tokens created via Jupiter Studio have claimable LP fees.");
+        setError("No Studio pool found for this token.");
         return;
       }
       setPoolAddresses(pools);
 
-      // 2. Check fees
       const fees = await JupiterStudioService.checkFees(pools.dbcPoolAddress);
       setFeeInfo(fees);
     } catch (e) {
@@ -55,7 +58,7 @@ export function FeeDashboard() {
     } finally {
       setIsLoading(false);
     }
-  }, [mintAddress]);
+  }, [mintAddress, toast]);
 
   const handleClaim = useCallback(async () => {
     if (!poolAddresses?.dbcPoolAddress || !walletAdapter) return;
@@ -68,111 +71,138 @@ export function FeeDashboard() {
         feeInfo?.unclaimedFee || 0
       );
       if (signature) {
-        // Refresh fees after claim
+        toast({
+          title: "Claim Successful",
+          description: "LP Fees have been sent to your wallet.",
+        });
         const fees = await JupiterStudioService.checkFees(poolAddresses.dbcPoolAddress);
         setFeeInfo(fees);
       }
+    } catch (e: any) {
+      toast({
+        title: "Claim Failed",
+        description: e.message,
+        variant: "destructive",
+      });
     } finally {
       setIsClaiming(false);
     }
-  }, [poolAddresses, walletAdapter, feeInfo]);
+  }, [poolAddresses, walletAdapter, feeInfo, toast]);
 
   return (
-    <div className="space-y-3">
-      <p className="text-xs text-muted-foreground">
-        Look up LP fees from tokens you created on Jupiter Studio.
-      </p>
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">
+          Jupiter Studio Fee Lookup
+        </p>
+        <Badge variant="outline" className="text-[9px] border-primary/20 bg-primary/5 text-primary">
+          LP REWARDS
+        </Badge>
+      </div>
 
       {/* Mint lookup */}
       <div className="flex gap-2">
-        <div className="flex-1">
+        <div className="flex-1 relative group">
           <Input
             placeholder="Enter token mint address..."
             value={mintAddress}
             onChange={(e) => setMintAddress(e.target.value)}
-            className="h-8 text-xs font-mono"
+            className="h-9 text-[10px] font-mono bg-black/40 border-white/10 focus:border-primary/50 transition-all pl-8"
           />
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground group-focus-within:text-primary transition-colors" />
         </div>
         <Button
           size="sm"
-          className="h-8 px-3 text-xs gap-1"
+          className="h-9 px-4 text-[10px] font-bold gap-2 bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20"
           onClick={handleLookup}
           disabled={isLoading || !mintAddress.trim()}
         >
           {isLoading ? (
             <Loader2 className="h-3 w-3 animate-spin" />
           ) : (
-            <Search className="h-3 w-3" />
+            "LOOKUP"
           )}
-          Lookup
         </Button>
       </div>
 
       {/* Error */}
       {error && (
-        <div className="flex items-start gap-2 p-2.5 rounded-lg bg-destructive/10 border border-destructive/20 text-xs text-destructive">
+        <div className="flex items-start gap-2 p-3 rounded-xl bg-destructive/10 border border-destructive/20 text-[10px] text-destructive animate-in fade-in slide-in-from-top-1">
           <AlertCircle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
-          {error}
+          <p className="leading-relaxed">{error}</p>
         </div>
       )}
 
       {/* Pool info */}
       {poolAddresses && (
-        <div className="p-3 rounded-xl bg-muted/20 border border-border space-y-3">
-          <div className="flex items-center gap-2">
-            <CheckCircle2 className="h-4 w-4 text-accent" />
-            <span className="text-xs font-medium">Pool Found</span>
+        <div className="p-4 rounded-xl bg-white/[0.03] border border-white/10 space-y-4 animate-in zoom-in-95 duration-300">
+          <div className="flex items-center justify-between border-b border-white/5 pb-3">
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-lg bg-accent/10">
+                <CheckCircle2 className="h-3.5 w-3.5 text-accent" />
+              </div>
+              <span className="text-[11px] font-bold">Studio Pool ID</span>
+            </div>
             <a
               href={`https://solscan.io/account/${poolAddresses.dbcPoolAddress}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="ml-auto text-[10px] text-muted-foreground hover:text-foreground flex items-center gap-0.5"
+              className="text-[9px] text-muted-foreground hover:text-primary transition-colors flex items-center gap-1 bg-white/5 px-2 py-0.5 rounded-full border border-white/10"
             >
-              Solscan <ExternalLink className="h-2.5 w-2.5" />
+              SOLSCAN <ExternalLink className="h-2.5 w-2.5" />
             </a>
           </div>
 
-          <div className="text-[10px] font-mono text-muted-foreground break-all">
-            Pool: {poolAddresses.dbcPoolAddress}
+          <div className="text-[10px] font-mono p-2 rounded-md bg-black/40 border border-white/5 text-muted-foreground break-all leading-relaxed">
+            {poolAddresses.dbcPoolAddress}
           </div>
 
           {feeInfo && (
             <div className="grid grid-cols-2 gap-3">
-              <div className="p-2.5 rounded-lg bg-card/50 border border-border/50">
-                <p className="text-[10px] text-muted-foreground mb-0.5">Total Fees</p>
-                <p className="text-sm font-mono font-bold text-foreground">
-                  {(feeInfo.totalFee / 1e6).toFixed(2)}
-                  <span className="text-[10px] text-muted-foreground ml-1">USDC</span>
-                </p>
+              <div className="p-3 rounded-xl bg-black/20 border border-white/5 group hover:border-white/10 transition-colors">
+                <p className="text-[9px] text-muted-foreground uppercase tracking-wider font-semibold mb-1">Total Fees</p>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-sm font-mono font-bold text-foreground">
+                    {(feeInfo.totalFee / 1e6).toFixed(2)}
+                  </span>
+                  <span className="text-[9px] font-bold text-muted-foreground">USDC</span>
+                </div>
               </div>
-              <div className="p-2.5 rounded-lg bg-accent/5 border border-accent/20">
-                <p className="text-[10px] text-muted-foreground mb-0.5">Unclaimed</p>
-                <p className={cn(
-                  "text-sm font-mono font-bold",
-                  feeInfo.unclaimedFee > 0 ? "text-accent" : "text-muted-foreground"
-                )}>
-                  {(feeInfo.unclaimedFee / 1e6).toFixed(2)}
-                  <span className="text-[10px] text-muted-foreground ml-1">USDC</span>
-                </p>
+              <div className={cn(
+                "p-3 rounded-xl border transition-all duration-300",
+                feeInfo.unclaimedFee > 0 
+                  ? "bg-accent/10 border-accent/30 shadow-lg shadow-accent/5" 
+                  : "bg-black/20 border-white/5"
+              )}>
+                <p className="text-[9px] text-muted-foreground uppercase tracking-wider font-semibold mb-1">Unclaimed</p>
+                <div className="flex items-baseline gap-1">
+                  <span className={cn(
+                    "text-sm font-mono font-bold",
+                    feeInfo.unclaimedFee > 0 ? "text-accent" : "text-muted-foreground"
+                  )}>
+                    {(feeInfo.unclaimedFee / 1e6).toFixed(2)}
+                  </span>
+                  <span className="text-[9px] font-bold text-muted-foreground">USDC</span>
+                </div>
               </div>
             </div>
           )}
 
           {feeInfo && feeInfo.unclaimedFee > 0 && (
             <Button
-              className="w-full h-9 text-xs font-bold gap-2"
+              className="w-full h-10 text-[11px] font-bold gap-2 bg-accent hover:bg-accent/90 pulse-border"
               onClick={handleClaim}
               disabled={isClaiming || !publicKey}
             >
               {isClaiming ? (
                 <>
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  Claiming...
+                  CLAIMING REWARDS...
                 </>
               ) : (
                 <>
-                  <Coins className="h-3.5 w-3.5" />
-                  Claim {(feeInfo.unclaimedFee / 1e6).toFixed(2)} USDC
+                  <Coins className="h-4 w-4" />
+                  CLAIM ${(feeInfo.unclaimedFee / 1e6).toFixed(2)} USDC
                 </>
               )}
             </Button>

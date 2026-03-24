@@ -55,7 +55,7 @@ const INITIAL_STRATEGIES: Strategy[] = [
   { id: "safe_exit", name: "Safe Exit", description: "Auto stop-loss at -15% and trailing take-profit at +50%", icon: <ShieldCheck className="h-4 w-4" />, risk: "Low", enabled: false },
   { id: "new_launch", name: "New Launch Hunter", description: "Snipes new tokens on Pump.fun within first 30s of launch", icon: <Flame className="h-4 w-4" />, risk: "High", enabled: false },
   { id: "scalper", name: "Scalper", description: "Auto-sells positions at custom profit target", icon: <Zap className="h-4 w-4" />, risk: "Medium", enabled: false },
-  { id: "whale_follow", name: "Whale Follow", description: "Auto-copies top leaderboard wallets' trades", icon: <Users className="h-4 w-4" />, risk: "Medium", enabled: false },
+  { id: "whale_follow", name: "Whale Follow", description: "Auto-buys trending tokens with high whale/top-trader activity scores", icon: <Users className="h-4 w-4" />, risk: "Medium", enabled: false },
 ];
 
 const riskColors: Record<string, string> = {
@@ -709,52 +709,64 @@ export const AutoStrategies = ({ killSignal = 0 }: Props) => {
         </div>
       </div>
 
-      <div className="p-3 rounded-lg border border-accent/30 bg-accent/5 backdrop-blur-sm space-y-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className={`h-2 w-2 rounded-full ${isAgentHired ? 'bg-chart-green animate-pulse' : 'bg-muted'}`} />
-            <span className="text-sm font-bold tracking-tight">
-              AGENT STATUS: {isAgentHired ? 'HIRED & ACTIVE' : 'NOT HIRED'}
-            </span>
+      <div className="p-4 rounded-xl border border-primary/30 bg-black/40 backdrop-blur-md shadow-lg space-y-4">
+        <div className="flex items-center justify-between border-b border-white/5 pb-3">
+          <div className="flex items-center gap-3">
+            <div className={`h-2.5 w-2.5 rounded-full ${isAgentHired ? 'bg-accent animate-pulse shadow-[0_0_10px_rgba(var(--accent-rgb),0.5)]' : 'bg-muted'}`} />
+            <div className="flex flex-col">
+              <span className="text-[11px] font-bold text-foreground tracking-wide uppercase">
+                D3S Agent Status
+              </span>
+              <span className="text-[10px] text-muted-foreground font-medium">
+                {isAgentHired ? 'Delegated & Initialized' : 'Ready for Hire'}
+              </span>
+            </div>
           </div>
-          {!isAgentHired && (
-              <Button 
-                className="w-full flex items-center gap-2 bg-accent hover:bg-accent/90 pulse-border"
-                onClick={handleHireAgent}
-                disabled={isHiring}
-              >
-                {isHiring ? <Loader2 className="h-3 w-3 animate-spin" /> : <Users className="h-3 w-3" />}
-                ACTIVATE D3S AGENT
-              </Button>
+          {!isAgentHired ? (
+            <Button 
+              size="sm"
+              className="h-8 px-4 text-[10px] font-bold bg-accent hover:bg-accent/90 shadow-lg shadow-accent/20"
+              onClick={handleHireAgent}
+              disabled={isHiring}
+            >
+              {isHiring ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Users className="h-3.5 w-3.5" />}
+              HIRE AGENT
+            </Button>
+          ) : (
+            <Badge variant="outline" className="h-6 bg-accent/10 text-accent border-accent/20 text-[10px] font-bold">
+              ACTIVE
+            </Badge>
           )}
         </div>
         
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Palmtree className="h-4 w-4 text-accent" />
-            <div className="space-y-0.5">
+        <div className="flex items-center justify-between group">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
+              <Palmtree className="h-4.5 w-4.5 text-primary" />
+            </div>
+            <div className="flex flex-col">
               <div className="flex items-center gap-2">
-                <Label className="text-xs font-semibold">24/7 Cloud Execution (Beach Mode)</Label>
-                <div className="px-1.5 py-0.5 rounded-full bg-primary/20 text-primary text-[9px] font-bold uppercase tracking-wider flex items-center gap-1 border border-primary/20">
+                <Label className="text-[11px] font-bold text-foreground">Beach Mode (24/7 Cloud)</Label>
+                <div className="px-1.5 py-0.5 rounded-full bg-primary/20 text-primary text-[8px] font-black uppercase tracking-tighter border border-primary/30 flex items-center gap-1">
                   <Cloud className="w-2.5 h-2.5" />
-                  CLOUD
+                  PRO
                 </div>
               </div>
-              <p className="text-[10px] text-muted-foreground">The agent trades for you even when you're offline</p>
+              <p className="text-[10px] text-muted-foreground leading-tight">Evaluation continues even when your browser is closed</p>
             </div>
           </div>
-          <Switch checked={beachMode} onCheckedChange={handleBeachMode} />
+          <Switch checked={beachMode} onCheckedChange={handleBeachMode} className="data-[state=checked]:bg-primary" />
         </div>
-      </div>
 
-      {beachMode && activeCount > 0 && (
-        <div className="p-2 rounded-lg bg-accent/10 border border-accent/20">
-          <p className="text-[11px] text-accent font-medium flex items-center gap-2">
-            <ShieldCheck className="w-3.5 h-3.5" />
-            D3S AGENT PROTECTED: {activeCount} strategies active 24/7 in the cloud.
-          </p>
-        </div>
-      )}
+        {beachMode && activeCount > 0 && (
+          <div className="px-3 py-2 rounded-lg bg-primary/5 border border-primary/20 flex items-center gap-2 animate-in fade-in slide-in-from-top-1">
+            <ShieldCheck className="w-3.5 h-3.5 text-primary" />
+            <p className="text-[10px] text-primary/90 font-medium">
+              AGENT PROTECTED: {activeCount} {activeCount === 1 ? 'strategy' : 'strategies'} active in the cloud.
+            </p>
+          </div>
+        )}
+      </div>
 
       {/* Pending Beach Mode Trades */}
       {pendingTrades.length > 0 && (

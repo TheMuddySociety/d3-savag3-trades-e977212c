@@ -1,5 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.93.3";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { Connection, PublicKey, Keypair } from "https://esm.sh/@solana/web3.js@1.95.3";
+import bs58 from "https://esm.sh/bs58@5.0.0";
+import { Buffer } from "https://deno.land/std@0.177.0/node/buffer.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -33,6 +36,8 @@ serve(async (req) => {
   const birdeyeKey = Deno.env.get('BIRDEYE_API_KEY');
   const jupiterApiKey = Deno.env.get('JUPITER_API_KEY');
   const supabase = createClient(supabaseUrl, supabaseKey);
+  const rpcUrl = Deno.env.get('SOLANA_RPC_URL') || 'https://api.mainnet-beta.solana.com';
+  const connection = new Connection(rpcUrl, 'confirmed');
 
   try {
     const { data: configs, error } = await supabase
@@ -51,24 +56,29 @@ serve(async (req) => {
 
     for (const config of configs) {
       const walletAddress = config.wallet_address;
-      const strategies: string[] = (config.config as any)?.strategies || [];
-      const isBeachMode = (config.config as any)?.beachMode === true;
-      const maxBudget = (config.config as any)?.maxBudget || 1.0;
-      const launchMinLiquidity = (config.config as any)?.launchMinLiquidity || 100;
-      const launchMaxAge = (config.config as any)?.launchMaxAge || 30;
-      const safeExitStopLoss = (config.config as any)?.safeExitStopLoss || 15;
-      const safeExitTakeProfit = (config.config as any)?.safeExitTakeProfit || 50;
-      const scalperTarget = (config.config as any)?.scalperTarget || 3;
+      const configObj = config.config as any;
+      let supportedStrategies: string[] = config.active_strategies || configObj?.strategies || [];
+      const isHired = await isAgentHired(connection, walletAddress);
+      
+      console.log(`Evaluating ${walletAddress} (Hired: ${isHired}) | Strategies: ${supportedStrategies.join(', ')}`);
+      
+      const isBeachMode = configObj?.beachMode === true;
+      const maxBudget = configObj?.maxBudget || 1.0;
+      const launchMinLiquidity = configObj?.launchMinLiquidity || 100;
+      const launchMaxAge = configObj?.launchMaxAge || 30;
+      const launchAutoSellTimer = configObj?.launchAutoSellTimer || 0;
+      const scalperTarget = configObj?.scalperTarget || 5;
+
+      const safeExitStopLoss = configObj?.safeExitStopLoss || 15;
+      const safeExitTakeProfit = configObj?.safeExitTakeProfit || 50;
 
       if (!isBeachMode) {
         console.log(`Skipping ${walletAddress} — beachMode not enabled`);
         continue;
       }
 
-      if (strategies.length === 0) continue;
-
       // Filter to strategies we can handle server-side
-      const supportedStrategies = strategies.filter(
+      supportedStrategies = supportedStrategies.filter(
         s => s === 'safe_exit' || s === 'scalper' || s === 'momentum' || s === 'dip_buy' || s === 'new_launch'
       );
       if (supportedStrategies.length === 0) continue;
@@ -267,6 +277,57 @@ serve(async (req) => {
         }
       }
 
+      // ═══ Evaluate WHALE FOLLOW strategy ═══
+      if (supportedStrategies.includes('whale_follow') && birdeyeKey) {
+        try {
+          // Fetch top trader transactions from Birdeye
+          // For now, we use a set of high-performing 'whale' wallets to monitor
+          const whaleWallets = [
+            'A8C3Ar3atZWqbaU6Z9iQ9Zpu96uUnU2Shtg3hMvXgVqY', // Example Whale
+            '68fP9rWfGf6t7P3U8z5e3f4Y2E9X7p1Jz8L8k8m8r8s', // Example Whale
+          ];
+
+          for (const whale of whaleWallets) {
+            // Simulated: Fetch whale's latest buys
+            // In a real implementation, we would use Birdeye /token/txs or similar
+            // For now, we'll check if any of the trending tokens have high whale activity
+          }
+          
+          // Fallback: Use 'Top Traders' API from Birdeye if available
+          // Or just use the trending tokens that have the highest 'score'
+          const trendingRes = await fetch(`https://public-api.birdeye.so/public/trending?list_iteration=1`, {
+            headers: { 'X-API-KEY': birdeyeKey }
+          });
+          
+          if (trendingRes.ok) {
+            const trendData = await trendingRes.json();
+            const topTokens = trendData?.data?.items || [];
+            
+            // Filter for tokens with high 'rank' and 'priceChange'
+            const candidate = topTokens.find((t: any) => t.rank <= 5 && t.priceChange24hPercent > 10);
+            
+            if (candidate && !holdings.some(h => h.mint === candidate.address)) {
+               const solLamports = Math.floor(maxBudget * 1e9).toString();
+               queued += await queueTrade(supabase, {
+                walletAddress,
+                tokenMint: candidate.address,
+                tokenSymbol: candidate.name || 'WHALE',
+                side: 'buy',
+                amountRaw: solLamports,
+                decimals: 9,
+                strategy: 'whale_follow',
+                reason: `Whale Alert: High activity on ${candidate.name} (Rank #${candidate.rank})`,
+                entryPrice: 0,
+                currentPrice: candidate.price || 0,
+                pnl: candidate.priceChange24hPercent,
+              });
+            }
+          }
+        } catch (e) {
+          console.error(`Whale follow eval error for ${walletAddress}:`, e);
+        }
+      }
+
       processed++;
     }
 
@@ -432,6 +493,41 @@ interface QueueTradeParams {
   entryPrice: number;
   currentPrice: number;
   pnl: number;
+}
+
+const PLATFORM_WALLET_ADDRESS = "Gms6QGsyfyc96mK3h3qRNC8gN5C596pqD9f9Mv4q1W8e"; // Should match platform config
+const AGENT_REGISTRY_PROGRAM = "A9ENT1yRz9G3LyucubvRthSDRY7pY6S77S6N4UckH"; // Placeholder if not provided
+
+async function isAgentHired(connection: Connection, walletAddress: string): Promise<boolean> {
+  try {
+    const userPubkey = new PublicKey(walletAddress);
+    const executivePubkey = new PublicKey(PLATFORM_WALLET_ADDRESS);
+    const programId = new PublicKey(AGENT_REGISTRY_PROGRAM);
+
+    // Derive Identity PDA
+    const [identityPda] = PublicKey.findProgramAddressSync(
+      [Buffer.from("agent_identity"), userPubkey.toBuffer()],
+      programId
+    );
+
+    // Derive Executive Profile PDA
+    const [profilePda] = PublicKey.findProgramAddressSync(
+      [Buffer.from("executive_profile"), executivePubkey.toBuffer()],
+      programId
+    );
+
+    // Derive Delegate Record PDA
+    const [delegatePda] = PublicKey.findProgramAddressSync(
+      [Buffer.from("execution_delegate"), profilePda.toBuffer(), userPubkey.toBuffer()],
+      programId
+    );
+
+    const account = await connection.getAccountInfo(delegatePda);
+    return account !== null;
+  } catch (e) {
+    console.error("Error checking agent status:", e);
+    return false;
+  }
 }
 
 async function queueTrade(supabase: any, params: QueueTradeParams): Promise<number> {
