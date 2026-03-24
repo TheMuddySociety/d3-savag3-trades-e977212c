@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Bot, Clock, Crosshair, BarChart3, Brain, Wallet, OctagonX, Layers, Eye, List, TrendingUp, Rocket, Coins, Flame, History } from "lucide-react";
+import { Bot, Clock, Crosshair, BarChart3, Brain, Wallet, OctagonX, Layers, Eye, List, TrendingUp, Rocket, Coins, Flame, History, Palmtree } from "lucide-react";
 import { D3SAgentHero } from "./bot-tools/D3SAgentHero";
 import { DCABot } from "./bot-tools/DCABot";
 import { BuySniper } from "./bot-tools/BuySniper";
