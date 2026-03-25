@@ -3,7 +3,6 @@
  * Bonding curve token launches, Pump.fun style.
  */
 import { PublicKey, SystemProgram, TransactionInstruction } from '@solana/web3.js';
-import { TOKEN_PROGRAM_ID } from '@solana/web3.js';
 
 export const TOKEN_LAUNCHER_PROGRAM_ID = new PublicKey(
   'D3ST0kenLaunch111111111111111111111111111111'
