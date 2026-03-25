@@ -1,0 +1,28 @@
+[toolchain]
+
+[features]
+seeds = false
+skip-lint = false
+
+[programs.devnet]
+beach_delegator = "D3SBchDe1egator111111111111111111111111111"
+fee_collector = "D3SFeeC011ect0r1111111111111111111111111111"
+escrow_vault = "D3SEscr0wVau1t11111111111111111111111111111"
+token_launcher = "D3ST0kenLaunch111111111111111111111111111111"
+
+[registry]
+url = "https://api.apr.dev"
+
+[provider]
+cluster = "devnet"
+wallet = "~/.config/solana/id.json"
+
+[scripts]
+test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
+deploy-all = """
+  anchor build && \
+  anchor deploy --program-name beach_delegator && \
+  anchor deploy --program-name fee_collector && \
+  anchor deploy --program-name escrow_vault && \
+  anchor deploy --program-name token_launcher
+"""
