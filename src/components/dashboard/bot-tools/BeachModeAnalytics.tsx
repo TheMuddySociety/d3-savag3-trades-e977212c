@@ -106,9 +106,10 @@ export function BeachModeAnalytics() {
       if ((t.pnl_percent ?? 0) > 0) map[t.strategy].wins++;
       map[t.strategy].totalPnl += t.pnl_percent ?? 0;
     });
+    const fallback = { label: 'Unknown', icon: Target, color: 'hsl(var(--muted-foreground))' };
     return Object.entries(map).map(([key, val]) => ({
       strategy: key,
-      ...STRATEGY_META[key] || { label: key, color: 'hsl(var(--muted-foreground))' },
+      ...(STRATEGY_META[key] || fallback),
       trades: val.trades,
       wins: val.wins,
       winRate: val.trades > 0 ? (val.wins / val.trades) * 100 : 0,
