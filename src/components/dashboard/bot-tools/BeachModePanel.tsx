@@ -381,6 +381,9 @@ export function BeachModePanel() {
           </CardContent>
         </Card>
       )}
+
+      {/* Analytics Dashboard */}
+      {isActive && <BeachModeAnalytics />}
     </div>
   );
 }
