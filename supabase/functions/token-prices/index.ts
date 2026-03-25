@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { Redis } from "npm:@upstash/redis@1.34.3";
+// Redis client - dynamic import to avoid build errors when not configured
+let RedisClass: any = null;
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -10,11 +11,10 @@ const corsHeaders = {
 // Redis client (safe even if env vars missing – falls back gracefully)
 let redis: any = null;
 try {
-  if (Deno.env.get("UPSTASH_REDIS_REST_URL") && Deno.env.get("UPSTASH_REDIS_REST_TOKEN")) {
-    redis = new Redis({
-      url: Deno.env.get("UPSTASH_REDIS_REST_URL")!,
-      token: Deno.env.get("UPSTASH_REDIS_REST_TOKEN")!,
-    });
+  const redisUrl = Deno.env.get("UPSTASH_REDIS_REST_URL");
+  const redisToken = Deno.env.get("UPSTASH_REDIS_REST_TOKEN");
+  if (redisUrl && redisToken && RedisClass) {
+    redis = new RedisClass({ url: redisUrl, token: redisToken });
   }
 } catch (e) {
   console.warn("Redis not configured – running without cache");
