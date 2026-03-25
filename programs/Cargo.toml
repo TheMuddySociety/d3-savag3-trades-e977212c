@@ -1,0 +1,11 @@
+[workspace]
+members = [
+  "beach-delegator",
+  "fee-collector",
+  "escrow-vault",
+  "token-launcher",
+]
+
+[workspace.dependencies]
+anchor-lang = "0.30.1"
+anchor-spl = "0.30.1"
