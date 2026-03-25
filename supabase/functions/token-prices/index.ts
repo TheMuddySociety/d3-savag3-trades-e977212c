@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { Redis } from "npm:@upstash/redis@1.34.3";
+// Redis client - dynamic import to avoid build errors when not configured
+let RedisClass: any = null;
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
