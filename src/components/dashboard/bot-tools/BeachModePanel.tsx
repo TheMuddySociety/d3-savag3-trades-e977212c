@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { supabase } from "@/integrations/supabase/client";
+import { BeachModeAnalytics } from "./BeachModeAnalytics";
 import { AgentService } from "@/services/solana/agentService";
 import { toast } from "sonner";
 
