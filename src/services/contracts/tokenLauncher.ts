@@ -5,7 +5,7 @@
 import { PublicKey, SystemProgram, TransactionInstruction } from '@solana/web3.js';
 
 export const TOKEN_LAUNCHER_PROGRAM_ID = new PublicKey(
-  'D3ST0kenLaunch111111111111111111111111111111'
+  'AucLeAW92yJiJuDCmtatTcpYyWQ6VAk9HQjXFR2EAN4v'
 );
 
 // Use SPL Token program ID

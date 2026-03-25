@@ -1,11 +1,14 @@
 [workspace]
 members = [
-  "beach-delegator",
-  "fee-collector",
-  "escrow-vault",
-  "token-launcher",
+  "beach_delegator",
+  "fee_collector",
+  "escrow_vault",
+  "token_launcher",
 ]
 
 [workspace.dependencies]
 anchor-lang = "0.30.1"
 anchor-spl = "0.30.1"
+
+[profile.release]
+overflow-checks = true

@@ -5,10 +5,10 @@ seeds = false
 skip-lint = false
 
 [programs.devnet]
-beach_delegator = "D3SBchDe1egator111111111111111111111111111"
-fee_collector = "D3SFeeC011ect0r1111111111111111111111111111"
-escrow_vault = "D3SEscr0wVau1t11111111111111111111111111111"
-token_launcher = "D3ST0kenLaunch111111111111111111111111111111"
+beach_delegator = "7fLkmNRYhUmqyXAyeVqVyg2QhanSxXPsGRBwUsrjxgxp"
+fee_collector = "ENz5v4ZMSNdDEYd8DKHonwAPbtb8KV6GX7w5JAeazyqz"
+escrow_vault = "H96kQMaLEEXqvbqehBMqV8vdkXZV6A8y7GAzyeZDZYXQ"
+token_launcher = "AucLeAW92yJiJuDCmtatTcpYyWQ6VAk9HQjXFR2EAN4v"
 
 [registry]
 url = "https://api.apr.dev"

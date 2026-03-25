@@ -5,7 +5,7 @@
 import { PublicKey, SystemProgram, TransactionInstruction } from '@solana/web3.js';
 
 export const FEE_COLLECTOR_PROGRAM_ID = new PublicKey(
-  'D3SFeeC011ect0r1111111111111111111111111111'
+  'ENz5v4ZMSNdDEYd8DKHonwAPbtb8KV6GX7w5JAeazyqz'
 );
 
 export interface FeeConfigData {

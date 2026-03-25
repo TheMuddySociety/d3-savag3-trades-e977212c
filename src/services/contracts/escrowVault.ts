@@ -5,7 +5,7 @@
 import { PublicKey, SystemProgram, TransactionInstruction } from '@solana/web3.js';
 
 export const ESCROW_VAULT_PROGRAM_ID = new PublicKey(
-  'D3SEscr0wVau1t11111111111111111111111111111'
+  'H96kQMaLEEXqvbqehBMqV8vdkXZV6A8y7GAzyeZDZYXQ'
 );
 
 export interface VaultData {

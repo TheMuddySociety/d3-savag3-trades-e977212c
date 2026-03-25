@@ -6,7 +6,7 @@ import { PublicKey, SystemProgram, TransactionInstruction } from '@solana/web3.j
 
 // Program ID — update after devnet deployment
 export const BEACH_DELEGATOR_PROGRAM_ID = new PublicKey(
-  'D3SBchDe1egator111111111111111111111111111111'
+  '7fLkmNRYhUmqyXAyeVqVyg2QhanSxXPsGRBwUsrjxgxp'
 );
 
 // Strategy IDs matching the on-chain u8 enum
