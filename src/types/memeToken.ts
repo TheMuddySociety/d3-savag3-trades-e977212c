@@ -13,6 +13,7 @@ export interface MemeToken {
   tokenAddress?: string;
   liquidity: number;
   holders: number;
+  uniqueTraders24h?: number;
   age?: string;
   onChainHolders?: number;
   onChainLiquidity?: number;

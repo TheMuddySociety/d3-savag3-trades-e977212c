@@ -141,15 +141,21 @@ serve(async (req: Request) => {
         const data = await res.json();
         
         // Map Birdeye trending data to format expected by LiveSignalFeed.tsx
-        const mapped = (data.data?.tokens || []).map((t: any) => ({
-          address: t.address,
-          symbol: t.symbol,
-          name: t.name,
-          price: Number(t.price || 0),
-          price_change_24h: Number(t.v24hChangePercent || 0),
-          volume_24h: Number(t.v24hUSD || 0),
-          rank: Number(t.rank || 0),
-        }));
+        const mapped = (data.data?.tokens || []).map((t: any) => {
+          const buys = Number(t.buy24h || 0);
+          const sells = Number(t.sell24h || 0);
+          return {
+            address: t.address,
+            symbol: t.symbol,
+            name: t.name,
+            price: Number(t.price || 0),
+            price_change_24h: Number(t.v24hChangePercent || 0),
+            volume_24h: Number(t.v24hUSD || 0),
+            rank: Number(t.rank || 0),
+            holders: Number(t.holder_count || t.holders || 0),
+            unique_traders_24h: buys + sells,
+          };
+        });
 
         return new Response(JSON.stringify({ success: true, data: mapped }), { headers: corsHeaders });
       } catch (e: any) {
@@ -190,6 +196,98 @@ serve(async (req: Request) => {
       } catch (e: any) {
         console.error("[token-prices] recent_launches error:", e.message);
         return new Response(JSON.stringify({ success: true, data: [] }), { headers: corsHeaders });
+      }
+    }
+
+    // ====================== SHIELD CHECK (MemeScanner) ======================
+    if (action === "shield_check") {
+      try {
+        const heliusKey = Deno.env.get("HELIUS_API_KEY");
+        if (!heliusKey) throw new Error("HELIUS_API_KEY not configured");
+
+        // 1. Get token metadata via Helius DAS for freeze/mint authority
+        const [assetRes, holdersRes] = await Promise.allSettled([
+          fetch(`https://mainnet.helius-rpc.com/?api-key=${heliusKey}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              jsonrpc: "2.0", id: "shield-asset", method: "getAsset",
+              params: { id: targetMint, displayOptions: { showFungible: true } },
+            }),
+          }).then((r) => r.json()),
+          fetch(`https://mainnet.helius-rpc.com/?api-key=${heliusKey}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              jsonrpc: "2.0", id: "shield-holders", method: "getTokenLargestAccounts",
+              params: [targetMint],
+            }),
+          }).then((r) => r.json()),
+        ]);
+
+        const asset = assetRes.status === "fulfilled" ? assetRes.value?.result : null;
+        const holders = holdersRes.status === "fulfilled" ? holdersRes.value?.result?.value || [] : [];
+
+        // Extract authority info from token metadata
+        const freezeAuthority = asset?.token_info?.freeze_authority || asset?.authorities?.find((a: any) => a.scopes?.includes("freeze"))?.address || null;
+        const mintAuthority = asset?.token_info?.mint_authority || asset?.authorities?.find((a: any) => a.scopes?.includes("mint"))?.address || null;
+        const tokenName = asset?.content?.metadata?.name || asset?.token_info?.symbol || "Unknown";
+        const tokenSymbol = asset?.content?.metadata?.symbol || asset?.token_info?.symbol || "???";
+
+        // 2. Get liquidity and pair age from Birdeye (if available)
+        let liquidity = 0;
+        let pairAge = "";
+        if (BIRDEYE_API_KEY) {
+          try {
+            const birdRes = await fetch(
+              `https://public-api.birdeye.so/defi/v3/token/market-data?address=${targetMint}`,
+              { headers: { "X-API-KEY": BIRDEYE_API_KEY, "x-chain": "solana", accept: "application/json" } }
+            );
+            if (birdRes.ok) {
+              const birdData = await birdRes.json();
+              liquidity = Number(birdData.data?.liquidity || 0);
+              pairAge = birdData.data?.createTime || birdData.data?.createdAt || "";
+            }
+          } catch (e) {
+            console.warn("[shield_check] Birdeye market data fetch failed:", e);
+          }
+        }
+
+        // 3. Compute risk flags
+        const holderCount = holders.length;
+        const hasFreezeAuthority = !!freezeAuthority;
+        const hasMintAuthority = !!mintAuthority;
+        const isLowLiquidity = liquidity < 10000; // Less than $10k
+        const isLowHolders = holderCount < 20;
+
+        const warnings: string[] = [];
+        if (hasFreezeAuthority && hasMintAuthority) warnings.push("Both freeze + mint authority active");
+        if (liquidity > 0 && liquidity < 1000) warnings.push("Extremely low liquidity (<$1K)");
+
+        const safe = !hasFreezeAuthority && !isLowLiquidity && !isLowHolders && warnings.length === 0;
+
+        const result = {
+          name: tokenName,
+          symbol: tokenSymbol,
+          safe,
+          holders: holderCount,
+          liquidity,
+          pairAge,
+          flags: {
+            freezeAuthority: hasFreezeAuthority,
+            mintAuthority: hasMintAuthority,
+            lowLiquidity: isLowLiquidity,
+            lowHolders: isLowHolders,
+            warnings,
+          },
+        };
+
+        return new Response(JSON.stringify({ success: true, data: result }), { headers: corsHeaders });
+      } catch (e: any) {
+        console.error("[token-prices] shield_check error:", e.message);
+        return new Response(JSON.stringify({ success: false, error: e.message || "Shield check failed" }), {
+          status: 500, headers: corsHeaders,
+        });
       }
     }
 

@@ -15,6 +15,8 @@ interface Signal {
   strength: 'low' | 'medium' | 'high';
   price?: number;
   change?: number;
+  holders?: number;
+  uniqueTraders?: number;
 }
 
 const SIGNAL_TYPES = {
@@ -66,6 +68,8 @@ function deriveSignalsFromTrending(trendingData: any[]): Signal[] {
         strength,
         price: t.price,
         change: safeChange,
+        holders: t.holders,
+        uniqueTraders: t.unique_traders_24h,
       };
     });
 }
@@ -150,9 +154,21 @@ export function LiveSignalFeed() {
                           {signal.strength.toUpperCase()}
                         </Badge>
                       </div>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-[10px] text-muted-foreground leading-tight line-clamp-2">
                         {signal.message}
                       </p>
+                      <div className="flex items-center gap-2 mt-1">
+                        {signal.holders !== undefined && signal.holders > 0 && (
+                          <span className="text-[9px] font-mono text-muted-foreground/80">
+                            {signal.holders.toLocaleString()} holders
+                          </span>
+                        )}
+                        {signal.uniqueTraders !== undefined && signal.uniqueTraders > 0 && (
+                          <span className="text-[9px] font-mono text-retro-green/80">
+                            {signal.uniqueTraders.toLocaleString()} active
+                          </span>
+                        )}
+                      </div>
                       <div className="flex justify-between items-center mt-1">
                         {signal.price !== undefined && (
                           <span className="text-xs font-mono text-primary">
