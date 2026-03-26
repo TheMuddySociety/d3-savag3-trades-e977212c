@@ -131,6 +131,16 @@ serve(async (req: Request) => {
        return new Response(JSON.stringify({ success: true, data: [] }), { headers: corsHeaders });
     }
 
+    if (action === "sol_price") {
+      const SOL_MINT = "So11111111111111111111111111111111111111112";
+      const price = await getCurrentPrice(SOL_MINT);
+      return new Response(JSON.stringify({ success: true, data: { price } }), { headers: corsHeaders });
+    }
+
+    if (action === "ping" || action === "health") {
+      return new Response(JSON.stringify({ success: true, status: "ok" }), { headers: corsHeaders });
+    }
+
     if (action === "recent_launches") {
       try {
         const res = await fetch("https://frontend-api-v2.pump.fun/coins/latest?limit=10&includeNsfw=false");
