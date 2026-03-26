@@ -7,15 +7,31 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
+# Environment
+.env
+.env.*
 *.local
+
+# Node / Build
+node_modules/
+dist/
+dist-ssr/
+
+# Large Binaries
+*.tar.bz2
+*.tar.gz
+*.exe
+platform-tools-*/
+solana-release/
+
+# Solana / Anchor
+programs/target/
+programs/.anchor/
 
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
-.idea
+.idea/
 .DS_Store
 *.suo
 *.ntvs*

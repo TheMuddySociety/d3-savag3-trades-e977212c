@@ -85,7 +85,7 @@ pub mod escrow_vault {
         let seeds = &[
             b"vault_sol".as_ref(),
             owner_key.as_ref(),
-            &[ctx.accounts.vault_sol_bump.to_le_bytes()[0]],
+            &[ctx.bumps.vault_sol],
         ];
         let signer_seeds = &[&seeds[..]];
 
@@ -242,10 +242,6 @@ pub struct Withdraw<'info> {
         bump
     )]
     pub vault_sol: UncheckedAccount<'info>,
-
-    // This is a workaround to pass the bump for vault_sol
-    // In production, derive it properly
-    pub vault_sol_bump: u8,
 
     pub system_program: Program<'info, System>,
 }
