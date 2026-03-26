@@ -11,6 +11,7 @@ import { JupiterUltraService } from "@/services/jupiter/ultra";
 import { cn } from "@/lib/utils";
 import { LiveTradeConfirmDialog } from "./LiveTradeConfirmDialog";
 import { isValidSolanaAddress } from "@/utils/validateSolanaAddress";
+import { getTradingSettings } from "@/utils/jupiterSwapConfig";
 
 const SOL_MINT = "So11111111111111111111111111111111111111112";
 
@@ -36,6 +37,14 @@ export const BuySniper = ({ killSignal = 0 }: Props) => {
   const [isLoading, setIsLoading] = useState(false);
   const sniperInterval = useRef<ReturnType<typeof setInterval> | null>(null);
   const isArmedRef = useRef(false);
+
+  // Initialize from user Settings
+  useEffect(() => {
+    const s = getTradingSettings();
+    setMaxSlippage(String(s.slippage));
+    setPriorityFee(String(s.priorityFee));
+    setUseHighPerformance(s.mevProtection);
+  }, []);
 
   useEffect(() => { isArmedRef.current = isArmed; }, [isArmed]);
 

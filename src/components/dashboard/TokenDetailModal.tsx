@@ -218,6 +218,7 @@ function useTokenDetail(token: MemeToken | null, open: boolean) {
 // ── Formatting ──────────────────────────────────────────────────────
 
 const fmt = (v: number, type: 'usd' | 'compact' | 'pct' = 'usd') => {
+  if (v == null || isNaN(v)) return type === 'pct' ? '+0.00%' : type === 'compact' ? '0' : '$0.00';
   if (type === 'pct') return `${v >= 0 ? '+' : ''}${v.toFixed(2)}%`;
   if (type === 'compact') {
     if (v >= 1e9) return `${(v / 1e9).toFixed(2)}B`;

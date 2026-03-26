@@ -10,6 +10,7 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import { JupiterUltraService } from "@/services/jupiter/ultra";
 import { LiveTradeConfirmDialog } from "./LiveTradeConfirmDialog";
 import { isValidSolanaAddress } from "@/utils/validateSolanaAddress";
+import { getTradingSettings } from "@/utils/jupiterSwapConfig";
 
 const SOL_MINT = "So11111111111111111111111111111111111111112";
 
@@ -36,6 +37,12 @@ export const GridBot = ({ killSignal = 0 }: Props) => {
   const isArmedRef = useRef(false);
 
   useEffect(() => { isArmedRef.current = isArmed; }, [isArmed]);
+
+  // Initialize from user Settings
+  useEffect(() => {
+    const s = getTradingSettings();
+    setUseHighPerformance(s.mevProtection);
+  }, []);
 
   const startGridStrategy = useCallback(() => {
     if (gridInterval.current) clearInterval(gridInterval.current);

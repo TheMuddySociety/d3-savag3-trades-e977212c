@@ -217,6 +217,9 @@ export const BotAccess = () => {
           <TabsContent value="launch" className="mt-0">
             <TokenLaunchWizard />
           </TabsContent>
+          <TabsContent value="tasks" className="mt-0">
+            <BackgroundTaskMonitor walletAddress={walletAddress} />
+          </TabsContent>
           <TabsContent value="fees" className="mt-0 space-y-6">
             <div className="grid grid-cols-1 gap-6">
               <ReferralEarningsTracker />

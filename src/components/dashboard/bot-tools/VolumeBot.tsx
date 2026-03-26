@@ -12,6 +12,7 @@ import { useConnection } from "@solana/wallet-adapter-react";
 import { JupiterTransactionService } from "@/services/jupiter/transactions";
 import { LiveTradeConfirmDialog } from "./LiveTradeConfirmDialog";
 import { isValidSolanaAddress } from "@/utils/validateSolanaAddress";
+import { getTradingSettings } from "@/utils/jupiterSwapConfig";
 
 const SOL_MINT = "So11111111111111111111111111111111111111112";
 
@@ -61,10 +62,13 @@ export const VolumeBot = ({ killSignal = 0 }: Props) => {
       try {
         const isBuy = countRef.current % 2 === 0;
         const lamports = Math.round(parseFloat(solPerTx) * 1e9);
+        const settings = getTradingSettings();
+        const slippageBps = Math.max(1, Math.floor(settings.slippage * 100));
+        const priorityLevel = settings.mevProtection ? 'high' : 'medium';
         if (isBuy) {
-          await JupiterTransactionService.swapTokens(connection, wallet, SOL_MINT, tokenAddress, lamports, 300, undefined, 'Medium', false, useHighPerformance);
+          await JupiterTransactionService.swapTokens(connection, wallet, SOL_MINT, tokenAddress, lamports, slippageBps, undefined, priorityLevel, false, useHighPerformance);
         } else {
-          await JupiterTransactionService.swapTokens(connection, wallet, tokenAddress, SOL_MINT, lamports, 300, undefined, 'Medium', false, useHighPerformance);
+          await JupiterTransactionService.swapTokens(connection, wallet, tokenAddress, SOL_MINT, lamports, slippageBps, undefined, priorityLevel, false, useHighPerformance);
         }
 
         countRef.current++;

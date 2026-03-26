@@ -13,6 +13,7 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import { useWalletPortfolio } from "@/hooks/useWalletPortfolio";
 import { Connection } from "@solana/web3.js";
 import { supabase } from "@/integrations/supabase/client";
+import { getTradingSettings } from "@/utils/jupiterSwapConfig";
 
 const SOL_MINT = "So11111111111111111111111111111111111111112";
 const RPC_URL = "https://api.mainnet-beta.solana.com";
@@ -68,15 +69,18 @@ export const CopyTradeBot = ({ killSignal = 0 }: Props) => {
       }
 
       const connection = new Connection(RPC_URL);
+      const settings = getTradingSettings();
+      const slippageBps = Math.max(1, Math.floor(settings.slippage * 100));
+      const priorityLevel = settings.mevProtection ? 'veryHigh' : 'high';
       if (isBuy) {
         const lamports = Math.floor(sol * 1e9);
-        await JupiterTransactionService.swapTokens(connection, wallet, SOL_MINT, token_mint, lamports, 300, undefined, "high");
+        await JupiterTransactionService.swapTokens(connection, wallet, SOL_MINT, token_mint, lamports, slippageBps, undefined, priorityLevel);
       } else {
         // Find holding from real wallet portfolio
         const holding = portfolio?.tokens?.find((h) => h.mint === token_mint);
         if (holding) {
           const lamports = Math.floor(holding.amount * Math.pow(10, holding.decimals));
-          await JupiterTransactionService.swapTokens(connection, wallet, token_mint, SOL_MINT, lamports, 300, undefined, "high");
+          await JupiterTransactionService.swapTokens(connection, wallet, token_mint, SOL_MINT, lamports, slippageBps, undefined, priorityLevel);
         }
       }
 

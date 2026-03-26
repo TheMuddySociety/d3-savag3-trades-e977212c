@@ -13,6 +13,7 @@ import { JupiterTransactionService } from "@/services/jupiter/transactions";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { useWalletPortfolio } from "@/hooks/useWalletPortfolio";
 import { Connection } from "@solana/web3.js";
+import { getTradingSettings } from "@/utils/jupiterSwapConfig";
 
 const SOL_MINT = "So11111111111111111111111111111111111111112";
 const RPC_URL = "https://api.mainnet-beta.solana.com";
@@ -100,8 +101,11 @@ export const BatchTrader = ({ killSignal = 0 }: Props) => {
           try {
             const connection = new Connection(RPC_URL);
             const lamports = Math.floor(sol * 1e9);
+            const settings = getTradingSettings();
+            const slippageBps = Math.max(1, Math.floor(settings.slippage * 100));
+            const priorityLevel = settings.mevProtection ? 'veryHigh' : 'high';
             const txid = await JupiterTransactionService.swapTokens(
-              connection, wallet, SOL_MINT, tokenAddress, lamports, 300, undefined, "high"
+              connection, wallet, SOL_MINT, tokenAddress, lamports, slippageBps, undefined, priorityLevel
             );
             if (!txid) throw new Error("Swap failed");
             setResults(prev => prev.map(r => r.address === tokenAddress ? { ...r, status: "success", message: txid.slice(0, 8) } : r));
@@ -145,8 +149,11 @@ export const BatchTrader = ({ killSignal = 0 }: Props) => {
           try {
             const connection = new Connection(RPC_URL);
             const lamports = Math.floor(holding.amount * Math.pow(10, holding.decimals));
+            const settings = getTradingSettings();
+            const slippageBps = Math.max(1, Math.floor(settings.slippage * 100));
+            const priorityLevel = settings.mevProtection ? 'veryHigh' : 'high';
             await JupiterTransactionService.swapTokens(
-              connection, wallet, holding.mint, SOL_MINT, lamports, 300, undefined, "high"
+              connection, wallet, holding.mint, SOL_MINT, lamports, slippageBps, undefined, priorityLevel
             );
           } catch (e) {
             console.error("Batch sell error:", e);
