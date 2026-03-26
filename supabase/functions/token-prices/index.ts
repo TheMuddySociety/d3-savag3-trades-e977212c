@@ -222,17 +222,24 @@ async function fetchBirdeyeOHLCV(mint: string, interval: string = "5m") {
   if (!res.ok) throw new Error(`Birdeye failed: ${res.status}`);
   const data = await res.json();
   
-  return (data.data?.items || []).map((c: any[]) => ({
-    timestamp: c[0] * 1000,
-    unixTime: c[0],
-    time: new Date(c[0] * 1000).toISOString().slice(11, 16),
-    open: Number(c[1]), 
-    high: Number(c[2]), 
-    low: Number(c[3]), 
-    close: Number(c[4]), 
-    volume: Number(c[5]) || 0,
-    value: Number(c[4]) // Important for Recharts mapping which expects 'value'
-  })).reverse();
+  const items = data.data?.items || [];
+  return items.map((c: any) => {
+    // Birdeye OHLCV returns objects with unixTime/o/h/l/c/v (not arrays)
+    const ts = c.unixTime ?? c[0] ?? 0;
+    const open = Number(c.o ?? c[1] ?? 0);
+    const high = Number(c.h ?? c[2] ?? 0);
+    const low = Number(c.l ?? c[3] ?? 0);
+    const close = Number(c.c ?? c[4] ?? 0);
+    const volume = Number(c.v ?? c[5] ?? 0);
+    const msTs = ts > 1e12 ? ts : ts * 1000;
+    return {
+      timestamp: msTs,
+      unixTime: ts,
+      time: msTs > 0 ? new Date(msTs).toISOString().slice(11, 16) : '00:00',
+      open, high, low, close, volume,
+      value: close,
+    };
+  }).reverse();
 }
 
 async function getCurrentPrice(mint: string) {
