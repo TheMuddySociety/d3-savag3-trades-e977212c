@@ -90,6 +90,10 @@ const fmt = (v: number | string | undefined | null): string => {
 - **Price V3 Integration**: Upgraded the `token-prices` Edge Function to the heuristics-based V3 Price API. Optimized the `prices` action for batch fetching (up to 50 tokens in one call), drastically reducing overhead during dashboard polling.
 - **Unified V2 Service**: Created `JupiterV2Service` to consolidate all trading logic. It seamlessly handles both default (proxied) and high-performance (direct custom API key) paths, ensuring the most reliable landing rates for bot-driven trades.
 
+### 6. Reown & WalletConnect Purge
+- **Package Removal**: Uninstalling `@reown/appkit`, `@reown/appkit-adapter-solana`, `@reown/appkit-wallet-button`, and `@jup-ag/jup-mobile-adapter`.
+- **Infrastructure Cleanup**: Removing all references to `VITE_REOWN_PROJECT_ID` and the WalletConnect plugin from `NetworkProvider.tsx`, ensuring the app relies solely on the Jupiter Unified Wallet Kit for browser-native wallet connections.
+
 ### ✅ Verification Results
 - **Security**: Verified `profiles` table immutability via SQL migrations.
 - **Privacy**: Verified `referral-earnings` Edge Function requires JWT and returns user-scoped stats only.
