@@ -253,6 +253,9 @@ export const CopyTradeBot = ({ killSignal = 0 }: Props) => {
       <div className="flex items-center gap-2">
         <Eye className="h-4 w-4 text-[hsl(var(--fun-purple))]" />
         <span className="text-sm font-medium text-foreground">Copy Trade (WebSocket)</span>
+        <Badge variant="outline" className="h-4 px-1.5 text-[8px] border-primary/20 text-primary/80 font-bold uppercase tracking-tighter">
+          Jupiter Metis
+        </Badge>
         {isActive && (
           <Badge className="text-[10px] gap-1 bg-destructive/20 text-destructive">
             {isConnected ? <Wifi className="h-2.5 w-2.5" /> : <WifiOff className="h-2.5 w-2.5" />}

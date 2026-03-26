@@ -688,7 +688,12 @@ export const AutoStrategies = ({ killSignal = 0 }: Props) => {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Brain className="h-4 w-4 text-accent" />
-          <span className="text-sm font-bold text-foreground uppercase tracking-wider">D3S Agent's War Room</span>
+          <div className="flex flex-col">
+            <span className="text-sm font-bold text-foreground uppercase tracking-wider leading-none">D3S Agent's War Room</span>
+            <span className="text-[8px] font-bold text-accent/60 uppercase tracking-tighter mt-1">
+              Powered by {JupiterUltraService.smartSwap ? "Jupiter Ultra & Metis" : "Jupiter Ultra"}
+            </span>
+          </div>
         </div>
         <div className="flex items-center gap-1">
           {executingTrade && (

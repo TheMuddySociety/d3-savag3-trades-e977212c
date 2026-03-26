@@ -193,6 +193,9 @@ export const BatchTrader = ({ killSignal = 0 }: Props) => {
       <div className="flex items-center gap-2">
         <Layers className="h-4 w-4 text-primary" />
         <span className="text-sm font-medium text-foreground">Batch Trader</span>
+        <Badge variant="outline" className="h-4 px-1.5 text-[8px] border-primary/20 text-primary/80 font-bold uppercase tracking-tighter">
+          Jupiter Metis
+        </Badge>
         <Badge variant="outline" className="text-[10px]">1-50 tokens</Badge>
       </div>
 

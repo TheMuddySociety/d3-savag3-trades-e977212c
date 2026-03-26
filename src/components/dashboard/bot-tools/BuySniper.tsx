@@ -171,6 +171,9 @@ export const BuySniper = ({ killSignal = 0 }: Props) => {
         <div className="flex items-center gap-2">
           <Crosshair className="h-4 w-4 text-primary" />
           <span className="text-sm font-medium text-foreground">Buy Sniper</span>
+          <Badge variant="outline" className="h-4 px-1.5 text-[8px] border-primary/20 text-primary/80 font-bold uppercase tracking-tighter">
+            Jupiter Ultra
+          </Badge>
         </div>
         {isArmed && (
           <Badge className="bg-destructive/20 text-destructive border-destructive/30 animate-pulse">

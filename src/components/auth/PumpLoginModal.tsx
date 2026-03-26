@@ -95,6 +95,12 @@ export function PumpLoginModal({ open, onOpenChange }: PumpLoginModalProps) {
               </div>
             </div>
           </div>
+
+          {/* Powered by Jupiter */}
+          <div className="mt-6 flex items-center gap-1.5 opacity-30 hover:opacity-50 transition-opacity">
+            <span className="text-[10px] font-medium text-white/50 uppercase tracking-tighter">Powered by</span>
+            <span className="text-[10px] font-bold text-primary uppercase tracking-tighter">Jupiter</span>
+          </div>
         </div>
       </DialogContent>
     </Dialog>

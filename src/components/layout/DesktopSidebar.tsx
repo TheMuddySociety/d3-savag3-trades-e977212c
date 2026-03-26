@@ -107,6 +107,20 @@ export function DesktopSidebar({ activePanel, onPanelChange, collapsed, onCollap
           {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
           {!collapsed && <span>Collapse</span>}
         </button>
+
+        {!collapsed && (
+          <div className="pt-2 px-2 pb-1 border-t border-border/50">
+            <a 
+              href="https://jup.ag" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 px-2 hover:opacity-80 transition-opacity"
+            >
+              <span className="text-[10px] font-medium text-muted-foreground whitespace-nowrap">Powered by</span>
+              <span className="text-[10px] font-bold text-accent uppercase tracking-tighter">Jupiter</span>
+            </a>
+          </div>
+        )}
       </div>
     </aside>
   );

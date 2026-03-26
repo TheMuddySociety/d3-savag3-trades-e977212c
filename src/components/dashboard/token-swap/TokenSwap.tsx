@@ -49,7 +49,7 @@ export function TokenSwap() {
             <img src="https://i.ibb.co/QvtDd1yY/image-6483441-4.jpg" alt="SAVAG3 D3 Tradez" className="h-6 w-6 rounded-full" />
             <h2 className="text-lg font-bold text-foreground">SAVAG3 D3 Tradez</h2>
           </div>
-          <p className="text-xs text-muted-foreground mt-1">Best rates across DEXs ✨</p>
+          <p className="text-xs text-muted-foreground mt-1">Best rates across DEXs ✨ • Powered by Jupiter Metis</p>
         </div>
         <div
           id="target-container"
