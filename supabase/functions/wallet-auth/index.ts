@@ -31,7 +31,7 @@ function base58Decode(str: string): Uint8Array {
   return new Uint8Array(bytes.reverse());
 }
 
-serve(async (req) => {
+serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -115,7 +115,7 @@ serve(async (req) => {
       if (createErr) {
         // User might exist but profile doesn't — try to find by email
         const { data: { users }, error: listErr } = await admin.auth.admin.listUsers();
-        const found = users?.find((u) => u.email === email);
+        const found = users?.find((u: any) => u.email === email);
         if (!found) throw createErr;
         userId = found.id;
         

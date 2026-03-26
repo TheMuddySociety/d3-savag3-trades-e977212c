@@ -9,7 +9,7 @@ const corsHeaders = {
 
 const REFERRAL_WALLET = "89MakU1zuaQKBrtFXXMgGxf8nKZ9Pbq52KtUwgNhCiBS";
 
-serve(async (req) => {
+serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }

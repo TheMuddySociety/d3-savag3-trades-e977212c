@@ -1,0 +1,4 @@
+{
+  "nodeModulesDir": true,
+  "importMap": "supabase/functions/import_map.json"
+}

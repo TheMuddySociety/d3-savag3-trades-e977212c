@@ -13,12 +13,12 @@ async function verifyHeliusSignature(body: string, authHeader: string | null, se
   const encoder = new TextEncoder();
   const key = await crypto.subtle.importKey(
     "raw",
-    encoder.encode(secret),
+    encoder.encode(secret) as BufferSource,
     { name: "HMAC", hash: "SHA-256" },
     false,
     ["sign"]
   );
-  const signature = await crypto.subtle.sign("HMAC", key, encoder.encode(body));
+  const signature = await crypto.subtle.sign("HMAC", key, encoder.encode(body) as BufferSource);
   const expected = Array.from(new Uint8Array(signature))
     .map(b => b.toString(16).padStart(2, '0'))
     .join('');
@@ -31,7 +31,7 @@ async function verifyHeliusSignature(body: string, authHeader: string | null, se
   return mismatch === 0;
 }
 
-serve(async (req) => {
+serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }

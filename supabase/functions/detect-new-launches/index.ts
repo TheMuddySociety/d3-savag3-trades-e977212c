@@ -35,7 +35,7 @@ serve(async (req: Request) => {
     return new Response(JSON.stringify({ success: true, broadcastCount, launches: newLaunches }), {
       headers: { "Content-Type": "application/json" },
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("[Launch Detector] Error:", error);
     return new Response(JSON.stringify({ error: "Launch detection failed" }), { status: 500 });
   }
