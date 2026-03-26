@@ -23,3 +23,6 @@ verify_jwt = false
 
 [functions.wallet-auth]
 verify_jwt = false
+
+[functions.beach-mode]
+verify_jwt = false
