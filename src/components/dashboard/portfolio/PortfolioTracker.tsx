@@ -177,7 +177,7 @@ export const PortfolioTracker = () => {
                             />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center text-[10px] font-bold text-muted-foreground">
-                              {token.symbol[0]}
+                              {token.symbol?.[0] || '?'}
                             </div>
                           )}
                         </div>

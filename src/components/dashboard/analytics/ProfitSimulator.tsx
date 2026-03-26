@@ -35,7 +35,7 @@ export function ProfitSimulator() {
   // Set the first token as default when memecoins are loaded
   useEffect(() => {
     if (memecoins.length > 0 && !selectedToken) {
-      setSelectedToken(memecoins[0].tokenAddress);
+      setSelectedToken(memecoins[0]?.tokenAddress || '');
     }
   }, [memecoins, selectedToken]);
 
@@ -184,7 +184,7 @@ export function ProfitSimulator() {
           <div className="space-y-2">
             <Slider
               value={[profitMultiplier]}
-              onValueChange={(value) => setProfitMultiplier(value[0])}
+              onValueChange={(value) => setProfitMultiplier(value?.[0] || 10)}
               min={1}
               max={100}
               step={1}
@@ -205,7 +205,7 @@ export function ProfitSimulator() {
           <div className="space-y-2">
             <Slider
               value={[daysHeld]}
-              onValueChange={(value) => setDaysHeld(value[0])}
+              onValueChange={(value) => setDaysHeld(value?.[0] || 7)}
               min={1}
               max={30}
               step={1}

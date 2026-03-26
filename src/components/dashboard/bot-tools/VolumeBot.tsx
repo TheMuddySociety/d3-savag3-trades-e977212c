@@ -53,7 +53,7 @@ export const VolumeBot = ({ killSignal = 0 }: Props) => {
     setIsRunning(true);
     setTxCount(0);
     countRef.current = 0;
-    const intervalMs = (60000 / txPerMinute[0]);
+    const intervalMs = (60000 / (txPerMinute?.[0] || 1));
 
     const executeVolumeTx = async () => {
       if (isExecutingRef.current) return;
@@ -110,7 +110,7 @@ export const VolumeBot = ({ killSignal = 0 }: Props) => {
     else startVolumeBot();
   };
 
-  const estVolPerHour = parseFloat(solPerTx) * txPerMinute[0] * 60 * 2;
+  const estVolPerHour = parseFloat(solPerTx) * (txPerMinute?.[0] || 0) * 60 * 2;
 
   return (
     <div className="space-y-4">
@@ -154,7 +154,7 @@ export const VolumeBot = ({ killSignal = 0 }: Props) => {
         <div>
           <div className="flex justify-between mb-1">
             <Label className="text-xs text-muted-foreground">Transactions / min</Label>
-            <span className="text-xs font-mono text-foreground">{txPerMinute[0]}</span>
+            <span className="text-xs font-mono text-foreground">{txPerMinute?.[0]}</span>
           </div>
           <Slider value={txPerMinute} onValueChange={setTxPerMinute} min={1} max={10} step={1} disabled={isRunning} />
         </div>

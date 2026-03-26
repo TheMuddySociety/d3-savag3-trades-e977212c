@@ -18,8 +18,8 @@ export function D3SAgentHero({ onHire, isHired, isHiring }: D3SAgentHeroProps) {
   const { portfolio } = useWalletPortfolio(publicKey?.toBase58() || null);
 
   const stats = [
-    { label: "Portfolio Value", value: portfolio ? `$${portfolio.totalPortfolioUsd.toLocaleString(undefined, { maximumFractionDigits: 0 })}` : "Loading...", sub: "Live Balance" },
-    { label: "Token Holdings", value: portfolio ? portfolio.tokenCount.toString() : "...", sub: "Managed Assets" },
+    { label: "Portfolio Value", value: portfolio?.totalPortfolioUsd !== undefined ? `$${portfolio.totalPortfolioUsd.toLocaleString(undefined, { maximumFractionDigits: 0 })}` : "Loading...", sub: "Live Balance" },
+    { label: "Token Holdings", value: portfolio?.tokenCount !== undefined ? portfolio.tokenCount.toString() : "...", sub: "Managed Assets" },
     { label: "AI Strategies", value: "6+", sub: "DCA, Snipe, Grid..." },
     { label: "Platform Status", value: "24/7", sub: "Cloud Mode Active" },
   ];

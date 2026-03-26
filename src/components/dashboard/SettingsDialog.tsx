@@ -14,7 +14,7 @@ interface SettingsDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-const STORAGE_KEY = "trading_settings";
+const STORAGE_KEY = "tradingSettings";
 const API_STORAGE_KEY = "custom_api_settings";
 
 function maskKey(key: string): string {
@@ -22,22 +22,6 @@ function maskKey(key: string): string {
   return key.slice(0, 4) + "••••" + key.slice(-4);
 }
 
-export function getCustomApiSettings() {
-  try {
-    const saved = localStorage.getItem(API_STORAGE_KEY);
-    if (!saved) return null;
-    return JSON.parse(saved) as {
-      customRpc?: string;
-      heliusApiKey?: string;
-      jupiterApiKey?: string;
-      useCustomRpc?: boolean;
-      useCustomHelius?: boolean;
-      useCustomJupiter?: boolean;
-    };
-  } catch {
-    return null;
-  }
-}
 
 export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
   // ── Trading Settings ──
@@ -166,7 +150,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                 max={15}
                 step={0.1}
                 value={[slippage]}
-                onValueChange={(v) => setSlippage(v[0])}
+                onValueChange={(v) => setSlippage(v?.[0] || 1.0)}
                 className="py-2"
               />
               <p className="text-[10px] text-muted-foreground flex items-center gap-1">
