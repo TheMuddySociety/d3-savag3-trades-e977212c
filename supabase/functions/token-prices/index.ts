@@ -53,7 +53,7 @@ serve(async (req: Request) => {
 
     console.log(`[token-prices] Received action: ${action}, targetMint: ${targetMint}`);
 
-    if (!targetMint && action !== "health" && action !== "trending" && action !== "recent_launches") {
+    if (!targetMint && action !== "health" && action !== "trending" && action !== "recent_launches" && action !== "sol_price" && action !== "ping") {
       return new Response(JSON.stringify({ success: false, error: "mint/address is required for this action" }), {
         status: 400,
         headers: corsHeaders,
@@ -131,6 +131,16 @@ serve(async (req: Request) => {
        return new Response(JSON.stringify({ success: true, data: [] }), { headers: corsHeaders });
     }
 
+    if (action === "sol_price") {
+      const SOL_MINT = "So11111111111111111111111111111111111111112";
+      const price = await getCurrentPrice(SOL_MINT);
+      return new Response(JSON.stringify({ success: true, data: { price } }), { headers: corsHeaders });
+    }
+
+    if (action === "ping" || action === "health") {
+      return new Response(JSON.stringify({ success: true, status: "ok" }), { headers: corsHeaders });
+    }
+
     if (action === "recent_launches") {
       try {
         const res = await fetch("https://frontend-api-v2.pump.fun/coins/latest?limit=10&includeNsfw=false");
@@ -175,12 +185,23 @@ serve(async (req: Request) => {
 
 async function fetchBirdeyeOHLCV(mint: string, interval: string = "5m") {
   if (!BIRDEYE_API_KEY) throw new Error("Birdeye API key not set");
+
+  // Normalize interval to Birdeye-accepted values (lowercase, valid periods)
+  const VALID_INTERVALS: Record<string, string> = {
+    "1m": "1m", "3m": "3m", "5m": "5m", "15m": "15m", "30m": "30m",
+    "1h": "1H", "1H": "1H", "2h": "2H", "2H": "2H", "4h": "4H", "4H": "4H",
+    "6h": "6H", "6H": "6H", "8h": "8H", "8H": "8H", "12h": "12H", "12H": "12H",
+    "1d": "1D", "1D": "1D", "3d": "3D", "3D": "3D", "1w": "1W", "1W": "1W",
+    "1M": "1M",
+  };
+  const normalizedInterval = VALID_INTERVALS[interval] || "5m";
+
   const now = Math.floor(Date.now() / 1000);
   const timeFrom = now - 86400; // 24 hours ago
 
-  const url = new URL("https://public-api.birdeye.so/defi/v3/ohlcv");
+  const url = new URL("https://public-api.birdeye.so/defi/ohlcv");
   url.searchParams.append("address", mint);
-  url.searchParams.append("type", interval);
+  url.searchParams.append("type", normalizedInterval);
   url.searchParams.append("time_from", timeFrom.toString());
   url.searchParams.append("time_to", now.toString());
   url.searchParams.append("currency", "usd");
