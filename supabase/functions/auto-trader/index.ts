@@ -512,7 +512,7 @@ async function isAgentHired(connection: Connection, walletAddress: string): Prom
 
     // Derive Executive Profile PDA
     const [profilePda] = PublicKey.findProgramAddressSync(
-      [Buffer.from("executive_profile"), executivePubkey.toBuffer()],
+      [new TextEncoder().encode("executive_profile"), executivePubkey.toBuffer()],
       programId
     );
 
