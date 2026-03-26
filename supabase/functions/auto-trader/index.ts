@@ -36,10 +36,9 @@ serve(async (req) => {
   const birdeyeKey = Deno.env.get('BIRDEYE_API_KEY');
   const jupiterApiKey = Deno.env.get('JUPITER_API_KEY');
   const supabase = createClient(supabaseUrl, supabaseKey);
-  const rpcUrl = Deno.env.get('SOLANA_RPC_URL') || 'https://api.mainnet-beta.solana.com';
-  const connection = new Connection(rpcUrl, 'confirmed');
 
   try {
+    // Early exit BEFORE creating expensive Connection object
     const { data: configs, error } = await supabase
       .from('sim_bot_configs')
       .select('*')
@@ -50,6 +49,10 @@ serve(async (req) => {
     if (!configs || configs.length === 0) {
       return jsonResponse({ success: true, data: { processed: 0, reason: 'no active configs' } });
     }
+
+    // Only create Connection when we actually have work to do
+    const rpcUrl = Deno.env.get('SOLANA_RPC_URL') || 'https://api.mainnet-beta.solana.com';
+    const connection = new Connection(rpcUrl, 'confirmed');
 
     let processed = 0;
     let queued = 0;
