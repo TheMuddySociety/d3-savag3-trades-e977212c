@@ -20,7 +20,48 @@ serve(async (req: Request) => {
       ? `https://mainnet.helius-rpc.com/?api-key=${heliusKey}`
       : "https://api.mainnet-beta.solana.com";
 
-    // Fetch all token accounts for the referral wallet
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: "No authorization header" }), {
+        status: 401,
+        headers: corsHeaders,
+      });
+    }
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
+    const supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+
+    const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
+    if (userError || !user) {
+      return new Response(JSON.stringify({ error: "Invalid token" }), {
+        status: 401,
+        headers: corsHeaders,
+      });
+    }
+
+    // Get the user's wallet address from their profile
+    const adminClient = createClient(supabaseUrl, supabaseServiceKey);
+    const { data: profile, error: profileError } = await adminClient
+      .from("profiles")
+      .select("wallet_address")
+      .eq("id", user.id)
+      .single();
+
+    if (profileError || !profile?.wallet_address) {
+      return new Response(JSON.stringify({ error: "User profile or wallet not found" }), {
+        status: 404,
+        headers: corsHeaders,
+      });
+    }
+
+    const userWallet = profile.wallet_address;
+
+    // Fetch token accounts for the referral wallet (this is shared/public info about the platform's referral vault)
     const tokenAccountsRes = await fetch(rpcUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -111,16 +152,13 @@ serve(async (req: Request) => {
       logoURI: tokenMeta[t.mint]?.logoURI || null,
     }));
 
-    // Fetch trade stats using service role (bypasses RLS)
-    let tradeStats = { totalTrades: 0, totalInputUsd: 0, totalOutputUsd: 0, estimatedFees: 0 };
+    // Fetch user-specific trade stats using service role (filtered by user wallet)
+    let tradeStats = { totalTrades: 0, totalInputUsd: 0, totalOutputUsd: 0, estimatedFeesReferral: 0 };
     try {
-      const sb = createClient(
-        Deno.env.get("SUPABASE_URL")!,
-        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-      );
-      const { data: trades, count } = await sb
+      const { data: trades, count } = await adminClient
         .from("live_trades")
-        .select("input_usd_value, output_usd_value", { count: "exact" });
+        .select("input_usd_value, output_usd_value", { count: "exact" })
+        .eq("wallet_address", userWallet);
 
       if (trades) {
         const totalInputUsd = trades.reduce((s: number, t: any) => s + (t.input_usd_value || 0), 0);
@@ -129,20 +167,21 @@ serve(async (req: Request) => {
           totalTrades: count || trades.length,
           totalInputUsd,
           totalOutputUsd,
-          estimatedFees: totalOutputUsd * 0.01,
+          estimatedFeesReferral: totalOutputUsd * 0.001, // 0.1% referral share
         };
       }
-    } catch {
-      // Trade stats are optional
+    } catch (e) {
+      console.error("Failed to fetch user trade stats:", e);
     }
 
     return new Response(
       JSON.stringify({
         referralWallet: REFERRAL_WALLET,
+        userWallet,
         solBalance,
         tokenBalances: enrichedBalances,
         totalTokenAccounts: accounts.length,
-        tradeStats,
+        userTradeStats: tradeStats,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
