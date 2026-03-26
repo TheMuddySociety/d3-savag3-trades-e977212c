@@ -53,6 +53,44 @@ In every bot component that performs swaps (**BuySniper.tsx**, **DCABot.tsx**, *
 
 **Files to update**: All listed bot files + the shared `useJupiterPlugin` hook/service.
 
+### 2. Render BackgroundTaskMonitor in Tasks tab
+**File**: `src/components/dashboard/BotAccess.tsx`
+
+**Add inside** `<TabsContent value="tasks">`:
+
+```tsx
+<BackgroundTaskMonitor walletAddress={walletAddress} />
+```
+
+### 3. Fix fmt() NaN Crash in TokenDetailModal
+**File**: `src/components/dashboard/TokenDetailModal.tsx`
+
+**Replace** the `fmt` function (~line 220):
+
+```ts
+const fmt = (v: number | string | undefined | null): string => {
+  if (v == null || isNaN(Number(v))) return '$0.00';
+  const num = typeof v === 'string' ? parseFloat(v) : v;
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 6,
+  }).format(num);
+};
+```
+
+### 4. Page Errors & Runtime Stability Audit
+- **Referral-Earnings Tracker Fix**: Resolved a critical runtime crash in the "Fees" and "Admin" tabs caused by a schema mismatch between the hardened Edge Function and the frontend component. I synchronized the component with the new user-scoped data model.
+- **Wallet Notification Fix**: Corrected the `WalletNotification` structure from an object to a function. This was a "silent killer" that would have caused a fatal crash in the `@jup-ag/wallet-adapter` (Jupiter Kit) initialization inside the `NetworkProvider`, breaking the entire app's wallet connection.
+- **Defensive Guards**: Implemented additional null-guards and `isNaN` checks in `TokenDetailModal.tsx` and `PortfolioTracker.tsx` to handle edge cases in external API responses (e.g., BirdEye/DexScreener).
+
+### ✅ Verification Results
+- **Security**: Verified `profiles` table immutability via SQL migrations.
+- **Privacy**: Verified `referral-earnings` Edge Function requires JWT and returns user-scoped stats only.
+- **Stability**: Confirmed dashboard tabs (Sniper, DCA, Volume, etc.) load correctly.
+- **Wallet Integration**: Confirmed `UnifiedWalletProvider` initializes correctly with the refactored callback.
+
 ### Expanded Jupiter Swap Configuration (Core for Real Bot Execution)
 This is the production-ready configuration every bot should use. It respects user settings, balances speed/cost/MEV protection, and follows Jupiter V6+ best practices.
 

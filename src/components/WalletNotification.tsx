@@ -15,26 +15,33 @@ interface IWalletNotification {
 }
 
 // Using Sonner for consistent app-wide look
-export const WalletNotification = {
-  onConnect: ({ shortAddress, walletName }: IWalletNotification) => {
-    toast.success(`Connected to ${walletName}`, {
-      description: `Wallet: ${shortAddress}`,
-    });
-  },
-  onConnecting: ({ walletName }: IWalletNotification) => {
-    toast.info(`Connecting to ${walletName}...`);
-  },
-  onDisconnect: ({ walletName }: IWalletNotification) => {
-    toast.info(`Disconnected from ${walletName}`);
-  },
-  onError: ({ walletName }: IWalletNotification) => {
-    toast.error(`Failed to connect to ${walletName}`);
-  },
-  onNotInstalled: ({ walletName }: IWalletNotification) => {
-    toast.error(`${walletName} is not installed`, {
-      description: "Please install the extension to continue.",
-    });
-  },
+export const WalletNotification = (params: any) => {
+  const { type, walletName, shortAddress } = params;
+
+  switch (type) {
+    case 'onConnect':
+      toast.success(`Connected to ${walletName}`, {
+        description: `Wallet: ${shortAddress || 'Connected'}`,
+      });
+      break;
+    case 'onConnecting':
+      toast.info(`Connecting to ${walletName}...`);
+      break;
+    case 'onDisconnect':
+      toast.info(`Disconnected from ${walletName}`);
+      break;
+    case 'onError':
+      toast.error(`Failed to connect to ${walletName}`);
+      break;
+    case 'onNotInstalled':
+      toast.error(`${walletName} is not installed`, {
+        description: "Please install the extension to continue.",
+      });
+      break;
+    default:
+      console.log("Wallet Notification:", params);
+      break;
+  }
 };
 
 export default WalletNotification;

@@ -59,9 +59,21 @@ export function ReferralEarningsTracker() {
       if (error) throw error;
 
       if (data) {
-        setReferralData(data);
-        if (data.tradeStats) {
-          setTradeStats(data.tradeStats);
+        // Map new schema to component state
+        setReferralData({
+          referralWallet: data.userWallet || "N/A",
+          solBalance: 0, // No longer returned for security
+          tokenBalances: [], // No longer returned for security
+          totalTokenAccounts: 0,
+        });
+
+        if (data.userTradeStats) {
+          setTradeStats({
+            totalTrades: data.userTradeStats.totalTrades || 0,
+            totalInputUsd: data.userTradeStats.totalInputUsd || 0,
+            totalOutputUsd: data.userTradeStats.totalOutputUsd || 0,
+            estimatedFees: data.userTradeStats.estimatedFeesReferral || 0,
+          });
         }
       }
     } catch (err) {
