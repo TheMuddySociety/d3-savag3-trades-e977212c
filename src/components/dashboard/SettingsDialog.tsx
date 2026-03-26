@@ -15,7 +15,6 @@ interface SettingsDialogProps {
 }
 
 const STORAGE_KEY = "tradingSettings";
-const API_STORAGE_KEY = "custom_api_settings";
 
 function maskKey(key: string): string {
   if (key.length <= 8) return "••••••••";
@@ -53,12 +52,8 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
         setPriorityFee(parsed.priorityFee || 0.001);
         setMevProtection(parsed.mevProtection !== false);
         setAutoApprove(!!parsed.autoApprove);
-      } catch {}
-    }
-    const apiSaved = localStorage.getItem(API_STORAGE_KEY);
-    if (apiSaved) {
-      try {
-        const parsed = JSON.parse(apiSaved);
+        
+        // Load API settings from the same merged key
         setCustomRpc(parsed.customRpc || "");
         setHeliusApiKey(parsed.heliusApiKey || "");
         setJupiterApiKey(parsed.jupiterApiKey || "");
@@ -66,13 +61,30 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
         setUseCustomHelius(!!parsed.useCustomHelius);
         setUseCustomJupiter(!!parsed.useCustomJupiter);
       } catch {}
+    } else {
+      // Fallback for legacy split keys
+      const apiSaved = localStorage.getItem("custom_api_settings");
+      if (apiSaved) {
+        try {
+          const parsed = JSON.parse(apiSaved);
+          setCustomRpc(parsed.customRpc || "");
+          setHeliusApiKey(parsed.heliusApiKey || "");
+          setJupiterApiKey(parsed.jupiterApiKey || "");
+          setUseCustomRpc(!!parsed.useCustomRpc);
+          setUseCustomHelius(!!parsed.useCustomHelius);
+          setUseCustomJupiter(!!parsed.useCustomJupiter);
+        } catch {}
+      }
     }
     setRpcStatus("idle");
   }, [open]);
 
   const handleSave = () => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ slippage, priorityFee, mevProtection, autoApprove }));
-    localStorage.setItem(API_STORAGE_KEY, JSON.stringify({
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ 
+      slippage, 
+      priorityFee, 
+      mevProtection, 
+      autoApprove,
       customRpc: customRpc.trim(),
       heliusApiKey: heliusApiKey.trim(),
       jupiterApiKey: jupiterApiKey.trim(),

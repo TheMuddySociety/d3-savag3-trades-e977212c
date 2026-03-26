@@ -18,7 +18,7 @@ import {
   AddressLookupTableAccount,
 } from '@solana/web3.js';
 import { toast } from 'sonner';
-import { getCustomApiSettings } from '@/components/dashboard/SettingsDialog';
+import { getCustomApiSettings } from '@/utils/getCustomApiSettings';
 import { PLATFORM_CONFIG } from '@/config/platform';
 
 // ─── Types ──────────────────────────────────────────────────────────

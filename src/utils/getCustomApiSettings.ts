@@ -16,6 +16,8 @@ export interface TradingSettings {
   priorityFee: number;      // SOL (e.g. 0.0005)
   mevProtection: boolean;
   autoApprove: boolean;
+  jupiterApiKey?: string;
+  useCustomJupiter?: boolean;
 }
 
 export interface ApiSettings {
@@ -44,6 +46,7 @@ const DEFAULT_TRADING_SETTINGS: TradingSettings = {
   priorityFee: 0.001,
   mevProtection: true,
   autoApprove: false,
+  useCustomJupiter: false,
 };
 
 // ── Getters ────────────────────────────────────────────────────────
@@ -58,6 +61,8 @@ export function getCustomApiSettings(): TradingSettings {
         priorityFee: parsed.priorityFee ?? DEFAULT_TRADING_SETTINGS.priorityFee,
         mevProtection: parsed.mevProtection !== false,
         autoApprove: !!parsed.autoApprove,
+        jupiterApiKey: parsed.jupiterApiKey,
+        useCustomJupiter: !!parsed.useCustomJupiter,
       };
     }
   } catch (e) {
