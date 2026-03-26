@@ -1,10 +1,8 @@
 import React from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { useAppKit } from "@reown/appkit/react";
-import { useWallet } from "@solana/wallet-adapter-react";
-import { type WalletName } from "@solana/wallet-adapter-base";
-import { ChevronRight, Zap, Flame, Sparkles, TrendingUp, LayoutGrid } from "lucide-react";
+import { UnifiedWalletButton, useUnifiedWallet } from "@jup-ag/wallet-adapter";
+import { ChevronRight, Zap, Flame, Sparkles, TrendingUp } from "lucide-react";
 import { motion } from "framer-motion";
 
 interface PumpLoginModalProps {
@@ -13,22 +11,11 @@ interface PumpLoginModalProps {
 }
 
 export function PumpLoginModal({ open, onOpenChange }: PumpLoginModalProps) {
-  const { open: openAppKit } = useAppKit();
-  const { wallets, select } = useWallet();
+  const { setShowWallets }: any = useUnifiedWallet();
 
-  const handleSocialLogin = async () => {
+  const handleSocialLogin = () => {
     onOpenChange(false);
-    await openAppKit({ view: 'Connect' });
-  };
-
-  const handleWalletSelect = (walletName: WalletName) => {
-    select(walletName);
-    onOpenChange(false);
-  };
-
-  const handleMoreWallets = async () => {
-    onOpenChange(false);
-    await openAppKit({ view: 'AllWallets' });
+    if (setShowWallets) setShowWallets(true);
   };
 
   return (
@@ -57,7 +44,17 @@ export function PumpLoginModal({ open, onOpenChange }: PumpLoginModalProps) {
           </div>
 
           <div className="w-full space-y-4">
-            {/* Social/Email Primary Option */}
+            {/* Unified Wallet Button */}
+            <div className="bg-[#1A1B1E] p-4 rounded-2xl border border-white/5 hover:border-white/10 transition-all flex justify-center">
+              <UnifiedWalletButton />
+            </div>
+
+            <div className="flex items-center gap-4 py-2">
+              <div className="h-[1px] flex-1 bg-white/5" />
+              <span className="text-[10px] text-white/20 font-bold uppercase tracking-[0.2em]">Quick Login</span>
+              <div className="h-[1px] flex-1 bg-white/5" />
+            </div>
+
             <Button
               onClick={handleSocialLogin}
               className="w-full h-16 bg-[#1A1B1E] hover:bg-[#25262B] border border-white/5 hover:border-white/10 text-white rounded-2xl flex items-center justify-between px-5 group transition-all duration-300"
@@ -67,46 +64,11 @@ export function PumpLoginModal({ open, onOpenChange }: PumpLoginModalProps) {
                   <Zap className="w-5 h-5 text-primary fill-primary/20" />
                 </div>
                 <div className="text-left">
-                  <div className="text-[15px] font-bold">Login with email or socials</div>
-                  <div className="text-[11px] text-white/30 font-medium">zero confirmation trading + 24/7 bot</div>
+                  <div className="text-[15px] font-bold">More Options</div>
+                  <div className="text-[11px] text-white/30 font-medium">socials, more wallets and setup</div>
                 </div>
               </div>
               <ChevronRight className="w-5 h-5 text-white/10 group-hover:text-white/30 transition-colors" />
-            </Button>
-
-            <div className="flex items-center gap-4 py-2">
-              <div className="h-[1px] flex-1 bg-white/5" />
-              <span className="text-[10px] text-white/20 font-bold uppercase tracking-[0.2em]">or</span>
-              <div className="h-[1px] flex-1 bg-white/5" />
-            </div>
-
-            {/* Popular Wallets Grid */}
-            <div className="grid grid-cols-2 gap-3">
-              <Button
-                onClick={() => handleWalletSelect('Phantom' as WalletName)}
-                variant="outline"
-                className="h-14 bg-white/[0.03] hover:bg-white/[0.06] border-white/5 hover:border-white/10 text-white rounded-xl flex items-center gap-3 px-4 transition-all"
-              >
-                <img src="https://mintlist.xyz/social/phantom.png" alt="Phantom" className="w-6 h-6 rounded-md" />
-                <span className="text-sm font-semibold tracking-tight">Phantom</span>
-              </Button>
-              <Button
-                onClick={() => handleWalletSelect('Solflare' as WalletName)}
-                variant="outline"
-                className="h-14 bg-white/[0.03] hover:bg-white/[0.06] border-white/5 hover:border-white/10 text-white rounded-xl flex items-center gap-3 px-4 transition-all"
-              >
-                <img src="https://solflare.com/assets/logo.svg" alt="Solflare" className="w-6 h-6" />
-                <span className="text-sm font-semibold tracking-tight">Solflare</span>
-              </Button>
-            </div>
-
-            <Button
-              onClick={handleMoreWallets}
-              variant="ghost"
-              className="w-full h-10 text-white/30 hover:text-white/50 text-xs font-semibold rounded-lg flex items-center justify-center gap-2 transition-all mt-2"
-            >
-              <LayoutGrid className="w-3.5 h-3.5" />
-              More wallets
             </Button>
           </div>
 
