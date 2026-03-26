@@ -13,7 +13,7 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import { useWalletPortfolio } from "@/hooks/useWalletPortfolio";
 import { Connection } from "@solana/web3.js";
 import { supabase } from "@/integrations/supabase/client";
-import { getTradingSettings } from "@/utils/jupiterSwapConfig";
+import { getCustomApiSettings } from "@/utils/getCustomApiSettings";
 
 const SOL_MINT = "So11111111111111111111111111111111111111112";
 const RPC_URL = "https://api.mainnet-beta.solana.com";
@@ -69,7 +69,7 @@ export const CopyTradeBot = ({ killSignal = 0 }: Props) => {
       }
 
       const connection = new Connection(RPC_URL);
-      const settings = getTradingSettings();
+      const settings = getCustomApiSettings();
       const slippageBps = Math.max(1, Math.floor(settings.slippage * 100));
       const priorityLevel = settings.mevProtection ? 'veryHigh' : 'high';
       if (isBuy) {

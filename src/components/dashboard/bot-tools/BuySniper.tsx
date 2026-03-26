@@ -11,7 +11,7 @@ import { JupiterUltraService } from "@/services/jupiter/ultra";
 import { cn } from "@/lib/utils";
 import { LiveTradeConfirmDialog } from "./LiveTradeConfirmDialog";
 import { isValidSolanaAddress } from "@/utils/validateSolanaAddress";
-import { getTradingSettings } from "@/utils/jupiterSwapConfig";
+import { getCustomApiSettings } from "@/utils/getCustomApiSettings";
 
 const SOL_MINT = "So11111111111111111111111111111111111111112";
 
@@ -40,7 +40,7 @@ export const BuySniper = ({ killSignal = 0 }: Props) => {
 
   // Initialize from user Settings
   useEffect(() => {
-    const s = getTradingSettings();
+    const s = getCustomApiSettings();
     setMaxSlippage(String(s.slippage));
     setPriorityFee(String(s.priorityFee));
     setUseHighPerformance(s.mevProtection);

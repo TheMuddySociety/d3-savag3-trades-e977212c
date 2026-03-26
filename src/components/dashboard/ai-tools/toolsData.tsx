@@ -1,4 +1,4 @@
-import { Zap, Activity, Shield, Bot, Crosshair, Clock, BarChart3, Rocket, Eye, Brain, Layers, Gauge, Search, History as HistoryIcon } from "lucide-react";
+import { Zap, Activity, Shield, Bot, Crosshair, Clock, BarChart3, Rocket, Eye, Brain, Layers, Gauge, Search, History as HistoryIcon, Cloud } from "lucide-react";
 
 export type ToolCategory = "all" | "trading" | "analysis" | "security" | "automation";
 
@@ -153,6 +153,16 @@ export const tools: AITool[] = [
     tags: ["Background", "Queue", "24/7"],
     status: "active",
     tabKey: "auto",
+  },
+  {
+    id: "beach-mode",
+    name: "Beach Mode",
+    description: "Relax while your agent stays active. Automatic risk management, profit taking, and budget controls with vacation-themed analytics.",
+    category: "automation",
+    icon: <Cloud className="h-5 w-5" />,
+    tags: ["Relax", "Safety", "Budget"],
+    status: "active",
+    tabKey: "beach",
   },
 ];
 

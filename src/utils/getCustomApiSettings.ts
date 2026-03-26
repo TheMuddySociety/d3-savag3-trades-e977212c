@@ -6,7 +6,7 @@
  * MEV protection (Jito) vs regular priority fee handling.
  */
 
-const TRADING_SETTINGS_KEY = "trading_settings";
+const TRADING_SETTINGS_KEY = "tradingSettings";
 const API_SETTINGS_KEY = "custom_api_settings";
 
 // ── Types ──────────────────────────────────────────────────────────
@@ -48,7 +48,7 @@ const DEFAULT_TRADING_SETTINGS: TradingSettings = {
 
 // ── Getters ────────────────────────────────────────────────────────
 
-export function getTradingSettings(): TradingSettings {
+export function getCustomApiSettings(): TradingSettings {
   try {
     const saved = localStorage.getItem(TRADING_SETTINGS_KEY);
     if (saved) {
@@ -93,7 +93,7 @@ export function buildJupiterSwapConfig(
   amount: number,
   overrides?: Partial<TradingSettings>,
 ): JupiterSwapConfig {
-  const settings = getTradingSettings();
+  const settings = getCustomApiSettings();
   const merged = { ...settings, ...overrides };
 
   // Convert percent to basis points (0.5% → 50 bps)
@@ -130,7 +130,7 @@ export function buildJupiterSwapConfig(
  * for display in bot confirmation dialogs
  */
 export function getSwapSettingsSummary(): string {
-  const s = getTradingSettings();
+  const s = getCustomApiSettings();
   const parts = [
     `Slippage: ${s.slippage}%`,
     `Priority: ${s.priorityFee} SOL`,

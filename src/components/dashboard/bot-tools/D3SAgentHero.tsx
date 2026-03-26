@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Brain, Flame, Shield, Zap, Clock, TrendingUp, Cloud, Loader2 } from "lucide-react";
 import { useWallet } from "@solana/wallet-adapter-react";
+import { useWalletPortfolio } from "@/hooks/useWalletPortfolio";
 
 interface D3SAgentHeroProps {
   onHire?: () => void;
@@ -14,6 +15,14 @@ interface D3SAgentHeroProps {
 
 export function D3SAgentHero({ onHire, isHired, isHiring }: D3SAgentHeroProps) {
   const { publicKey } = useWallet();
+  const { portfolio } = useWalletPortfolio(publicKey?.toBase58() || null);
+
+  const stats = [
+    { label: "Portfolio Value", value: portfolio ? `$${portfolio.totalPortfolioUsd.toLocaleString(undefined, { maximumFractionDigits: 0 })}` : "Loading...", sub: "Live Balance" },
+    { label: "Token Holdings", value: portfolio ? portfolio.tokenCount.toString() : "...", sub: "Managed Assets" },
+    { label: "AI Strategies", value: "6+", sub: "DCA, Snipe, Grid..." },
+    { label: "Platform Status", value: "24/7", sub: "Cloud Mode Active" },
+  ];
 
   return (
     <div className="space-y-4">
@@ -98,15 +107,10 @@ export function D3SAgentHero({ onHire, isHired, isHiring }: D3SAgentHeroProps) {
 
       {/* Stats Row */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-        {[
-          { label: "Swaps Executed", value: "∞", sub: "Jupiter Ultra" },
-          { label: "Avg Response", value: "<1s", sub: "Lightning fast" },
-          { label: "Strategies", value: "6+", sub: "DCA, Snipe, Grid..." },
-          { label: "Background Tasks", value: "24/7", sub: "Cloud Mode" },
-        ].map(({ label, value, sub }) => (
-          <Card key={label} className="p-3 bg-card/50 border-border/50">
-            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{label}</p>
-            <p className="text-lg font-bold font-mono text-foreground mt-0.5">{value}</p>
+        {stats.map(({ label, value, sub }) => (
+          <Card key={label} className="p-3 bg-card/50 border-border/50 backdrop-blur-sm transition-all hover:bg-card/80">
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">{label}</p>
+            <p className="text-lg font-bold font-mono text-primary mt-0.5">{value}</p>
             <p className="text-[9px] text-muted-foreground">{sub}</p>
           </Card>
         ))}
