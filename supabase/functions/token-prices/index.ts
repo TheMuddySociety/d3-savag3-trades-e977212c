@@ -128,7 +128,34 @@ serve(async (req: Request) => {
     }
     
     if (action === "trending") {
-       return new Response(JSON.stringify({ success: true, data: [] }), { headers: corsHeaders });
+      try {
+        if (!BIRDEYE_API_KEY) throw new Error("Birdeye API key not set");
+        const res = await fetch("https://public-api.birdeye.so/defi/token_trending?sort_by=rank&sort_type=asc&offset=0&limit=20", {
+          headers: { 
+            "X-API-KEY": BIRDEYE_API_KEY, 
+            "x-chain": "solana",
+            "accept": "application/json"
+          },
+        });
+        if (!res.ok) throw new Error(`Birdeye trending failed: ${res.status}`);
+        const data = await res.json();
+        
+        // Map Birdeye trending data to format expected by LiveSignalFeed.tsx
+        const mapped = (data.data?.tokens || []).map((t: any) => ({
+          address: t.address,
+          symbol: t.symbol,
+          name: t.name,
+          price: t.price || 0,
+          price_change_24h: t.v24hChangePercent || 0,
+          volume_24h: t.v24hUSD || 0,
+          rank: t.rank || 0,
+        }));
+
+        return new Response(JSON.stringify({ success: true, data: mapped }), { headers: corsHeaders });
+      } catch (e: any) {
+        console.error("[token-prices] trending error:", e.message);
+        return new Response(JSON.stringify({ success: true, data: [] }), { headers: corsHeaders });
+      }
     }
 
     if (action === "sol_price") {
