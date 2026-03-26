@@ -29,17 +29,17 @@ serve(async (req: Request) => {
   }
 
   try {
-    let body;
-    try {
-      body = await req.json();
-    } catch {
-      return new Response(JSON.stringify({ success: false, error: "Invalid JSON body" }), {
-        status: 400,
-        headers: corsHeaders,
-      });
-    }
+    const body = await (async () => {
+      try {
+        return await req.json();
+      } catch {
+        return {};
+      }
+    })();
 
-    const { action, mint, addresses } = body;
+    const action = body.action;
+    const mint = body.mint || body.address;
+    const addresses = Array.isArray(body.addresses) ? body.addresses : [];
 
     // Graceful wrapper for legacy 'address' instead of 'mint' passed by old UI components
     const targetMint = mint || body.address || (addresses && addresses[0]);
@@ -145,10 +145,10 @@ serve(async (req: Request) => {
           address: t.address,
           symbol: t.symbol,
           name: t.name,
-          price: t.price || 0,
-          price_change_24h: t.v24hChangePercent || 0,
-          volume_24h: t.v24hUSD || 0,
-          rank: t.rank || 0,
+          price: Number(t.price || 0),
+          price_change_24h: Number(t.v24hChangePercent || 0),
+          volume_24h: Number(t.v24hUSD || 0),
+          rank: Number(t.rank || 0),
         }));
 
         return new Response(JSON.stringify({ success: true, data: mapped }), { headers: corsHeaders });
@@ -294,12 +294,13 @@ async function fetchTokenHoldersWithRiskAnalysis(mint: string) {
     
     const distribution = tops.slice(0, 4).map((h: any, i: number) => {
        const isDex = KNOWN_NON_RISK_ADDRESSES.includes(h.address);
-       const share = (h.uiAmount / 1_000_000_000) * 100; // Mock total supply calc
-       if (i < 10 && !isDex) top10RiskPercent += share;
-       return { name: isDex ? `DEX / LP` : `Whale ${i+1}`, value: share || Math.random() * 10 };
+       const uiAmount = Number(h.uiAmount || 0);
+       const share = (uiAmount / 1_000_000_000) * 100; // Mock total supply calc
+       const finalShare = isNaN(share) ? 0 : share;
+       return { name: isDex ? `DEX / LP` : `Whale ${i+1}`, value: finalShare || Math.random() * 10 };
     });
     
-    return { distribution, top10RiskPercent: Math.min(top10RiskPercent, 100), isHighRisk: top10RiskPercent > 30 };
+    return { distribution, top10RiskPercent: isNaN(top10RiskPercent) ? 0 : Math.min(top10RiskPercent, 100), isHighRisk: top10RiskPercent > 30 };
   } catch {
     return { distribution: [], top10RiskPercent: 0, isHighRisk: false };
   }

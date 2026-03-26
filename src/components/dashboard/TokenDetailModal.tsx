@@ -116,11 +116,14 @@ function useTokenDetail(token: MemeToken | null, open: boolean) {
         // Holders
         if (fullData.holders && fullData.holders.data && fullData.holders.data.success && fullData.holders.data.data?.distribution) {
           const dist = fullData.holders.data.data.distribution;
-          setHolders(dist.map((d: { name: string; value: number }, i: number) => ({
-            ...d,
-            value: +d.value.toFixed(1),
-            color: HOLDER_COLORS[i] || HOLDER_COLORS[3],
-          })));
+          setHolders(dist.map((d: { name: string; value: any }, i: number) => {
+            const val = Number(d.value || 0);
+            return {
+              ...d,
+              value: isNaN(val) ? 0 : +val.toFixed(1),
+              color: HOLDER_COLORS[i] || HOLDER_COLORS[3],
+            };
+          }));
           setHoldersRisk({
             top10RiskPercent: fullData.holders.data.data.top10RiskPercent || 0,
             isHighRisk: fullData.holders.data.data.isHighRisk || false
@@ -143,15 +146,18 @@ function useTokenDetail(token: MemeToken | null, open: boolean) {
             owner: string;
           }, i: number) => {
             const isBuy = t.side === 'buy';
-            const solAmt = isBuy ? t.from?.uiAmount || 0 : t.to?.uiAmount || 0;
-            const tokenAmt = isBuy ? t.to?.uiAmount || 0 : t.from?.uiAmount || 0;
+            const solAmt = Number(isBuy ? t.from?.uiAmount || 0 : t.to?.uiAmount || 0);
+            const tokenAmt = Number(isBuy ? t.to?.uiAmount || 0 : t.from?.uiAmount || 0);
+            const safeSolAmt = isNaN(solAmt) ? 0 : solAmt;
+            const safeTokenAmt = isNaN(tokenAmt) ? 0 : tokenAmt;
+            
             return {
               id: i,
               type: isBuy ? 'buy' as const : 'sell' as const,
-              amount: tokenAmt,
-              solAmount: +solAmt.toFixed(3),
-              price: tokenAmt > 0 ? solAmt * 67 / tokenAmt : 0,
-              time: new Date(t.blockUnixTime * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+              amount: safeTokenAmt,
+              solAmount: +safeSolAmt.toFixed(3),
+              price: safeTokenAmt > 0 ? (safeSolAmt * 67) / safeTokenAmt : 0,
+              time: t.blockUnixTime ? new Date(t.blockUnixTime * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '??:??',
               wallet: t.owner ? `${t.owner.slice(0, 4)}...${t.owner.slice(-4)}` : 'unknown',
             };
           }));

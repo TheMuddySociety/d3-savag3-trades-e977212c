@@ -26,45 +26,46 @@ const SIGNAL_TYPES = {
 
 function deriveSignalsFromTrending(trendingData: any[]): Signal[] {
   return trendingData
-    .filter((t: any) => t.price > 0)
+    .filter((t: any) => t && typeof t.price === 'number' && t.price > 0)
     .slice(0, 10)
     .map((t: any) => {
-      const change = t.price_change_24h || 0;
+      const change = Number(t.price_change_24h || 0);
+      const safeChange = isNaN(change) ? 0 : change;
       let type: Signal['type'] = 'alert';
       let message = '';
       let strength: Signal['strength'] = 'low';
-
-      if (change > 15) {
+ 
+      if (safeChange > 15) {
         type = 'buy';
-        message = `Surging +${change.toFixed(1)}% — breakout detected`;
+        message = `Surging +${safeChange.toFixed(1)}% — breakout detected`;
         strength = 'high';
-      } else if (change > 5) {
+      } else if (safeChange > 5) {
         type = 'buy';
-        message = `Trending up +${change.toFixed(1)}% in 24h`;
+        message = `Trending up +${safeChange.toFixed(1)}% in 24h`;
         strength = 'medium';
-      } else if (change < -10) {
+      } else if (safeChange < -10) {
         type = 'sell';
-        message = `Dropping ${change.toFixed(1)}% — sell pressure`;
+        message = `Dropping ${safeChange.toFixed(1)}% — sell pressure`;
         strength = 'high';
-      } else if (change < -3) {
+      } else if (safeChange < -3) {
         type = 'sell';
-        message = `Declining ${change.toFixed(1)}% in 24h`;
+        message = `Declining ${safeChange.toFixed(1)}% in 24h`;
         strength = 'medium';
       } else {
         type = 'volume';
-        message = `Active trading — ${change >= 0 ? '+' : ''}${change.toFixed(1)}% change`;
+        message = `Active trading — ${safeChange >= 0 ? '+' : ''}${safeChange.toFixed(1)}% change`;
         strength = 'low';
       }
-
+ 
       return {
-        id: `signal-${t.address || t.symbol}-${Date.now()}`,
+        id: `signal-${t.address || t.symbol || Math.random()}-${Date.now()}`,
         type,
         token: t.symbol?.toUpperCase() || 'UNKNOWN',
         message,
         timestamp: Date.now(),
         strength,
         price: t.price,
-        change,
+        change: safeChange,
       };
     });
 }
