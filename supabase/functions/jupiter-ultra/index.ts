@@ -44,8 +44,10 @@ serve(async (req: Request) => {
       authHeaders["x-api-key"] = jupiterApiKey;
     }
 
+    const SWAP_API_BASE = "https://api.jup.ag/swap/v2";
+
     if (action === "order") {
-      const { inputMint, outputMint, amount, taker, swapMode } = body;
+      const { inputMint, outputMint, amount, taker, swapMode, slippageBps = 300 } = body;
       if (!inputMint || !outputMint || !amount || !taker) {
         return new Response(JSON.stringify({ error: "Missing required params" }), {
           status: 400,
@@ -53,15 +55,24 @@ serve(async (req: Request) => {
         });
       }
 
-      const url = `${ULTRA_API_BASE}/order?inputMint=${inputMint}&outputMint=${outputMint}&amount=${amount}&taker=${taker}&swapMode=${swapMode || "ExactIn"}`;
+      const queryParams = new URLSearchParams({
+        inputMint,
+        outputMint,
+        amount,
+        taker,
+        swapMode: swapMode || "ExactIn",
+        slippageBps: String(slippageBps),
+      });
+
+      const url = `${SWAP_API_BASE}/order?${queryParams.toString()}`;
       
-      console.log("Fetching Ultra order:", url);
+      console.log("Fetching Swap V2 order:", url);
       const res = await fetch(url, { headers: authHeaders });
       
       if (!res.ok) {
         const errorText = await res.text();
-        console.error("Ultra order error:", res.status, errorText);
-        return new Response(JSON.stringify({ error: `Jupiter Ultra: ${res.status} ${errorText}` }), {
+        console.error("Swap V2 order error:", res.status, errorText);
+        return new Response(JSON.stringify({ error: `Jupiter Swap V2: ${res.status} ${errorText}` }), {
           status: res.status,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
@@ -114,8 +125,8 @@ serve(async (req: Request) => {
         });
       }
 
-      console.log("Executing Ultra swap, requestId:", requestId);
-      const res = await fetch(`${ULTRA_API_BASE}/execute`, {
+      console.log("Executing Swap V2 swap, requestId:", requestId);
+      const res = await fetch(`${SWAP_API_BASE}/execute`, {
         method: "POST",
         headers: authHeaders,
         body: JSON.stringify({ signedTransaction, requestId }),
@@ -123,7 +134,7 @@ serve(async (req: Request) => {
 
       if (!res.ok) {
         const errorText = await res.text();
-        console.error("Ultra execute error:", res.status, errorText);
+        console.error("Swap V2 execute error:", res.status, errorText);
         return new Response(JSON.stringify({ error: `Execute failed: ${res.status} ${errorText}` }), {
           status: res.status,
           headers: { ...corsHeaders, "Content-Type": "application/json" },

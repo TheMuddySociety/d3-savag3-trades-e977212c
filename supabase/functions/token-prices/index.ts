@@ -120,11 +120,23 @@ serve(async (req: Request) => {
     
     // Polling endpoints
     if (action === "prices") {
-       const mapped: any = {};
-       for (const m of addresses) {
-          mapped[m] = { price: await getCurrentPrice(m) };
-       }
-       return new Response(JSON.stringify({ success: true, data: mapped }), { headers: corsHeaders });
+      const mapped: any = {};
+      if (addresses.length > 0) {
+        try {
+          const res = await fetch(`https://api.jup.ag/price/v3?ids=${addresses.join(',')}`);
+          const data = await res.json();
+          for (const m of addresses) {
+            mapped[m] = { price: data.data?.[m]?.price || null };
+          }
+        } catch (e) {
+          console.error("[token-prices] Batch price fetch failed:", e);
+          // Fallback to sequential for safety if batch fails
+          for (const m of addresses) {
+            mapped[m] = { price: await getCurrentPrice(m) };
+          }
+        }
+      }
+      return new Response(JSON.stringify({ success: true, data: mapped }), { headers: corsHeaders });
     }
     
     if (action === "trending") {
@@ -369,7 +381,7 @@ async function fetchBirdeyeOHLCV(mint: string, interval: string = "5m") {
 
 async function getCurrentPrice(mint: string) {
   try {
-    const res = await fetch(`https://lite-api.jup.ag/price/v2?ids=${mint}`);
+    const res = await fetch(`https://api.jup.ag/price/v3?ids=${mint}`);
     const data = await res.json();
     return data.data?.[mint]?.price || null;
   } catch { return null; }

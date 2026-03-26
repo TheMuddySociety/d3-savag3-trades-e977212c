@@ -3,6 +3,7 @@ import { VersionedTransaction } from '@solana/web3.js';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { JupiterV6Service, jupiterV6Service } from './v6';
+import { JupiterV2Service } from './v2';
 
 export interface UltraOrderResponse {
   inputMint: string;
@@ -204,40 +205,19 @@ export class JupiterUltraService {
   }
 
   /**
-   * Smart swap: routes through V6 when custom API key is configured, Ultra otherwise
+   * Smart swap: routes through unified V2 service
    */
   static async smartSwap(
     wallet: any,
     inputMint: string,
     outputMint: string,
     amount: string,
+    slippageBps: number = 300,
     swapMode: 'ExactIn' | 'ExactOut' = 'ExactIn',
   ): Promise<UltraExecuteResponse | null> {
-    // Route to V6 if user has custom Jupiter API key
-    if (JupiterV6Service.isV6Available()) {
-      console.log('[SmartSwap] Using Jupiter V6 (custom API key detected)');
-      const result = await jupiterV6Service.buildAndSendSwap(wallet, {
-        inputMint,
-        outputMint,
-        amount,
-        swapMode,
-      });
-      if (result) {
-        // Map V6 result to UltraExecuteResponse shape
-        return {
-          status: 'Success',
-          signature: result.signature,
-          code: 0,
-          totalInputAmount: result.quote.inAmount,
-          totalOutputAmount: result.quote.outAmount,
-        };
-      }
-      return null;
-    }
-
-    // Default: Ultra (gasless)
-    console.log('[SmartSwap] Using Jupiter Ultra (default)');
-    return this.swap(wallet, inputMint, outputMint, amount, swapMode);
+    console.log('[SmartSwap] Using unified Jupiter V2 architecture');
+    const result = await JupiterV2Service.swap(wallet, inputMint, outputMint, amount, slippageBps, swapMode);
+    return result as UltraExecuteResponse | null;
   }
 
   /**

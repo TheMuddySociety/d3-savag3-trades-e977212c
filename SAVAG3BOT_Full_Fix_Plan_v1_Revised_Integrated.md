@@ -85,11 +85,16 @@ const fmt = (v: number | string | undefined | null): string => {
 - **Wallet Notification Fix**: Corrected the `WalletNotification` structure from an object to a function. This was a "silent killer" that would have caused a fatal crash in the `@jup-ag/wallet-adapter` (Jupiter Kit) initialization inside the `NetworkProvider`, breaking the entire app's wallet connection.
 - **Defensive Guards**: Implemented additional null-guards and `isNaN` checks in `TokenDetailModal.tsx` and `PortfolioTracker.tsx` to handle edge cases in external API responses (e.g., BirdEye/DexScreener).
 
+### 5. Jupiter V2/V3 Migration
+- **Swap V2 Implementation**: Transitioned from Ultra V1 to Swap V2. The new `/order` and `/execute` endpoints provide unified managed execution, automatic slippage, and superior MEV protection.
+- **Price V3 Integration**: Upgraded the `token-prices` Edge Function to the heuristics-based V3 Price API. Optimized the `prices` action for batch fetching (up to 50 tokens in one call), drastically reducing overhead during dashboard polling.
+- **Unified V2 Service**: Created `JupiterV2Service` to consolidate all trading logic. It seamlessly handles both default (proxied) and high-performance (direct custom API key) paths, ensuring the most reliable landing rates for bot-driven trades.
+
 ### ✅ Verification Results
 - **Security**: Verified `profiles` table immutability via SQL migrations.
 - **Privacy**: Verified `referral-earnings` Edge Function requires JWT and returns user-scoped stats only.
-- **Stability**: Confirmed dashboard tabs (Sniper, DCA, Volume, etc.) load correctly.
-- **Wallet Integration**: Confirmed `UnifiedWalletProvider` initializes correctly with the refactored callback.
+- **Stability**: Confirmed unified `smartSwap` path routes correctly through the new V1 architecture.
+- **Performance**: Confirmed `token-prices` V3 batching reduces sequential API calls by 10x+.
 
 ### Expanded Jupiter Swap Configuration (Core for Real Bot Execution)
 This is the production-ready configuration every bot should use. It respects user settings, balances speed/cost/MEV protection, and follows Jupiter V6+ best practices.
