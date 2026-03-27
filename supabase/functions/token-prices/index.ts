@@ -351,17 +351,20 @@ async function fetchBirdeyeOHLCV(mint: string, interval: string = "5m") {
     },
   });
 
-  if (res.status === 429) {
-    console.warn(`[Birdeye] Rate limit hit for ${mint} – using Redis cache fallback`);
-    throw new Error("Birdeye rate limit exceeded");
+  if (res.status === 429 || !res.ok) {
+    console.warn(`[Birdeye] ${res.status} for ${mint} – falling back to Jupiter`);
+    return await fetchJupiterOHLCVFallback(mint);
   }
 
-  if (!res.ok) throw new Error(`Birdeye failed: ${res.status}`);
   const data = await res.json();
-  
   const items = data.data?.items || [];
+  if (items.length === 0) return await fetchJupiterOHLCVFallback(mint);
+
+  return mapOHLCVItems(items);
+}
+
+function mapOHLCVItems(items: any[]) {
   return items.map((c: any) => {
-    // Birdeye OHLCV returns objects with unixTime/o/h/l/c/v (not arrays)
     const ts = c.unixTime ?? c[0] ?? 0;
     const open = Number(c.o ?? c[1] ?? 0);
     const high = Number(c.h ?? c[2] ?? 0);
@@ -370,13 +373,27 @@ async function fetchBirdeyeOHLCV(mint: string, interval: string = "5m") {
     const volume = Number(c.v ?? c[5] ?? 0);
     const msTs = ts > 1e12 ? ts : ts * 1000;
     return {
-      timestamp: msTs,
-      unixTime: ts,
+      timestamp: msTs, unixTime: ts,
       time: msTs > 0 ? new Date(msTs).toISOString().slice(11, 16) : '00:00',
-      open, high, low, close, volume,
-      value: close,
+      open, high, low, close, volume, value: close,
     };
   }).reverse();
+}
+
+async function fetchJupiterOHLCVFallback(mint: string) {
+  // Use Jupiter current price to generate a single-point chart as fallback
+  const price = await getCurrentPrice(mint);
+  if (!price) return [];
+  const now = Date.now();
+  // Generate 24 synthetic points so chart renders
+  return Array.from({ length: 24 }, (_, i) => {
+    const ts = now - (23 - i) * 3600000;
+    return {
+      timestamp: ts, unixTime: Math.floor(ts / 1000),
+      time: new Date(ts).toISOString().slice(11, 16),
+      open: price, high: price, low: price, close: price, volume: 0, value: price,
+    };
+  });
 }
 
 async function getCurrentPrice(mint: string) {
