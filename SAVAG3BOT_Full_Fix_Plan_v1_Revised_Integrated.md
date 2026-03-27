@@ -103,13 +103,15 @@ const fmt = (v: number | string | undefined | null): string => {
 
 ### 9. Security Remediation
 - **Critical Dependency Purge**: Removed `@jup-ag/plugin` from `package.json`. This package was optimized for Next.js and pulled in a vulnerable version of `next`. Since this is a Vite project, we now load the Jupiter Terminal exclusively via a secure remote script, eliminating the attack surface entirely.
-- **Override Cleanup**: Removed forced `next` overrides as the dependency tree is now 100% clean of Next.js.
+
+### 10. Terminal Optimization (Best Practice)
+- **Seamless Wallet Passthrough**: Following the official Jupiter documentation, I have enabled `enableWalletPassthrough: true` in the `TokenSwap` component. This ensures the embedded terminal automatically inherits the application's existing wallet connection (from the Unified Wallet Kit), removing the need for users to connect twice.
 
 ### ✅ Verification Results
 - **Security**: Verified Reown and Next.js vulnerabilities have been remediated via package removal.
 - **Privacy**: Verified `referral-earnings` Edge Function requires JWT.
 - **Stability**: Confirmed Jupiter Terminal V3 still loads correctly in `TokenSwap`.
-- **Performance**: Reduced bundle size by removing unnecessary Next.js-centric plugins.
+- **UX**: Verified that Wallet Passthrough creates a unified session across the app and terminal.
 
 ### Expanded Jupiter Swap Configuration (Core for Real Bot Execution)
 This is the production-ready configuration every bot should use. It respects user settings, balances speed/cost/MEV protection, and follows Jupiter V6+ best practices.
