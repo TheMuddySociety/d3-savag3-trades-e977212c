@@ -6,7 +6,8 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const ULTRA_API_BASE = "https://api.jup.ag/ultra/v1";
+const ULTRA_API_BASE = Deno.env.get("CUSTOM_JUPITER_ULTRA_URL") || "https://api.jup.ag/ultra/v1";
+const SWAP_API_BASE = Deno.env.get("CUSTOM_JUPITER_SWAP_URL") || "https://api.jup.ag/swap/v2";
 
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
@@ -44,7 +45,7 @@ serve(async (req: Request) => {
       authHeaders["x-api-key"] = jupiterApiKey;
     }
 
-    const SWAP_API_BASE = "https://api.jup.ag/swap/v2";
+    const SWAP_API_BASE = Deno.env.get("CUSTOM_JUPITER_SWAP_URL") || "https://api.jup.ag/swap/v2";
 
     if (action === "order") {
       const { inputMint, outputMint, amount, taker, swapMode, slippageBps = 300 } = body;

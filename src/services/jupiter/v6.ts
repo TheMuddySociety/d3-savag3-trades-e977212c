@@ -69,11 +69,7 @@ export class JupiterV6Service {
   private connection: Connection;
 
   constructor() {
-    const settings = getCustomApiSettings();
-    // Use QuickNode Metis or default Jupiter v6 API
-    this.baseUrl = settings?.jupiterApiKey
-      ? 'https://quote-api.jup.ag/v6'   // Authenticated via header
-      : 'https://quote-api.jup.ag/v6';
+    this.baseUrl = PLATFORM_CONFIG.JUPITER_V6_API_URL;
     this.connection = new Connection(PLATFORM_CONFIG.RPC_URL, 'confirmed');
   }
 

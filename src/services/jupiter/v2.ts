@@ -84,7 +84,7 @@ export class JupiterV2Service {
           swapMode,
           slippageBps: String(slippageBps),
         });
-        const res = await fetch(`https://api.jup.ag/swap/v2/order?${queryParams.toString()}`, {
+        const res = await fetch(`${PLATFORM_CONFIG.JUPITER_V2_API_URL}/order?${queryParams.toString()}`, {
           headers: this.getHeaders(),
         });
         if (!res.ok) throw new Error(`Swap V2 order failed: ${res.status}`);
@@ -119,7 +119,7 @@ export class JupiterV2Service {
 
       if (useCustom) {
         console.log('[JupiterV2] Executing direct Swap V2...');
-        const res = await fetch(`https://api.jup.ag/swap/v2/execute`, {
+        const res = await fetch(`${PLATFORM_CONFIG.JUPITER_V2_API_URL}/execute`, {
           method: 'POST',
           headers: this.getHeaders(),
           body: JSON.stringify({ signedTransaction, requestId }),

@@ -212,7 +212,11 @@ serve(async (req) => {
     const isInvalidKey = !heliusKey || heliusKey.includes("REPLACE") || heliusKey.length < 10;
 
     let rpcUrl: string;
-    if (isInvalidKey) {
+    const customSolanaRpc = Deno.env.get("CUSTOM_SOLANA_RPC_URL");
+    
+    if (customSolanaRpc) {
+      rpcUrl = customSolanaRpc;
+    } else if (isInvalidKey) {
       console.warn("HELIUS_API_KEY is missing or invalid. Falling back to public RPC.");
       rpcUrl = "https://api.mainnet-beta.solana.com";
     } else {

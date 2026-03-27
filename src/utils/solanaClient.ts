@@ -1,5 +1,5 @@
-
-import { Connection, Commitment } from '@solana/web3.js';
+import { Connection, PublicKey, Commitment, Cluster } from '@solana/web3.js';
+import { PLATFORM_CONFIG } from '@/config/platform';
 
 export type SolanaClientOptions = {
   urlOrMoniker: 'mainnet' | 'devnet' | 'testnet' | string;
@@ -42,7 +42,7 @@ export function createSolanaClient(options: SolanaClientOptions): SolanaClient {
   const wsEndpoint = wsEndpointOverride || endpoint.replace('http', 'ws');
   
   // Create the RPC connection for regular API calls
-  const rpc = new Connection(endpoint, commitment);
+  const rpc = new Connection(PLATFORM_CONFIG.RPC_URL, commitment);
   
   // Create the RPC connection optimized for WebSocket subscriptions
   const rpcSubscriptions = new Connection(wsEndpoint, commitment);
