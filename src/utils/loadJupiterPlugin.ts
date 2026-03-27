@@ -1,4 +1,4 @@
-export const JUPITER_PLUGIN_SRC = 'https://plugin.jup.ag/plugin-v1.js';
+export const JUPITER_PLUGIN_SRC = 'https://terminal.jup.ag/main-v3.js';
 
 let jupiterScriptPromise: Promise<void> | null = null;
 

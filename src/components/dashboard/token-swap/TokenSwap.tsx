@@ -45,8 +45,8 @@ export function TokenSwap() {
       <div className="bg-card/90 backdrop-blur-xl rounded-3xl border-2 border-primary/30 shadow-xl overflow-hidden">
         <div className="px-5 py-4 border-b border-border/30 bg-gradient-to-r from-primary/10 to-accent/10">
           <div className="flex items-center gap-2">
-            <img src="https://i.ibb.co/QvtDd1yY/image-6483441-4.jpg" alt="SAVAG3 D3 Tradez" className="h-6 w-6 rounded-full" />
-            <h2 className="text-lg font-bold text-foreground">SAVAG3 D3 Tradez</h2>
+            <img src="https://i.ibb.co/QvtDd1yY/image-6483441-4.jpg" alt="SAVAG3" className="h-6 w-6 rounded-full" />
+            <h2 className="text-lg font-bold text-foreground">Swap + Trigger Dashboard</h2>
           </div>
           <p className="text-xs text-muted-foreground mt-1">Best rates across DEXs ✨ • Powered by Jupiter Metis</p>
         </div>

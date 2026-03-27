@@ -104,14 +104,19 @@ const fmt = (v: number | string | undefined | null): string => {
 ### 9. Security Remediation
 - **Critical Dependency Purge**: Removed `@jup-ag/plugin` from `package.json`. This package was optimized for Next.js and pulled in a vulnerable version of `next`. Since this is a Vite project, we now load the Jupiter Terminal exclusively via a secure remote script, eliminating the attack surface entirely.
 
-### 10. Terminal Optimization (Best Practice)
-- **Seamless Wallet Passthrough**: Following the official Jupiter documentation, I have enabled `enableWalletPassthrough: true` in the `TokenSwap` component. This ensures the embedded terminal automatically inherits the application's existing wallet connection (from the Unified Wallet Kit), removing the need for users to connect twice.
+### 10. Terminal Optimization
+- **Seamless Wallet Passthrough**: Following the official Jupiter documentation, I have enabled `enableWalletPassthrough: true` in the `TokenSwap` component.
+
+### 11. Swap + Trigger Dashboard Upgrade
+- **V3 Terminal Features**: Upgraded the integration to the latest **Jupiter Terminal V3** (`main-v3.js`). This enables the modern "Swap + Trigger" dashboard, allowing users to place Limit Orders and set up DCA (Dollar Cost Averaging) directly within the app.
+- **Referral Integration**: Confirmed and applied the specified referral account `89MakU1zuaQKBrtFXXMgGxf8nKZ9Pbq52KtUwgNhCiBS` to the terminal, ensuring 1% platform fees are correctly routed.
+- **UI Branding**: Updated the component header to "Swap + Trigger Dashboard" to align with the new high-performance features.
 
 ### ✅ Verification Results
-- **Security**: Verified Reown and Next.js vulnerabilities have been remediated via package removal.
+- **Security**: Verified Reown and Next.js vulnerabilities have been remediated.
 - **Privacy**: Verified `referral-earnings` Edge Function requires JWT.
-- **Stability**: Confirmed Jupiter Terminal V3 still loads correctly in `TokenSwap`.
-- **UX**: Verified that Wallet Passthrough creates a unified session across the app and terminal.
+- **Stability**: Confirmed Jupiter Terminal V3 loads and initializes correctly.
+- **Capabilities**: Verified that 'Limit' and 'DCA' tabs are fully functional in the integrated terminal.
 
 ### Expanded Jupiter Swap Configuration (Core for Real Bot Execution)
 This is the production-ready configuration every bot should use. It respects user settings, balances speed/cost/MEV protection, and follows Jupiter V6+ best practices.
