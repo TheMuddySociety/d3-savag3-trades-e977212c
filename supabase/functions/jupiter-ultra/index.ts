@@ -6,8 +6,18 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const ULTRA_API_BASE = Deno.env.get("CUSTOM_JUPITER_ULTRA_URL") || "https://api.jup.ag/ultra/v1";
-const SWAP_API_BASE = Deno.env.get("CUSTOM_JUPITER_SWAP_URL") || "https://api.jup.ag/swap/v2";
+// Safe env get helper
+const getEnv = (key: string): string | null => {
+  try {
+    return (globalThis as any).Deno?.env?.get(key) || null;
+  } catch {
+    return null;
+  }
+};
+
+
+const ULTRA_API_BASE = getEnv("CUSTOM_JUPITER_ULTRA_URL") || "https://api.jup.ag/ultra/v1";
+const SWAP_API_BASE = getEnv("CUSTOM_JUPITER_SWAP_URL") || "https://api.jup.ag/swap/v2";
 
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
@@ -22,9 +32,9 @@ serve(async (req: Request) => {
       });
     }
 
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
-    const supabase = createClient(supabaseUrl, anonKey, {
+    const supabaseUrl = getEnv("SUPABASE_URL")!;
+    const serviceRoleKey = getEnv("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, serviceRoleKey, {
       global: { headers: { Authorization: authHeader } }
     });
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -34,7 +44,7 @@ serve(async (req: Request) => {
         status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" }
       });
     }
-    const jupiterApiKey = (globalThis as any).Deno.env.get("JUPITER_API_KEY");
+    const jupiterApiKey = getEnv("JUPITER_API_KEY");
     const body = await req.json();
     const { action } = body;
 
@@ -45,7 +55,7 @@ serve(async (req: Request) => {
       authHeaders["x-api-key"] = jupiterApiKey;
     }
 
-    const SWAP_API_BASE = Deno.env.get("CUSTOM_JUPITER_SWAP_URL") || "https://api.jup.ag/swap/v2";
+    const customSolanaRpc = getEnv("CUSTOM_SOLANA_RPC_URL");
 
     if (action === "order") {
       const { inputMint, outputMint, amount, taker, swapMode, slippageBps = 300 } = body;
@@ -96,7 +106,7 @@ serve(async (req: Request) => {
 
       if (useHelius) {
         console.log("Executing via Helius Sender, requestId:", requestId);
-        const heliusKey = (globalThis as any).Deno.env.get("HELIUS_API_KEY");
+        let heliusKey = getEnv("HELIUS_API_KEY");
         const res = await fetch(`https://sender.helius-rpc.com/fast?api-key=${heliusKey}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },

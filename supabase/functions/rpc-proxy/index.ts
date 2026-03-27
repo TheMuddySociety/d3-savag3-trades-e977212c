@@ -98,14 +98,23 @@ function logRequest(
   }
 }
 
+// Safe env get helper
+const getEnv = (key: string): string | null => {
+  try {
+    return (globalThis as any).Deno?.env?.get(key) || null;
+  } catch {
+    return null;
+  }
+};
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   const startTime = performance.now();
-  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const supabaseUrl = getEnv("SUPABASE_URL")!;
+  const serviceRoleKey = getEnv("SUPABASE_SERVICE_ROLE_KEY")!;
 
   // Extract a hashed IP hint from headers (privacy-preserving)
   const forwardedFor = req.headers.get("x-forwarded-for");
@@ -164,7 +173,7 @@ serve(async (req) => {
         });
       }
 
-      const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+      const anonKey = getEnv("SUPABASE_ANON_KEY")!;
       const supabase = createClient(supabaseUrl, anonKey, {
         global: { headers: { Authorization: authHeader } },
       });
@@ -208,11 +217,11 @@ serve(async (req) => {
       });
     }
 
-    let heliusKey = Deno.env.get("HELIUS_API_KEY");
+    let heliusKey = getEnv("HELIUS_API_KEY");
     const isInvalidKey = !heliusKey || heliusKey.includes("REPLACE") || heliusKey.length < 10;
 
     let rpcUrl: string;
-    const customSolanaRpc = Deno.env.get("CUSTOM_SOLANA_RPC_URL");
+    const customSolanaRpc = getEnv("CUSTOM_SOLANA_RPC_URL");
     
     if (customSolanaRpc) {
       rpcUrl = customSolanaRpc;
@@ -222,6 +231,7 @@ serve(async (req) => {
     } else {
       rpcUrl = `https://mainnet.helius-rpc.com/?api-key=${heliusKey}`;
     }
+
 
     const rpcRes = await fetch(rpcUrl, {
       method: "POST",

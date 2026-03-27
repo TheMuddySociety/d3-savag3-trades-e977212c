@@ -39,7 +39,7 @@ export function createSolanaClient(options: SolanaClientOptions): SolanaClient {
   const endpoint = getEndpoint(urlOrMoniker);
   
   // Create WebSocket endpoint by replacing http with ws if not explicitly provided
-  const wsEndpoint = wsEndpointOverride || endpoint.replace('http', 'ws');
+  const wsEndpoint = wsEndpointOverride || PLATFORM_CONFIG.RPC_URL.replace('http', 'ws');
   
   // Create the RPC connection for regular API calls
   const rpc = new Connection(PLATFORM_CONFIG.RPC_URL, commitment);

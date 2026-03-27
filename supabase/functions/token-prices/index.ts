@@ -8,19 +8,16 @@ const corsHeaders = {
   "Content-Type": "application/json",
 };
 
-// Redis client (safe even if env vars missing – falls back gracefully)
-let redis: any = null;
-try {
-  const redisUrl = Deno.env.get("UPSTASH_REDIS_REST_URL");
-  const redisToken = Deno.env.get("UPSTASH_REDIS_REST_TOKEN");
-  if (redisUrl && redisToken && RedisClass) {
-    redis = new RedisClass({ url: redisUrl, token: redisToken });
+// Safe env get helper
+const getEnv = (key: string): string | null => {
+  try {
+    return (globalThis as any).Deno?.env?.get(key) || null;
+  } catch {
+    return null;
   }
-} catch (e) {
-  console.warn("Redis not configured – running without cache");
-}
+};
 
-const BIRDEYE_API_KEY = Deno.env.get("BIRDEYE_API_KEY");
+const BIRDEYE_API_KEY = getEnv("BIRDEYE_API_KEY");
 
 serve(async (req: Request) => {
   // Handle CORS preflight
@@ -222,7 +219,7 @@ serve(async (req: Request) => {
     // ====================== SHIELD CHECK (MemeScanner) ======================
     if (action === "shield_check") {
       try {
-        const heliusKey = Deno.env.get("HELIUS_API_KEY");
+        const heliusKey = getEnv("HELIUS_API_KEY");
         if (!heliusKey) {
           return new Response(JSON.stringify({ 
             success: true, 
@@ -445,7 +442,7 @@ async function fetchTokenHoldersWithRiskAnalysis(mint: string) {
     'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',  // SPL Token Program
   ];
   // Check for Helius API key
-  const heliusKey = Deno.env.get('HELIUS_API_KEY');
+  const heliusKey = getEnv("HELIUS_API_KEY");
   if (!heliusKey) {
     // Return empty placeholder data when key is missing
     return { distribution: [], top10RiskPercent: 0, isHighRisk: false };
