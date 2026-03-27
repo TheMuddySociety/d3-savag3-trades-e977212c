@@ -170,6 +170,7 @@ serve(async (req: Request) => {
             price: Number(t.price || 0),
             price_change_24h: Number(t.v24hChangePercent || 0),
             volume_24h: Number(t.v24hUSD || 0),
+            market_cap: Number(t.mc || t.marketCap || 0),
             rank: Number(t.rank || 0),
             holders: Number(t.holder_count || t.holders || 0),
             unique_traders_24h: buys + sells,
@@ -488,6 +489,7 @@ async function fetchDexScreenerTrending() {
       price: Number(p.priceUsd || 0),
       price_change_24h: Number(p.priceChange?.h24 || 0),
       volume_24h: Number(p.volume?.h24 || 0),
+      market_cap: Number(p.fdv || p.marketCap || 0),
       rank: i + 1,
       holders: 0, // DexScreener doesn't provide holder count in this endpoint
       unique_traders_24h: 0,

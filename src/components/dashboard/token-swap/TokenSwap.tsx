@@ -13,6 +13,7 @@ export function TokenSwap() {
         window.Jupiter.init({
           displayMode: "integrated",
           integratedTargetId: "target-container",
+          endpoint: PLATFORM_CONFIG.RPC_URL,
           enableWalletPassthrough: true,
           defaultExplorer: "Solscan",
           // Enable Swap + Trigger (Limit Order, DCA)
