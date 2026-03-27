@@ -103,9 +103,9 @@ export const DCABot = ({ killSignal = 0 }: Props) => {
     };
 
     executeDCAOrder();
-    dcaInterval.current = setInterval(() => {
+    dcaInterval.current = window.setInterval(() => {
       const delay = useRandomDelay ? Math.random() * 2000 : 0;
-      setTimeout(executeDCAOrder, delay);
+      window.setTimeout(executeDCAOrder, delay);
     }, baseInterval);
   };
 
