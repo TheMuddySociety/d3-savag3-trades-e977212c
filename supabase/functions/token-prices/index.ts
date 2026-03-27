@@ -380,11 +380,26 @@ async function fetchBirdeyeOHLCV(mint: string, interval: string = "5m") {
 }
 
 async function getCurrentPrice(mint: string) {
+  // Try Jupiter Price API v2 first (v3 deprecated)
   try {
-    const res = await fetch(`https://api.jup.ag/price/v3?ids=${mint}`);
-    const data = await res.json();
-    return data.data?.[mint]?.price || null;
-  } catch { return null; }
+    const res = await fetch(`https://api.jup.ag/price/v2?ids=${mint}`);
+    if (res.ok) {
+      const data = await res.json();
+      const price = data.data?.[mint]?.price;
+      if (price) return Number(price);
+    }
+  } catch (e) {
+    console.warn("[getCurrentPrice] Jupiter v2 failed:", e);
+  }
+  // Fallback: DatAPI asset search
+  try {
+    const res = await fetch(`https://datapi.jup.ag/v1/assets/search?query=${mint}`);
+    if (res.ok) {
+      const arr = await res.json();
+      if (Array.isArray(arr) && arr[0]?.usdPrice) return Number(arr[0].usdPrice);
+    }
+  } catch {}
+  return null;
 }
 
 async function fetchTokenHoldersWithRiskAnalysis(mint: string) {
