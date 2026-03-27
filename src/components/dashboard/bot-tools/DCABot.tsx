@@ -41,7 +41,7 @@ export const DCABot = ({ killSignal = 0 }: Props) => {
   const [useRandomDelay, setUseRandomDelay] = useState(true);
   const [showConfirm, setShowConfirm] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const dcaInterval = useRef<ReturnType<typeof setInterval> | null>(null);
+  const dcaInterval = useRef<NodeJS.Timeout | null>(null);
   const countRef = useRef(0);
   const isExecutingRef = useRef(false);
 
