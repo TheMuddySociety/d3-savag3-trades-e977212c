@@ -98,16 +98,18 @@ const fmt = (v: number | string | undefined | null): string => {
 - **DexScreener Fallback**: Implemented a robust fallback mechanism for the `trending` endpoint. If the Birdeye API key is missing or rate-limited, the system automatically switches to DexScreener's Boosted API to fetch the latest trending Solana tokens.
 
 ### 8. User Connect Simplification
-- **1-Click Jupiter Flow**: Purged all Reown-style "More Options" and "Social Login" descriptors from the connection UI. The `PumpLoginModal` is now a streamlined, 1-click gateway to the Jupiter Unified Wallet experience, removing potential friction and confusion for veteran Solana users.
-- **SIWS Integrity**: Verified that the custom "Sign-in with Solana" auth flow remains fully operational, providing secure, signature-based access to the Supabase backend without third-party dependencies.
+- **1-Click Jupiter Flow**: Purged all Reown-style "More Options" and "Social Login" descriptors from the connection UI. The `PumpLoginModal` is now a streamlined, 1-click gateway to the Jupiter Unified Wallet experience.
+- **SIWS Integrity**: Verified that the custom "Sign-in with Solana" auth flow remains fully operational.
+
+### 9. Security Remediation
+- **Critical Dependency Purge**: Removed `@jup-ag/plugin` from `package.json`. This package was optimized for Next.js and pulled in a vulnerable version of `next`. Since this is a Vite project, we now load the Jupiter Terminal exclusively via a secure remote script, eliminating the attack surface entirely.
+- **Override Cleanup**: Removed forced `next` overrides as the dependency tree is now 100% clean of Next.js.
 
 ### ✅ Verification Results
-- **Security**: Verified `profiles` table immutability via SQL migrations.
-- **Privacy**: Verified `referral-earnings` Edge Function requires JWT and returns user-scoped stats only.
-- **Stability**: Confirmed unified `smartSwap` path routes correctly through the new V1 architecture.
-- **Wallet Architecture**: Verified that removing Reown does not interrupt standard browser wallet connections.
-- **Data Continuity**: Verified that `token-prices` trending endpoint returns high-quality data even without a Birdeye key.
-- **User Experience**: Confirmed the connection flow is now faster and exclusively focused on the Jupiter ecosystem.
+- **Security**: Verified Reown and Next.js vulnerabilities have been remediated via package removal.
+- **Privacy**: Verified `referral-earnings` Edge Function requires JWT.
+- **Stability**: Confirmed Jupiter Terminal V3 still loads correctly in `TokenSwap`.
+- **Performance**: Reduced bundle size by removing unnecessary Next.js-centric plugins.
 
 ### Expanded Jupiter Swap Configuration (Core for Real Bot Execution)
 This is the production-ready configuration every bot should use. It respects user settings, balances speed/cost/MEV protection, and follows Jupiter V6+ best practices.

@@ -1,6 +1,4 @@
 import { useEffect } from 'react';
-// @ts-ignore - CSS module lacks type declarations
-import "@jup-ag/plugin/css";
 import { loadJupiterPluginScript } from '@/utils/loadJupiterPlugin';
 import { PLATFORM_CONFIG } from "@/config/platform";
 
