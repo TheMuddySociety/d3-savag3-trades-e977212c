@@ -141,7 +141,11 @@ serve(async (req: Request) => {
     
     if (action === "trending") {
       try {
-        if (!BIRDEYE_API_KEY) throw new Error("Birdeye API key not set");
+        if (!BIRDEYE_API_KEY) {
+          console.warn("[token-prices] Birdeye key missing, attempting DexScreener fallback");
+          return await fetchDexScreenerTrending();
+        }
+
         const res = await fetch("https://public-api.birdeye.so/defi/token_trending?sort_by=rank&sort_type=asc&offset=0&limit=20", {
           headers: { 
             "X-API-KEY": BIRDEYE_API_KEY, 
@@ -149,10 +153,13 @@ serve(async (req: Request) => {
             "accept": "application/json"
           },
         });
-        if (!res.ok) throw new Error(`Birdeye trending failed: ${res.status}`);
-        const data = await res.json();
         
-        // Map Birdeye trending data to format expected by LiveSignalFeed.tsx
+        if (!res.ok) {
+          console.warn(`[token-prices] Birdeye trending failed (${res.status}), using DexScreener fallback`);
+          return await fetchDexScreenerTrending();
+        }
+
+        const data = await res.json();
         const mapped = (data.data?.tokens || []).map((t: any) => {
           const buys = Number(t.buy24h || 0);
           const sells = Number(t.sell24h || 0);
@@ -171,8 +178,8 @@ serve(async (req: Request) => {
 
         return new Response(JSON.stringify({ success: true, data: mapped }), { headers: corsHeaders });
       } catch (e: any) {
-        console.error("[token-prices] trending error:", e.message);
-        return new Response(JSON.stringify({ success: true, data: [] }), { headers: corsHeaders });
+        console.error("[token-prices] trending error, trying fallback:", e.message);
+        return await fetchDexScreenerTrending();
       }
     }
 
@@ -452,4 +459,43 @@ async function fetchRecentTrades(mint: string) {
   return [
     { type: 'buy', amount: Math.random() * 1000, solAmount: Math.random() * 2, price: 0.001, time: new Date().toISOString(), wallet: 'mock123' }
   ];
+}
+
+async function fetchDexScreenerTrending() {
+  try {
+    // Top boosted tokens on Solana
+    const res = await fetch("https://api.dexscreener.com/token-boosts/top/v1", {
+      headers: { "accept": "application/json" }
+    });
+    if (!res.ok) throw new Error(`DexScreener failed: ${res.status}`);
+    const tokens = await res.json();
+    
+    // DexScreener boosted API returns an array of objects with { tokenAddress, url, chainId, ... }
+    const solanaTokens = (Array.isArray(tokens) ? tokens : []).filter(t => t.chainId === 'solana');
+    
+    // We need more details (name, symbol, price) for each token
+    // DexScreener allows fetching up to 30 addresses at once
+    const addresses = solanaTokens.slice(0, 15).map(t => t.tokenAddress).join(',');
+    if (!addresses) return new Response(JSON.stringify({ success: true, data: [] }), { headers: corsHeaders });
+
+    const detailRes = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${addresses}`);
+    const detailData = await detailRes.json();
+    
+    const mapped = (detailData.pairs || []).map((p: any, i: number) => ({
+      address: p.baseToken.address,
+      symbol: p.baseToken.symbol,
+      name: p.baseToken.name,
+      price: Number(p.priceUsd || 0),
+      price_change_24h: Number(p.priceChange?.h24 || 0),
+      volume_24h: Number(p.volume?.h24 || 0),
+      rank: i + 1,
+      holders: 0, // DexScreener doesn't provide holder count in this endpoint
+      unique_traders_24h: 0,
+    }));
+
+    return new Response(JSON.stringify({ success: true, data: mapped }), { headers: corsHeaders });
+  } catch (e: any) {
+    console.error("[token-prices] DexScreener fallback failed:", e.message);
+    return new Response(JSON.stringify({ success: true, data: [] }), { headers: corsHeaders });
+  }
 }

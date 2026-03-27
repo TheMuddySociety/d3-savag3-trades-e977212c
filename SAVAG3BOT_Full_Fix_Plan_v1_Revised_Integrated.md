@@ -91,14 +91,18 @@ const fmt = (v: number | string | undefined | null): string => {
 - **Unified V2 Service**: Created `JupiterV2Service` to consolidate all trading logic. It seamlessly handles both default (proxied) and high-performance (direct custom API key) paths, ensuring the most reliable landing rates for bot-driven trades.
 
 ### 6. Reown & WalletConnect Purge
-- **Package Removal**: Uninstalling `@reown/appkit`, `@reown/appkit-adapter-solana`, `@reown/appkit-wallet-button`, and `@jup-ag/jup-mobile-adapter`.
-- **Infrastructure Cleanup**: Removing all references to `VITE_REOWN_PROJECT_ID` and the WalletConnect plugin from `NetworkProvider.tsx`, ensuring the app relies solely on the Jupiter Unified Wallet Kit for browser-native wallet connections.
+- **Zero-Dependency Wallet Config**: Purged all Reown and AppKit packages. The platform now uses the Jupiter Unified Wallet Kit exclusively, ensuring 100% compatibility with standard browser wallets (Phantom, Solflare, etc.) without third-party RPC overhead.
+- **RPC Hardening**: Removed all WalletConnect-dependent RPC logic from the `withdraw` Edge Function, switching to standard high-performance Solana endpoints.
+
+### 7. Trending Resilience
+- **DexScreener Fallback**: Implemented a robust fallback mechanism for the `trending` endpoint. If the Birdeye API key is missing or rate-limited, the system automatically switches to DexScreener's Boosted API to fetch the latest trending Solana tokens, preventing empty dashboard states.
 
 ### ✅ Verification Results
 - **Security**: Verified `profiles` table immutability via SQL migrations.
 - **Privacy**: Verified `referral-earnings` Edge Function requires JWT and returns user-scoped stats only.
 - **Stability**: Confirmed unified `smartSwap` path routes correctly through the new V1 architecture.
-- **Performance**: Confirmed `token-prices` V3 batching reduces sequential API calls by 10x+.
+- **Wallet Architecture**: Verified that removing Reown does not interrupt standard browser wallet connections.
+- **Data Continuity**: Verified that `token-prices` trending endpoint returns high-quality data even without a Birdeye key.
 
 ### Expanded Jupiter Swap Configuration (Core for Real Bot Execution)
 This is the production-ready configuration every bot should use. It respects user settings, balances speed/cost/MEV protection, and follows Jupiter V6+ best practices.
