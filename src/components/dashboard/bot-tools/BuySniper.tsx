@@ -58,7 +58,7 @@ export const BuySniper = ({ killSignal = 0 }: Props) => {
     try {
       const lamports = Math.round(parseFloat(buyAmount) * 1e9);
       const result = await JupiterUltraService.swap(
-        wallet, SOL_MINT, tokenAddress, String(lamports), 'ExactIn', useHighPerformance
+        wallet, SOL_MINT, tokenAddress, String(lamports), 'ExactIn'
       );
 
       if (result?.status === 'Success' && result.signature) {

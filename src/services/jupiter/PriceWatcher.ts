@@ -246,6 +246,7 @@ export class PriceWatcher {
           this.config.inputMint,
           this.config.outputMint,
           this.config.amount,
+          'ExactIn' // Assuming 'ExactIn' was the 5th argument, and the 6th is removed.
         );
         if (result?.status === 'Success' && result.signature) {
           const swapResult = {

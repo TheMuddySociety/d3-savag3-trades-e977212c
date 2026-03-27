@@ -9,7 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { useConnection } from "@solana/wallet-adapter-react";
-import { JupiterTransactionService } from "@/services/jupiter/transactions";
+import { JupiterUltraService } from "@/services/jupiter/ultra";
 import { LiveTradeConfirmDialog } from "./LiveTradeConfirmDialog";
 import { isValidSolanaAddress } from "@/utils/validateSolanaAddress";
 import { getCustomApiSettings } from "@/utils/getCustomApiSettings";
@@ -66,9 +66,9 @@ export const VolumeBot = ({ killSignal = 0 }: Props) => {
         const slippageBps = Math.max(1, Math.floor(settings.slippage * 100));
         const priorityLevel = settings.mevProtection ? 'high' : 'medium';
         if (isBuy) {
-          await JupiterTransactionService.swapTokens(connection, wallet, SOL_MINT, tokenAddress, lamports, slippageBps, undefined, priorityLevel, false, useHighPerformance);
+          await JupiterUltraService.swap(wallet, SOL_MINT, tokenAddress, lamports.toString());
         } else {
-          await JupiterTransactionService.swapTokens(connection, wallet, tokenAddress, SOL_MINT, lamports, slippageBps, undefined, priorityLevel, false, useHighPerformance);
+          await JupiterUltraService.swap(wallet, tokenAddress, SOL_MINT, lamports.toString());
         }
 
         countRef.current++;

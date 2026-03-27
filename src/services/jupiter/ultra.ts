@@ -92,18 +92,17 @@ export class JupiterUltraService {
   }
 
   /**
-   * Execute a signed transaction via Jupiter Ultra
+   * Execute a signed transaction via Jupiter Ultra managed flow.
    */
   static async execute(
     signedTransaction: string,
-    requestId: string,
-    useHelius: boolean = false
+    requestId: string
   ): Promise<UltraExecuteResponse | null> {
     try {
-      console.log('Executing Ultra swap via proxy, requestId:', requestId, 'useHelius:', useHelius);
+      console.log('Executing Ultra swap via managed proxy, requestId:', requestId);
       
       const { data, error } = await supabase.functions.invoke('jupiter-ultra', {
-        body: { action: 'execute', signedTransaction, requestId, useHelius },
+        body: { action: 'execute', signedTransaction, requestId },
       });
 
       if (error) throw new Error(error.message);
@@ -121,15 +120,15 @@ export class JupiterUltraService {
   }
 
   /**
-   * Full swap flow: get order → sign → execute
+   * Full managed swap flow: get order → sign → execute.
+   * Leverages Jupiter's internal 'Beam' pipeline for reliable landing.
    */
   static async swap(
     wallet: any,
     inputMint: string,
     outputMint: string,
     amount: string,
-    swapMode: 'ExactIn' | 'ExactOut' = 'ExactIn',
-    useHelius: boolean = false
+    swapMode: 'ExactIn' | 'ExactOut' = 'ExactIn'
   ): Promise<UltraExecuteResponse | null> {
     try {
       if (!wallet.publicKey || !wallet.signTransaction) {
@@ -139,40 +138,37 @@ export class JupiterUltraService {
 
       const taker = wallet.publicKey.toString();
 
-      // 1. Get order via proxy
+      // 1. Get order via proxy (uses skipUserAccountsRpcCalls for stability)
       const order = await this.getOrder(inputMint, outputMint, amount, taker, swapMode);
       if (!order) return null;
 
-      // Check for API-level errors (e.g. insufficient funds)
       if ((order as any).errorCode || (order as any).error) {
         const errMsg = (order as any).errorMessage || (order as any).error || 'Order error';
         toast.error(errMsg);
         return { status: 'Failed', error: errMsg, code: (order as any).errorCode || -1 } as UltraExecuteResponse;
       }
 
-      // Ensure transaction data exists
       if (!order.transaction) {
         toast.error('No transaction returned from Jupiter');
         return { status: 'Failed', error: 'Empty transaction', code: -1 } as UltraExecuteResponse;
       }
 
-      // 2. Deserialize and sign the transaction
+      // 2. Deserialize and sign
       const transactionBuf = Buffer.from(order.transaction, 'base64');
       const transaction = VersionedTransaction.deserialize(transactionBuf);
       const signedTx = await wallet.signTransaction(transaction);
 
-      // 3. Serialize the signed transaction back to base64
+      // 3. Serialize back to base64
       const signedTxBase64 = Buffer.from(signedTx.serialize()).toString('base64');
 
-      // 4. Execute via proxy
-      const result = await this.execute(signedTxBase64, order.requestId, useHelius);
+      // 4. Managed Execute (Server-side landing & retries)
+      const result = await this.execute(signedTxBase64, order.requestId);
       
       if (!result) return null;
 
       if (result.status === 'Success') {
         toast.success(`Swap successful! Tx: ${result.signature?.substring(0, 8)}...`);
 
-        // Log trade to live_trades table
         try {
           await supabase.from('live_trades').insert({
             wallet_address: taker,
@@ -183,11 +179,8 @@ export class JupiterUltraService {
             output_amount: parseFloat(order.outAmount) || 0,
             input_usd_value: order.inUsdValue || 0,
             output_usd_value: order.outUsdValue || 0,
-            input_symbol: null,
-            output_symbol: null,
             status: 'success',
             trade_type: 'swap',
-            bot_type: null,
           });
         } catch (logErr) {
           console.warn('Failed to log trade:', logErr);
@@ -202,22 +195,6 @@ export class JupiterUltraService {
       toast.error(`Swap failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
       return null;
     }
-  }
-
-  /**
-   * Smart swap: routes through unified V2 service
-   */
-  static async smartSwap(
-    wallet: any,
-    inputMint: string,
-    outputMint: string,
-    amount: string,
-    slippageBps: number = 300,
-    swapMode: 'ExactIn' | 'ExactOut' = 'ExactIn',
-  ): Promise<UltraExecuteResponse | null> {
-    console.log('[SmartSwap] Using unified Jupiter V2 architecture');
-    const result = await JupiterV2Service.swap(wallet, inputMint, outputMint, amount, slippageBps, swapMode);
-    return result as UltraExecuteResponse | null;
   }
 
   /**

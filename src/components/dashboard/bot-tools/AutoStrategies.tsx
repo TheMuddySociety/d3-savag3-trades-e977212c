@@ -216,8 +216,7 @@ export const AutoStrategies = ({ killSignal = 0 }: Props) => {
           holding.mint,
           SOL_MINT,
           rawAmount.toString(),
-          'ExactIn',
-          useHighPerformance
+          'ExactIn'
         );
 
       if (result?.status === 'Success') {
@@ -264,8 +263,7 @@ export const AutoStrategies = ({ killSignal = 0 }: Props) => {
           SOL_MINT,
           tokenMint,
           rawAmount,
-          'ExactIn',
-          useHighPerformance
+          'ExactIn'
         );
 
       if (result?.status === 'Success') {

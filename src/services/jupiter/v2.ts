@@ -106,12 +106,12 @@ export class JupiterV2Service {
   }
 
   /**
-   * Execute a signed transaction
+   * Execute a signed transaction via Jupiter's managed 'Order & Execute' flow.
+   * Handles confirmation polling and retry logic server-side.
    */
   static async execute(
     signedTransaction: string,
-    requestId: string,
-    useHelius: boolean = false
+    requestId: string
   ): Promise<SwapExecuteResponse | null> {
     try {
       const settings = getCustomApiSettings();
@@ -127,9 +127,9 @@ export class JupiterV2Service {
         if (!res.ok) throw new Error(`Execute failed: ${res.status}`);
         return await res.json();
       } else {
-        console.log('[JupiterV2] Executing Swap V2 via proxy...');
+        console.log('[JupiterV2] Executing Swap V2 via managed proxy...');
         const { data, error } = await supabase.functions.invoke('jupiter-ultra', {
-          body: { action: 'execute', signedTransaction, requestId, useHelius },
+          body: { action: 'execute', signedTransaction, requestId },
         });
         if (error) throw new Error(error.message);
         if (!data?.success) throw new Error(data?.error || 'Execute failed');

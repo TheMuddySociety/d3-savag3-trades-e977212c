@@ -9,14 +9,12 @@ import { Layers, Play, DollarSign, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { isValidSolanaAddress } from "@/utils/validateSolanaAddress";
 import { LiveTradeConfirmDialog } from "./LiveTradeConfirmDialog";
-import { JupiterTransactionService } from "@/services/jupiter/transactions";
+import { JupiterUltraService } from "@/services/jupiter/ultra";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { useWalletPortfolio } from "@/hooks/useWalletPortfolio";
-import { Connection } from "@solana/web3.js";
 import { getCustomApiSettings } from "@/utils/getCustomApiSettings";
 
 const SOL_MINT = "So11111111111111111111111111111111111111112";
-const RPC_URL = "https://api.mainnet-beta.solana.com";
 const BATCH_SIZE = 5;
 
 interface Props {
@@ -99,15 +97,12 @@ export const BatchTrader = ({ killSignal = 0 }: Props) => {
         batch.map(async (tokenAddress) => {
           if (killedRef.current) return;
           try {
-            const connection = new Connection(RPC_URL);
             const lamports = Math.floor(sol * 1e9);
-            const settings = getCustomApiSettings();
-            const slippageBps = Math.max(1, Math.floor(settings.slippage * 100));
-            const priorityLevel = settings.mevProtection ? 'veryHigh' : 'high';
-            const txid = await JupiterTransactionService.swapTokens(
-              connection, wallet, SOL_MINT, tokenAddress, lamports, slippageBps, undefined, priorityLevel
+            const result = await JupiterUltraService.swap(
+              wallet, SOL_MINT, tokenAddress, lamports.toString()
             );
-            if (!txid) throw new Error("Swap failed");
+            if (result?.status !== 'Success') throw new Error(result?.error || "Swap failed");
+            const txid = result.signature || "Success";
             setResults(prev => prev.map(r => r.address === tokenAddress ? { ...r, status: "success", message: txid.slice(0, 8) } : r));
           } catch (e: any) {
             setResults(prev => prev.map(r => r.address === tokenAddress ? { ...r, status: "error", message: e.message } : r));
@@ -147,13 +142,9 @@ export const BatchTrader = ({ killSignal = 0 }: Props) => {
         batch.map(async (holding) => {
           if (killedRef.current) return;
           try {
-            const connection = new Connection(RPC_URL);
             const lamports = Math.floor(holding.amount * Math.pow(10, holding.decimals));
-            const settings = getCustomApiSettings();
-            const slippageBps = Math.max(1, Math.floor(settings.slippage * 100));
-            const priorityLevel = settings.mevProtection ? 'veryHigh' : 'high';
-            await JupiterTransactionService.swapTokens(
-              connection, wallet, holding.mint, SOL_MINT, lamports, slippageBps, undefined, priorityLevel
+            await JupiterUltraService.swap(
+              wallet, holding.mint, SOL_MINT, lamports.toString()
             );
           } catch (e) {
             console.error("Batch sell error:", e);

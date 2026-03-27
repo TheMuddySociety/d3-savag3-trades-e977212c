@@ -66,6 +66,7 @@ serve(async (req: Request) => {
         });
       }
 
+      // Latest Jupiter V2 /order best practices (Mar 2026)
       const queryParams = new URLSearchParams({
         inputMint,
         outputMint,
@@ -73,17 +74,24 @@ serve(async (req: Request) => {
         taker,
         swapMode: swapMode || "ExactIn",
         slippageBps: String(slippageBps),
+        skipUserAccountsRpcCalls: "true", // Reduce simulation RPC dependency
+        dynamicComputeUnitLimit: "true",  // Use server-side CU estimation
       });
 
       const url = `${SWAP_API_BASE}/order?${queryParams.toString()}`;
       
-      console.log("Fetching Swap V2 order:", url);
-      const res = await fetch(url, { headers: authHeaders });
+      console.log("Fetching Managed Swap V2 order:", url);
+      const res = await fetch(url, { 
+        headers: { 
+          ...authHeaders,
+          "Accept": "application/json"
+        } 
+      });
       
       if (!res.ok) {
         const errorText = await res.text();
         console.error("Swap V2 order error:", res.status, errorText);
-        return new Response(JSON.stringify({ error: `Jupiter Swap V2: ${res.status} ${errorText}` }), {
+        return new Response(JSON.stringify({ error: `Jupiter Order Error: ${res.status} ${errorText}` }), {
           status: res.status,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
@@ -96,7 +104,7 @@ serve(async (req: Request) => {
     }
 
     if (action === "execute") {
-      const { signedTransaction, requestId, useHelius } = body;
+      const { signedTransaction, requestId } = body;
       if (!signedTransaction || !requestId) {
         return new Response(JSON.stringify({ error: "Missing signedTransaction or requestId" }), {
           status: 400,
@@ -104,42 +112,16 @@ serve(async (req: Request) => {
         });
       }
 
-      if (useHelius) {
-        console.log("Executing via Helius Sender, requestId:", requestId);
-        let heliusKey = getEnv("HELIUS_API_KEY");
-        const res = await fetch(`https://sender.helius-rpc.com/fast?api-key=${heliusKey}`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            jsonrpc: "2.0",
-            id: requestId,
-            method: "sendTransaction",
-            params: [
-              signedTransaction,
-              { encoding: "base64", skipPreflight: true, maxRetries: 0 }
-            ]
-          }),
-        });
-
-        if (!res.ok) {
-          const errorText = await res.text();
-          console.error("Helius Sender error:", res.status, errorText);
-          return new Response(JSON.stringify({ error: `Helius Sender failed: ${res.status}` }), {
-            status: res.status,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
-        }
-
-        const data = await res.json();
-        return new Response(JSON.stringify({ success: true, data: { status: 'Success', signature: data.result } }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
-      console.log("Executing Swap V2 swap, requestId:", requestId);
+      // NOTE: Helius Sender (sender.helius-rpc.com) is removed in favor of 
+      // Jupiter's native 'Beam' pipeline, which already handles multi-RPC 
+      // landing and confirmation more reliably for /order transactions.
+      console.log("Executing Managed Swap V2 swap, requestId:", requestId);
       const res = await fetch(`${SWAP_API_BASE}/execute`, {
         method: "POST",
-        headers: authHeaders,
+        headers: {
+          ...authHeaders,
+          "Accept": "application/json"
+        },
         body: JSON.stringify({ signedTransaction, requestId }),
       });
 
@@ -148,7 +130,7 @@ serve(async (req: Request) => {
         console.error("Swap V2 execute error:", res.status, errorText);
         let userMessage = errorText;
         if (errorText.includes("Your RPC is not responding")) {
-          userMessage = "Swap simulation failed: The Solana RPC is not responding. Please check your Helius or Custom RPC settings in Supabase secrets.";
+          userMessage = "Swap simulation failed: The Solana RPC is not responding. Using skipUserAccountsRpcCalls=true may mitigate this.";
         }
         return new Response(JSON.stringify({ error: `Execute failed: ${res.status} ${userMessage}` }), {
           status: res.status,

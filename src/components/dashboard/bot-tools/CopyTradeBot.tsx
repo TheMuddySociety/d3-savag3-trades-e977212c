@@ -8,15 +8,13 @@ import { Eye, Play, Square, Wifi, WifiOff } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { isValidSolanaAddress } from "@/utils/validateSolanaAddress";
 import { LiveTradeConfirmDialog } from "./LiveTradeConfirmDialog";
-import { JupiterTransactionService } from "@/services/jupiter/transactions";
+import { JupiterUltraService } from "@/services/jupiter/ultra";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { useWalletPortfolio } from "@/hooks/useWalletPortfolio";
-import { Connection } from "@solana/web3.js";
 import { supabase } from "@/integrations/supabase/client";
 import { getCustomApiSettings } from "@/utils/getCustomApiSettings";
 
 const SOL_MINT = "So11111111111111111111111111111111111111112";
-const RPC_URL = "https://api.mainnet-beta.solana.com";
 
 interface CopiedTrade {
   timestamp: string;
@@ -68,19 +66,14 @@ export const CopyTradeBot = ({ killSignal = 0 }: Props) => {
         throw new Error("Wallet not connected");
       }
 
-      const connection = new Connection(RPC_URL);
-      const settings = getCustomApiSettings();
-      const slippageBps = Math.max(1, Math.floor(settings.slippage * 100));
-      const priorityLevel = settings.mevProtection ? 'veryHigh' : 'high';
       if (isBuy) {
         const lamports = Math.floor(sol * 1e9);
-        await JupiterTransactionService.swapTokens(connection, wallet, SOL_MINT, token_mint, lamports, slippageBps, undefined, priorityLevel);
+        await JupiterUltraService.swap(wallet, SOL_MINT, token_mint, lamports.toString());
       } else {
-        // Find holding from real wallet portfolio
         const holding = portfolio?.tokens?.find((h) => h.mint === token_mint);
         if (holding) {
           const lamports = Math.floor(holding.amount * Math.pow(10, holding.decimals));
-          await JupiterTransactionService.swapTokens(connection, wallet, token_mint, SOL_MINT, lamports, slippageBps, undefined, priorityLevel);
+          await JupiterUltraService.swap(wallet, token_mint, SOL_MINT, lamports.toString());
         }
       }
 

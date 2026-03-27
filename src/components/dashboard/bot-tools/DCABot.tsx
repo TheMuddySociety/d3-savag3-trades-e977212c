@@ -9,7 +9,7 @@ import { Clock, Play, Pause } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { useConnection } from "@solana/wallet-adapter-react";
-import { JupiterTransactionService } from "@/services/jupiter/transactions";
+import { JupiterUltraService } from "@/services/jupiter/ultra";
 import { LiveTradeConfirmDialog } from "./LiveTradeConfirmDialog";
 import { isValidSolanaAddress } from "@/utils/validateSolanaAddress";
 import { getCustomApiSettings } from "@/utils/getCustomApiSettings";
@@ -83,12 +83,8 @@ export const DCABot = ({ killSignal = 0 }: Props) => {
         const lamports = Math.round(parseFloat(amountPerOrder) * 1e9);
         const settings = getCustomApiSettings();
         const slippageBps = Math.max(1, Math.floor(settings.slippage * 100));
-        let txid = await JupiterTransactionService.swapTokens(connection, wallet, SOL_MINT, tokenAddress, lamports, slippageBps);
-        
-        if (!txid) {
-          await new Promise(r => setTimeout(r, 3000));
-          txid = await JupiterTransactionService.swapTokens(connection, wallet, SOL_MINT, tokenAddress, lamports, slippageBps);
-        }
+        const result = await JupiterUltraService.swap(wallet, SOL_MINT, tokenAddress, lamports.toString());
+        const txid = result?.status === 'Success' ? result.signature : null;
         
         if (txid) {
           countRef.current++;
