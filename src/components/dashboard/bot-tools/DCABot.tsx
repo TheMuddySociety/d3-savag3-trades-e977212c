@@ -41,25 +41,25 @@ export const DCABot = ({ killSignal = 0 }: Props) => {
   const [useRandomDelay, setUseRandomDelay] = useState(true);
   const [showConfirm, setShowConfirm] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const dcaInterval = useRef<NodeJS.Timeout | null>(null);
+  const dcaInterval = useRef<number | null>(null);
   const countRef = useRef(0);
   const isExecutingRef = useRef(false);
 
   useEffect(() => {
-    return () => { if (dcaInterval.current) clearInterval(dcaInterval.current); };
+    return () => { if (dcaInterval.current !== null) clearInterval(dcaInterval.current); };
   }, []);
 
   useEffect(() => {
     if (killSignal > 0) {
       setIsRunning(false);
       setShowConfirm(false);
-      if (dcaInterval.current) { clearInterval(dcaInterval.current); dcaInterval.current = null; }
+      if (dcaInterval.current !== null) { clearInterval(dcaInterval.current); dcaInterval.current = null; }
     }
   }, [killSignal]);
 
   const stopDCA = () => {
     setIsRunning(false);
-    if (dcaInterval.current) { clearInterval(dcaInterval.current); dcaInterval.current = null; }
+    if (dcaInterval.current !== null) { clearInterval(dcaInterval.current); dcaInterval.current = null; }
   };
 
   const proceedStartDCA = () => {
@@ -106,7 +106,7 @@ export const DCABot = ({ killSignal = 0 }: Props) => {
     dcaInterval.current = window.setInterval(() => {
       const delay = useRandomDelay ? Math.random() * 2000 : 0;
       window.setTimeout(executeDCAOrder, delay);
-    }, baseInterval) as unknown as NodeJS.Timeout;
+    }, baseInterval);
   };
 
   const startDCA = () => {
