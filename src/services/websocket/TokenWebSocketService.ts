@@ -22,7 +22,7 @@ class TokenWebSocketService {
   private isConnected = false;
   private subscribedTokens: Set<string> = new Set();
   private tokenData: Map<string, MemeToken> = new Map();
-  private pollInterval: ReturnType<typeof setInterval> | null = null;
+  private pollInterval: NodeJS.Timeout | null = null;
   private readonly POLL_INTERVAL_MS = 5000; // Poll every 5 seconds
 
   async connect(): Promise<void> {
