@@ -46,20 +46,20 @@ export const DCABot = ({ killSignal = 0 }: Props) => {
   const isExecutingRef = useRef(false);
 
   useEffect(() => {
-    return () => { if (dcaInterval.current) clearInterval(dcaInterval.current); };
+    return () => { if (dcaInterval.current !== null) clearInterval(dcaInterval.current); };
   }, []);
 
   useEffect(() => {
     if (killSignal > 0) {
       setIsRunning(false);
       setShowConfirm(false);
-      if (dcaInterval.current) { clearInterval(dcaInterval.current); dcaInterval.current = null; }
+      if (dcaInterval.current !== null) { clearInterval(dcaInterval.current); dcaInterval.current = null; }
     }
   }, [killSignal]);
 
   const stopDCA = () => {
     setIsRunning(false);
-    if (dcaInterval.current) { clearInterval(dcaInterval.current); dcaInterval.current = null; }
+    if (dcaInterval.current !== null) { clearInterval(dcaInterval.current); dcaInterval.current = null; }
   };
 
   const proceedStartDCA = () => {
