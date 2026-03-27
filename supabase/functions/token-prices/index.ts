@@ -223,7 +223,18 @@ serve(async (req: Request) => {
     if (action === "shield_check") {
       try {
         const heliusKey = Deno.env.get("HELIUS_API_KEY");
-        if (!heliusKey) throw new Error("HELIUS_API_KEY not configured");
+        if (!heliusKey) {
+          return new Response(JSON.stringify({ 
+            success: true, 
+            data: { 
+              name: "Unknown", 
+              symbol: "???", 
+              safe: false, 
+              warning: "Enhanced shield scan requires HELIUS_API_KEY. Using basic validation.",
+              flags: { lowLiquidity: true, warnings: ["API key missing"] }
+            } 
+          }), { headers: corsHeaders });
+        }
 
         // 1. Get token metadata via Helius DAS for freeze/mint authority
         const [assetRes, holdersRes] = await Promise.allSettled([
@@ -433,8 +444,14 @@ async function fetchTokenHoldersWithRiskAnalysis(mint: string) {
     '11111111111111111111111111111111',             // System Program
     'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',  // SPL Token Program
   ];
+  // Check for Helius API key
+  const heliusKey = Deno.env.get('HELIUS_API_KEY');
+  if (!heliusKey) {
+    // Return empty placeholder data when key is missing
+    return { distribution: [], top10RiskPercent: 0, isHighRisk: false };
+  }
   try {
-    const res = await fetch(`https://mainnet.helius-rpc.com/?api-key=${Deno.env.get('HELIUS_API_KEY')}`, {
+    const res = await fetch(`https://mainnet.helius-rpc.com/?api-key=${heliusKey}`, {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ jsonrpc: "2.0", id: "1", method: "getTokenLargestAccounts", params: [mint] })
     });
