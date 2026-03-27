@@ -1,4 +1,5 @@
-import { ReactNode } from "react";
+import { ReactNode, useMemo } from "react";
+import { ConnectionProvider } from "@solana/wallet-adapter-react";
 import { UnifiedWalletProvider } from "@jup-ag/wallet-adapter";
 import { useNetwork } from "@/hooks/useNetwork";
 import { PLATFORM_CONFIG } from "@/config/platform";
@@ -12,26 +13,28 @@ export function NetworkProvider({ children }: NetworkProviderProps) {
   const { rpcUrl, jupiterEnv } = useNetwork();
 
   return (
-    <UnifiedWalletProvider
-      wallets={[]} // Unified Wallet Kit handles discovery automatically
-      config={{
-        autoConnect: true,
-        env: jupiterEnv as any,
-        metadata: {
-          name: "SAVAG3BOT",
-          description: "High-performance Solana Memecoin Trading Terminal",
-          url: typeof window !== 'undefined' ? window.location.origin : "https://savag3bot.app",
-          iconUrls: [typeof window !== 'undefined' ? window.location.origin + "/dan-logo.jpg" : ""],
-        },
-        notificationCallback: WalletNotification as any,
-        walletlistExplanation: {
-          href: "https://dev.jup.ag/tool-kits/wallet-kit",
-        },
-        theme: "dark",
-        lang: "en",
-      }}
-    >
-      {children}
-    </UnifiedWalletProvider>
+    <ConnectionProvider endpoint={rpcUrl}>
+      <UnifiedWalletProvider
+        wallets={[]}
+        config={{
+          autoConnect: true,
+          env: jupiterEnv as any,
+          metadata: {
+            name: "SAVAG3BOT",
+            description: "High-performance Solana Memecoin Trading Terminal",
+            url: typeof window !== 'undefined' ? window.location.origin : "https://savag3bot.app",
+            iconUrls: [typeof window !== 'undefined' ? window.location.origin + "/dan-logo.jpg" : ""],
+          },
+          notificationCallback: WalletNotification as any,
+          walletlistExplanation: {
+            href: "https://dev.jup.ag/tool-kits/wallet-kit",
+          },
+          theme: "dark",
+          lang: "en",
+        }}
+      >
+        {children}
+      </UnifiedWalletProvider>
+    </ConnectionProvider>
   );
 }
