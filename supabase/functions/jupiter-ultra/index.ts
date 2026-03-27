@@ -146,7 +146,11 @@ serve(async (req: Request) => {
       if (!res.ok) {
         const errorText = await res.text();
         console.error("Swap V2 execute error:", res.status, errorText);
-        return new Response(JSON.stringify({ error: `Execute failed: ${res.status} ${errorText}` }), {
+        let userMessage = errorText;
+        if (errorText.includes("Your RPC is not responding")) {
+          userMessage = "Swap simulation failed: The Solana RPC is not responding. Please check your Helius or Custom RPC settings in Supabase secrets.";
+        }
+        return new Response(JSON.stringify({ error: `Execute failed: ${res.status} ${userMessage}` }), {
           status: res.status,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });

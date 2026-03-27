@@ -38,11 +38,26 @@ export function createSolanaClient(options: SolanaClientOptions): SolanaClient {
   // Get the HTTP endpoint
   const endpoint = getEndpoint(urlOrMoniker);
   
-  // Create WebSocket endpoint by replacing http with ws if not explicitly provided
-  const wsEndpoint = wsEndpointOverride || PLATFORM_CONFIG.RPC_URL.replace('http', 'ws');
+  // Create WebSocket endpoint logic
+  let wsEndpoint: string;
+  if (wsEndpointOverride) {
+    wsEndpoint = wsEndpointOverride;
+  } else {
+    // If it's a known cluster URL, use standard ws paths
+    if (endpoint === 'https://api.mainnet-beta.solana.com') {
+      wsEndpoint = 'wss://api.mainnet-beta.solana.com';
+    } else if (endpoint === 'https://api.devnet.solana.com') {
+      wsEndpoint = 'wss://api.devnet.solana.com';
+    } else if (endpoint === 'https://api.testnet.solana.com') {
+      wsEndpoint = 'wss://api.testnet.solana.com';
+    } else {
+      // Fallback: replace http with ws in the provided endpoint
+      wsEndpoint = endpoint.replace('https://', 'wss://').replace('http://', 'ws://');
+    }
+  }
   
   // Create the RPC connection for regular API calls
-  const rpc = new Connection(PLATFORM_CONFIG.RPC_URL, commitment);
+  const rpc = new Connection(endpoint, commitment);
   
   // Create the RPC connection optimized for WebSocket subscriptions
   const rpcSubscriptions = new Connection(wsEndpoint, commitment);

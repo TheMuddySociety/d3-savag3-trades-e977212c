@@ -224,9 +224,10 @@ serve(async (req) => {
     const customSolanaRpc = getEnv("CUSTOM_SOLANA_RPC_URL");
     
     if (customSolanaRpc) {
+      console.log("Using CUSTOM_SOLANA_RPC_URL:", customSolanaRpc);
       rpcUrl = customSolanaRpc;
     } else if (isInvalidKey) {
-      console.warn("HELIUS_API_KEY is missing or invalid. Falling back to public RPC.");
+      console.warn("HELIUS_API_KEY is missing or invalid. Falling back to public RPC. Swaps may fail simulation.");
       rpcUrl = "https://api.mainnet-beta.solana.com";
     } else {
       rpcUrl = `https://mainnet.helius-rpc.com/?api-key=${heliusKey}`;
