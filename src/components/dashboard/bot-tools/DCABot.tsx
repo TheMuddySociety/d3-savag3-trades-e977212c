@@ -106,7 +106,7 @@ export const DCABot = ({ killSignal = 0 }: Props) => {
     dcaInterval.current = window.setInterval(() => {
       const delay = useRandomDelay ? Math.random() * 2000 : 0;
       window.setTimeout(executeDCAOrder, delay);
-    }, baseInterval) as unknown as NodeJS.Timeout;
+    }, baseInterval);
   };
 
   const startDCA = () => {

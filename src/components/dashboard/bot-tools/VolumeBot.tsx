@@ -33,7 +33,7 @@ export const VolumeBot = ({ killSignal = 0 }: Props) => {
   const [useHighPerformance, setUseHighPerformance] = useState(true);
   const [showConfirm, setShowConfirm] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const volumeInterval = useRef<NodeJS.Timeout | null>(null);
+  const volumeInterval = useRef<ReturnType<typeof setInterval> | null>(null);
   const isExecutingRef = useRef(false);
   const countRef = useRef(0);
 

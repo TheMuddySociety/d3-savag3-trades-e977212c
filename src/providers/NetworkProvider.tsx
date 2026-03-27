@@ -23,7 +23,7 @@ export function NetworkProvider({ children }: NetworkProviderProps) {
           url: typeof window !== 'undefined' ? window.location.origin : "https://savag3bot.app",
           iconUrls: [typeof window !== 'undefined' ? window.location.origin + "/dan-logo.jpg" : ""],
         },
-        notificationCallback: WalletNotification,
+        notificationCallback: WalletNotification as any,
         walletlistExplanation: {
           href: "https://dev.jup.ag/tool-kits/wallet-kit",
         },

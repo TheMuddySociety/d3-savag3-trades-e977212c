@@ -94,7 +94,7 @@ export const AutoStrategies = ({ killSignal = 0 }: Props) => {
   const [launchMinLiquidity, setLaunchMinLiquidity] = useState("100");
   const [launchMaxAge, setLaunchMaxAge] = useState("30");
   const [launchAutoSellTimer, setLaunchAutoSellTimer] = useState("0");
-  const launchAutoSellTimers = useRef<Map<string, NodeJS.Timeout>>(new Map());
+  const launchAutoSellTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
   const launchMinLiqRef = useRef(launchMinLiquidity);
   const launchMaxAgeRef = useRef(launchMaxAge);
   const launchAutoSellTimerRef = useRef(launchAutoSellTimer);
