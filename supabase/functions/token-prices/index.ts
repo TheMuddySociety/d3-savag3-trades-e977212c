@@ -19,6 +19,11 @@ const getEnv = (key: string): string | null => {
 
 const BIRDEYE_API_KEY = getEnv("BIRDEYE_API_KEY");
 
+// Trending Cache (Warm Isolate only)
+let cachedTrending: any = null;
+let lastTrendingFetch = 0;
+const TRENDING_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
 serve(async (req: Request) => {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
@@ -137,13 +142,25 @@ serve(async (req: Request) => {
     }
     
     if (action === "trending") {
+      const now = Date.now();
+      if (cachedTrending && (now - lastTrendingFetch < TRENDING_CACHE_TTL)) {
+        console.log("[token-prices] Returning cached trending data");
+        return new Response(JSON.stringify({ success: true, data: cachedTrending }), { headers: corsHeaders });
+      }
+
       try {
         if (!BIRDEYE_API_KEY) {
           console.warn("[token-prices] Birdeye key missing, attempting DexScreener fallback");
-          return await fetchDexScreenerTrending();
+          const res = await fetchDexScreenerTrending();
+          const j = await res.json();
+          if (j.success) {
+            cachedTrending = j.data.slice(0, 30);
+            lastTrendingFetch = now;
+          }
+          return new Response(JSON.stringify({ success: true, data: cachedTrending || [] }), { headers: corsHeaders });
         }
 
-        const res = await fetch("https://public-api.birdeye.so/defi/token_trending?sort_by=rank&sort_type=asc&offset=0&limit=20", {
+        const res = await fetch("https://public-api.birdeye.so/defi/token_trending?sort_by=rank&sort_type=asc&offset=0&limit=30", {
           headers: { 
             "X-API-KEY": BIRDEYE_API_KEY, 
             "x-chain": "solana",
@@ -153,7 +170,13 @@ serve(async (req: Request) => {
         
         if (!res.ok) {
           console.warn(`[token-prices] Birdeye trending failed (${res.status}), using DexScreener fallback`);
-          return await fetchDexScreenerTrending();
+          const fallbackRes = await fetchDexScreenerTrending();
+          const j = await fallbackRes.json();
+          if (j.success) {
+            cachedTrending = j.data.slice(0, 30);
+            lastTrendingFetch = now;
+          }
+          return new Response(JSON.stringify({ success: true, data: cachedTrending || [] }), { headers: corsHeaders });
         }
 
         const data = await res.json();
@@ -172,12 +195,20 @@ serve(async (req: Request) => {
             holders: Number(t.holder_count || t.holders || 0),
             unique_traders_24h: buys + sells,
           };
-        });
+        }).slice(0, 30);
 
+        cachedTrending = mapped;
+        lastTrendingFetch = now;
         return new Response(JSON.stringify({ success: true, data: mapped }), { headers: corsHeaders });
       } catch (e: any) {
         console.error("[token-prices] trending error, trying fallback:", e.message);
-        return await fetchDexScreenerTrending();
+        const res = await fetchDexScreenerTrending();
+        const j = await res.json();
+        if (j.success) {
+          cachedTrending = j.data.slice(0, 30);
+          lastTrendingFetch = now;
+        }
+        return new Response(JSON.stringify({ success: true, data: cachedTrending || [] }), { headers: corsHeaders });
       }
     }
 
@@ -490,7 +521,7 @@ async function fetchDexScreenerTrending() {
     
     // We need more details (name, symbol, price) for each token
     // DexScreener allows fetching up to 30 addresses at once
-    const addresses = solanaTokens.slice(0, 15).map(t => t.tokenAddress).join(',');
+    const addresses = solanaTokens.slice(0, 30).map(t => t.tokenAddress).join(',');
     if (!addresses) return new Response(JSON.stringify({ success: true, data: [] }), { headers: corsHeaders });
 
     const detailRes = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${addresses}`);

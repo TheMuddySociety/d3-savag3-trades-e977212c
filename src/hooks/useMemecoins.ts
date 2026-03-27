@@ -17,6 +17,8 @@ const getAgeDisplay = (timestamp: number): string => {
   return `${diffDays}d`;
 };
 
+import { supabase } from '@/integrations/supabase/client';
+
 export const useMemecoins = () => {
   const [memecoins, setMemecoins] = useState<MemeToken[]>([]);
   const [loading, setLoading] = useState(true);
@@ -27,37 +29,74 @@ export const useMemecoins = () => {
   const fetchMemecoins = useCallback(async (silent = false) => {
     try {
       if (!silent) setLoading(true);
-      const bullmeTokens = await BullmeService.getNewTokens();
       
-      // Transform Bullme tokens to our MemeToken format
-      const transformedTokens = bullmeTokens
-        .filter(token => token.address.endsWith('pump'))
-        .map((token, index) => ({
-          id: token.address,
-          name: token.name,
-          symbol: token.symbol,
-          price: token.marketCap / token.totalSupply,
-          marketCap: token.marketCap,
-          volume24h: token.tradeVolume24h,
-          change24h: (token.buyVolume24h + token.sellVolume24h) > 0
-            ? ((token.buyVolume24h - token.sellVolume24h) / (token.buyVolume24h + token.sellVolume24h)) * 100
-            : 0,
-          change1h: (token.buyCount24h + token.sellCount24h) > 0
-            ? ((token.buyCount24h - token.sellCount24h) / (token.buyCount24h + token.sellCount24h)) * 50
-            : 0,
-          logoUrl: token.logo,
-          tokenAddress: token.address,
-          liquidity: token.liquidity,
-          holders: token.tradeCount,
-          age: getAgeDisplay(token.timestamp),
-          onChainHolders: token.tradeCount,
-          onChainLiquidity: token.liquidity,
-          tags: ["Pump.Fun", token.status === "NEW" ? "New" : "Listed"],
-          timestamp: token.timestamp,
-          status: token.status
-        }));
+      console.log('[useMemecoins] Fetching trending tokens from Edge Function...');
+      const { data, error } = await supabase.functions.invoke('token-prices', {
+        body: { action: 'trending' }
+      });
 
-      setMemecoins(transformedTokens);
+      if (error) throw error;
+      
+      const trendingData = data.data || [];
+      
+      // Map to MemeToken format
+      const transformedTokens: MemeToken[] = trendingData.map((t: any, index: number) => ({
+        id: t.address || `t-${index}`,
+        name: t.name || 'Unknown',
+        symbol: t.symbol || '???',
+        price: Number(t.price || 0),
+        marketCap: Number(t.market_cap || 0),
+        volume24h: Number(t.volume_24h || 0),
+        change24h: Number(t.price_change_24h || 0),
+        change1h: 0, // Not provided by this endpoint
+        logoUrl: `https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/${t.address}/logo.png`, // Placeholder logo logic
+        tokenAddress: t.address,
+        liquidity: 0, // Not provided by trending endpoint
+        holders: Number(t.holders || t.unique_traders_24h || 0),
+        age: '—',
+        onChainHolders: Number(t.holders || 0),
+        onChainLiquidity: 0,
+        tags: ["Trending", t.address.endsWith('pump') ? "Pump.Fun" : "Solana"],
+        timestamp: Date.now() - (index * 60000), // Mock timestamp for sorting
+        status: "LISTED"
+      }));
+
+      // Fallback to Bullme if Edge Function is empty
+      if (transformedTokens.length === 0) {
+        console.log('[useMemecoins] Edge Function returned no tokens, falling back to Bullme...');
+        const bullmeTokens = await BullmeService.getNewTokens();
+        // ... (Keep existing Bullme mapping if needed, or just set to empty if Bullme is also failing)
+        const bullmeMapped = bullmeTokens
+          .filter(token => token.address.endsWith('pump'))
+          .map((token) => ({
+            id: token.address,
+            name: token.name,
+            symbol: token.symbol,
+            price: token.marketCap / token.totalSupply,
+            marketCap: token.marketCap,
+            volume24h: token.tradeVolume24h,
+            change24h: (token.buyVolume24h + token.sellVolume24h) > 0
+              ? ((token.buyVolume24h - token.sellVolume24h) / (token.buyVolume24h + token.sellVolume24h)) * 100
+              : 0,
+            change1h: (token.buyCount24h + token.sellCount24h) > 0
+              ? ((token.buyCount24h - token.sellCount24h) / (token.buyCount24h + token.sellCount24h)) * 50
+              : 0,
+            logoUrl: token.logo,
+            tokenAddress: token.address,
+            liquidity: token.liquidity,
+            holders: token.tradeCount,
+            age: getAgeDisplay(token.timestamp),
+            onChainHolders: token.tradeCount,
+            onChainLiquidity: token.liquidity,
+            tags: ["Pump.Fun", token.status === "NEW" ? "New" : "Listed"],
+            timestamp: token.timestamp,
+            status: token.status
+          }));
+        setMemecoins(bullmeMapped.slice(0, 30));
+      } else {
+        setMemecoins(transformedTokens.slice(0, 30));
+      }
+
     } catch (error) {
       console.error('Error fetching memecoins:', error);
       toast({

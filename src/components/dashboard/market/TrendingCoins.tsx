@@ -69,16 +69,21 @@ export function TrendingCoins() {
                 <Filter className="h-4 w-4" />
                 {showFilters ? 'Hide Filters' : 'Filter'}
               </Button>
+            <div className="flex items-center gap-4">
+              <span className="text-[10px] text-muted-foreground hidden sm:inline">
+                Refreshes every 5 mins
+              </span>
               <Button 
                 variant="outline" 
                 size="sm" 
                 onClick={refreshData}
                 disabled={isRefreshing}
-                className="h-8 gap-1"
+                className="h-8 gap-1 min-w-[90px]"
               >
                 <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-                {isRefreshing ? 'Refreshing...' : 'Refresh'}
+                {isRefreshing ? 'Syncing...' : 'Refresh'}
               </Button>
+            </div>
             </div>
           </div>
         </CardTitle>
@@ -203,7 +208,7 @@ export function TrendingCoins() {
                     <TableCell className="text-right"><div className="h-8 w-16 bg-muted rounded animate-pulse ml-auto"></div></TableCell>
                   </TableRow>
                 ))
-              ) : (
+              ) : filteredCoins.length > 0 ? (
                 filteredCoins.map((coin) => (
                   <TableRow 
                     key={coin.id} 
@@ -309,6 +314,18 @@ export function TrendingCoins() {
                     </TableCell>
                   </TableRow>
                 ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={11} className="h-32 text-center text-muted-foreground">
+                    <div className="flex flex-col items-center gap-2">
+                      <BarChart2 className="h-8 w-8 opacity-20" />
+                      <p>No trending tokens found or still syncing...</p>
+                      <Button variant="link" size="sm" onClick={refreshData}>
+                        Try refreshing
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
               )}
             </TableBody>
           </Table>
