@@ -26,83 +26,99 @@ export function DesktopDashboard() {
   const sidebarWidth = sidebarCollapsed ? 56 : 200;
 
   const renderMainPanel = () => {
-    return (
-      <>
-        <div className={activePanel === 'swap' ? 'block' : 'hidden'}>
-          <div className="space-y-4">
+    switch (activePanel) {
+      case 'swap':
+        return (
+          <div className="space-y-4 animate-in fade-in duration-300">
             <TokenSwap />
             <PortfolioTracker />
           </div>
-        </div>
-        <div className={activePanel === 'portfolio' ? 'block' : 'hidden'}>
-          <div className="space-y-4">
+        );
+      case 'portfolio':
+        return (
+          <div className="space-y-4 animate-in fade-in duration-300">
             <PortfolioTracker />
             <MiniChart title="SOL/USD" />
             <Leaderboard />
           </div>
-        </div>
-        <div className={activePanel === 'tokens' ? 'block' : 'hidden'}>
-          <div className="space-y-4">
+        );
+      case 'tokens':
+        return (
+          <div className="space-y-4 animate-in fade-in duration-300">
             <TopMemecoins />
             <Leaderboard />
           </div>
-        </div>
-        <div className={activePanel === 'signals' ? 'block' : 'hidden'}>
-          <div className="space-y-4">
+        );
+      case 'signals':
+        return (
+          <div className="space-y-4 animate-in fade-in duration-300">
             <LiveSignalFeed />
             <MemeScanner />
           </div>
-        </div>
-        <div className={activePanel === 'bots' ? 'block' : 'hidden'}>
-          <div className="space-y-4">
+        );
+      case 'bots':
+        return (
+          <div className="space-y-4 animate-in fade-in duration-300">
             <BotAccess />
             <AIToolsAgents />
           </div>
-        </div>
-        <div className={activePanel === 'alerts' ? 'block' : 'hidden'}>
-          <div className="space-y-4">
+        );
+      case 'alerts':
+        return (
+          <div className="space-y-4 animate-in fade-in duration-300">
             <PriceAlerts walletAddress={walletAddress} />
             <LiveSignalFeed />
           </div>
-        </div>
-        <div className={activePanel === 'chat' ? 'block' : 'hidden'}>
-          <JupiterAIChat />
-        </div>
-      </>
-    );
+        );
+      case 'chat':
+        return <JupiterAIChat />;
+      default:
+        return null;
+    }
   };
 
   const renderRightPanel = () => {
-    return (
-      <>
-        <div className={activePanel === 'swap' || activePanel === 'portfolio' ? 'space-y-4' : 'hidden'}>
-          <PriceAlerts walletAddress={walletAddress} />
-          <LiveSignalFeed />
-        </div>
-        <div className={activePanel === 'tokens' ? 'space-y-4' : 'hidden'}>
-          <MiniChart title="SOL/USD" />
-          <TokenSwap />
-          <MemeScanner />
-        </div>
-        <div className={activePanel === 'signals' ? 'space-y-4' : 'hidden'}>
-          <MiniChart title="SOL/USD" />
-          <PriceAlerts walletAddress={walletAddress} />
-        </div>
-        <div className={activePanel === 'bots' ? 'space-y-4' : 'hidden'}>
-          <MiniChart title="SOL/USD" />
-          <PriceAlerts walletAddress={walletAddress} />
-        </div>
-        <div className={activePanel === 'alerts' ? 'space-y-4' : 'hidden'}>
-          <MiniChart title="SOL/USD" />
-          <MemeScanner />
-        </div>
-        <div className={activePanel === 'chat' ? 'space-y-4' : 'hidden'}>
-          <MiniChart title="SOL/USD" />
-          <LiveSignalFeed />
-          <PriceAlerts walletAddress={walletAddress} />
-        </div>
-      </>
-    );
+    switch (activePanel) {
+      case 'swap':
+      case 'portfolio':
+        return (
+          <div className="space-y-4 animate-in fade-in duration-300">
+            <PriceAlerts walletAddress={walletAddress} />
+            <LiveSignalFeed />
+          </div>
+        );
+      case 'tokens':
+        return (
+          <div className="space-y-4 animate-in fade-in duration-300">
+            <MiniChart title="SOL/USD" />
+            <TokenSwap />
+            <MemeScanner />
+          </div>
+        );
+      case 'signals':
+      case 'bots':
+      case 'alerts':
+        return (
+          <div className="space-y-4 animate-in fade-in duration-300">
+            <MiniChart title="SOL/USD" />
+            {activePanel === 'signals' || activePanel === 'bots' ? (
+              <PriceAlerts walletAddress={walletAddress} />
+            ) : (
+              <MemeScanner />
+            )}
+          </div>
+        );
+      case 'chat':
+        return (
+          <div className="space-y-4 animate-in fade-in duration-300">
+            <MiniChart title="SOL/USD" />
+            <LiveSignalFeed />
+            <PriceAlerts walletAddress={walletAddress} />
+          </div>
+        );
+      default:
+        return null;
+    }
   };
 
   return (

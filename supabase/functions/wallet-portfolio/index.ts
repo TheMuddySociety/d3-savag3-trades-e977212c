@@ -197,7 +197,8 @@ serve(async (req) => {
       if (mintsToPrice.length > 0 || !solPrice) {
         const allMints = [SOL_MINT, ...mintsToPrice];
         try {
-          const pRes = await fetch(`https://api.jup.ag/price/v2?ids=${allMints.slice(0, 100).join(",")}`);
+          // Using Price V2 (Latest) with batching (up to 100 mints)
+          const pRes = await fetch(`https://api.jup.ag/price/v2?ids=${allMints.slice(0, 100).join(",")}&showExtraInfo=true`);
           if (pRes.ok) {
             const pData = await pRes.json();
             if (pData?.data) {
@@ -250,7 +251,12 @@ serve(async (req) => {
     portfolioCache.set(cacheKey, { data: responseData, expiry: Date.now() + CACHE_TTL });
 
     return new Response(responseData, {
-      headers: { ...corsHeaders, "Content-Type": "application/json", "X-Cache": "MISS" },
+      headers: { 
+        ...corsHeaders, 
+        "Content-Type": "application/json", 
+        "X-Cache": "MISS",
+        "Cache-Control": "public, max-age=10" 
+      },
     });
 
   } catch (err: any) {

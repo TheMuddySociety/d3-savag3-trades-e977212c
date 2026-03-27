@@ -1,23 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Activity, TrendingUp, TrendingDown, AlertTriangle, Zap } from 'lucide-react';
 import { cn } from "@/lib/utils";
-import { supabase } from '@/integrations/supabase/client';
-
-interface Signal {
-  id: string;
-  type: 'buy' | 'sell' | 'alert' | 'volume';
-  token: string;
-  message: string;
-  timestamp: number;
-  strength: 'low' | 'medium' | 'high';
-  price?: number;
-  change?: number;
-  holders?: number;
-  uniqueTraders?: number;
-}
+import { useSignals, Signal } from "@/providers/SignalProvider";
 
 const SIGNAL_TYPES = {
   buy: { icon: TrendingUp, color: 'text-retro-green', bg: 'bg-retro-green/20' },
@@ -26,80 +13,8 @@ const SIGNAL_TYPES = {
   volume: { icon: Zap, color: 'text-blue-400', bg: 'bg-blue-400/20' }
 };
 
-function deriveSignalsFromTrending(trendingData: any[]): Signal[] {
-  return trendingData
-    .filter((t: any) => t && typeof t.price === 'number' && t.price > 0)
-    .slice(0, 10)
-    .map((t: any) => {
-      const change = Number(t.price_change_24h || 0);
-      const safeChange = isNaN(change) ? 0 : change;
-      let type: Signal['type'] = 'alert';
-      let message = '';
-      let strength: Signal['strength'] = 'low';
- 
-      if (safeChange > 15) {
-        type = 'buy';
-        message = `Surging +${safeChange.toFixed(1)}% — breakout detected`;
-        strength = 'high';
-      } else if (safeChange > 5) {
-        type = 'buy';
-        message = `Trending up +${safeChange.toFixed(1)}% in 24h`;
-        strength = 'medium';
-      } else if (safeChange < -10) {
-        type = 'sell';
-        message = `Dropping ${safeChange.toFixed(1)}% — sell pressure`;
-        strength = 'high';
-      } else if (safeChange < -3) {
-        type = 'sell';
-        message = `Declining ${safeChange.toFixed(1)}% in 24h`;
-        strength = 'medium';
-      } else {
-        type = 'volume';
-        message = `Active trading — ${safeChange >= 0 ? '+' : ''}${safeChange.toFixed(1)}% change`;
-        strength = 'low';
-      }
- 
-      return {
-        id: `signal-${t.address || t.symbol || Math.random()}-${Date.now()}`,
-        type,
-        token: t.symbol?.toUpperCase() || 'UNKNOWN',
-        message,
-        timestamp: Date.now(),
-        strength,
-        price: t.price,
-        change: safeChange,
-        holders: t.holders,
-        uniqueTraders: t.unique_traders_24h,
-      };
-    });
-}
-
 export function LiveSignalFeed() {
-  const [signals, setSignals] = useState<Signal[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const fetchSignals = async () => {
-    try {
-      const { data, error } = await supabase.functions.invoke('token-prices', {
-        body: { action: 'trending' },
-      });
-      if (error) throw error;
-      if (data?.success && Array.isArray(data.data)) {
-        const derived = deriveSignalsFromTrending(data.data);
-        setSignals(derived);
-      }
-    } catch (err) {
-      console.error('Failed to fetch signals:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchSignals();
-    const interval = setInterval(fetchSignals, 30000); // refresh every 30s
-    return () => clearInterval(interval);
-  }, []);
+  const { signals, loading } = useSignals();
 
   const getStrengthColor = (strength: Signal['strength']) => {
     switch (strength) {

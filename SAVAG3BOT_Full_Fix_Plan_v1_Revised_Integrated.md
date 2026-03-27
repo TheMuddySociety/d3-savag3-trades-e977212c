@@ -108,15 +108,19 @@ const fmt = (v: number | string | undefined | null): string => {
 - **Seamless Wallet Passthrough**: Following the official Jupiter documentation, I have enabled `enableWalletPassthrough: true` in the `TokenSwap` component.
 
 ### 11. Swap + Trigger Dashboard Upgrade
-- **V3 Terminal Features**: Upgraded the integration to the latest **Jupiter Terminal V3** (`main-v3.js`). This enables the modern "Swap + Trigger" dashboard, allowing users to place Limit Orders and set up DCA (Dollar Cost Averaging) directly within the app.
-- **Referral Integration**: Confirmed and applied the specified referral account `89MakU1zuaQKBrtFXXMgGxf8nKZ9Pbq52KtUwgNhCiBS` to the terminal, ensuring 1% platform fees are correctly routed.
-- **UI Branding**: Updated the component header to "Swap + Trigger Dashboard" to align with the new high-performance features.
+- **V3 Terminal Features**: Upgraded the integration to the latest **Jupiter Terminal V3**.
+
+### 12. Performance Optimization
+- **Optimization A: Conditional Rendering**: Transition the `DesktopDashboard` and `MobileDashboard` from CSS-based hiding (`hidden`) to **Conditional Mounting**. This will prevent background components from running redundant polling logic.
+- **Optimization B: Centralized Data Providers**: 
+    - Create `PortfolioProvider`: Consolidates `useWalletPortfolio` polling into a single context, ensuring only one network request is made per 12s interval.
+    - Create `SignalProvider`: Consolidates `LiveSignalFeed` polling (every 30s) into a shared state.
+- **Optimization C: Edge Function V3 Migration**: Update the `wallet-portfolio` Edge Function to use the heuristics-based **Jupiter Price API V3** for faster and more reliable token pricing.
 
 ### ✅ Verification Results
-- **Security**: Verified Reown and Next.js vulnerabilities have been remediated.
-- **Privacy**: Verified `referral-earnings` Edge Function requires JWT.
-- **Stability**: Confirmed Jupiter Terminal V3 loads and initializes correctly.
-- **Capabilities**: Verified that 'Limit' and 'DCA' tabs are fully functional in the integrated terminal.
+- **Network**: Monitor DevTools to verify network request reduction (expecting ~70% drop).
+- **Latency**: Measure dashboard load and tab-switch speed.
+- **Stability**: Ensure Jupiter Terminal state (if any) is handled correctly during remounts.
 
 ### Expanded Jupiter Swap Configuration (Core for Real Bot Execution)
 This is the production-ready configuration every bot should use. It respects user settings, balances speed/cost/MEV protection, and follows Jupiter V6+ best practices.

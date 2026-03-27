@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Briefcase, RefreshCw, Wallet, DollarSign, Coins, ExternalLink } from "lucide-react";
 import { useWallet } from "@solana/wallet-adapter-react";
-import { useWalletPortfolio } from "@/hooks/useWalletPortfolio";
+import { usePortfolio } from "@/providers/PortfolioProvider";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -27,7 +27,7 @@ const formatAmount = (v: number) => {
 export const PortfolioTracker = () => {
   const { publicKey } = useWallet();
   const walletAddress = publicKey?.toBase58() || null;
-  const { portfolio, isLoading, error, diagnostics, refresh } = useWalletPortfolio(walletAddress);
+  const { portfolio, isLoading, error, diagnostics, refresh } = usePortfolio();
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const handleRefresh = async () => {

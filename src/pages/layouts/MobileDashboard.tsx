@@ -96,12 +96,14 @@ export function MobileDashboard() {
         <div className="px-3 space-y-2.5">
           <ConnectionStatus />
           
-          {/* STATIC LAYERS (Jupiter Singleton) */}
-          <div className={activeTab === 'trade' ? 'block space-y-2.5 mb-1' : 'hidden'}>
-            <TokenSwap key={`swap-${refreshKey}`} />
-            <MiniChart title="SOL/USD" key={`chart-${refreshKey}`} />
-            <PortfolioTracker key={`portfolio-${refreshKey}`} />
-          </div>
+          {/* ACTIVE TAB CONTENT */}
+          {activeTab === 'trade' && (
+            <div className="space-y-2.5 mb-1 animate-in fade-in duration-300">
+              <TokenSwap key={`swap-${refreshKey}`} />
+              <MiniChart title="SOL/USD" key={`chart-${refreshKey}`} />
+              <PortfolioTracker key={`portfolio-${refreshKey}`} />
+            </div>
+          )}
 
           <AnimatePresence mode="wait">
             {activeTab !== 'trade' && (

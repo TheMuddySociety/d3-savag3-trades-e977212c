@@ -9,7 +9,8 @@ import { ThemeProvider } from "@/hooks/use-theme";
 import { TradingModeProvider } from "@/hooks/useTradingMode";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { NetworkProvider } from "@/providers/NetworkProvider";
-// Jupiter Unified Wallet Kit configuration consolidated within NetworkProvider
+import { PortfolioProvider } from "@/providers/PortfolioProvider";
+import { SignalProvider } from "@/providers/SignalProvider";
 
 const Landing = lazy(() => import("./pages/Landing"));
 const Index = lazy(() => import("./pages/Index"));
@@ -32,27 +33,31 @@ const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider defaultTheme="dark">
-          <NetworkProvider>
-            <TradingModeProvider>
-            <TooltipProvider>
-              <Toaster />
-              <Sonner />
-              <ErrorBoundary>
-                <BrowserRouter>
-                  <Suspense fallback={<PageLoader />}>
-                    <Routes>
-                      <Route path="/" element={<Landing />} />
-                      <Route path="/dashboard" element={<Index />} />
-                      <Route path="/token/:address" element={<TokenDetail />} />
-                      <Route path="/admin" element={<Admin />} />
-                      <Route path="*" element={<NotFound />} />
-                    </Routes>
-                  </Suspense>
-                </BrowserRouter>
-              </ErrorBoundary>
-            </TooltipProvider>
-            </TradingModeProvider>
-          </NetworkProvider>
+        <NetworkProvider>
+          <PortfolioProvider>
+            <SignalProvider>
+              <TradingModeProvider>
+                <TooltipProvider>
+                  <Toaster />
+                  <Sonner />
+                  <ErrorBoundary>
+                    <BrowserRouter>
+                      <Suspense fallback={<PageLoader />}>
+                        <Routes>
+                          <Route path="/" element={<Landing />} />
+                          <Route path="/dashboard" element={<Index />} />
+                          <Route path="/token/:address" element={<TokenDetail />} />
+                          <Route path="/admin" element={<Admin />} />
+                          <Route path="*" element={<NotFound />} />
+                        </Routes>
+                      </Suspense>
+                    </BrowserRouter>
+                  </ErrorBoundary>
+                </TooltipProvider>
+              </TradingModeProvider>
+            </SignalProvider>
+          </PortfolioProvider>
+        </NetworkProvider>
       </ThemeProvider>
     </QueryClientProvider>
   );
