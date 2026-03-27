@@ -123,14 +123,14 @@ serve(async (req: Request) => {
       const mapped: any = {};
       if (addresses.length > 0) {
         try {
-          const res = await fetch(`https://api.jup.ag/price/v3?ids=${addresses.join(',')}`);
+          const res = await fetch(`https://api.jup.ag/price/v2?ids=${addresses.join(',')}`);
           const data = await res.json();
           for (const m of addresses) {
-            mapped[m] = { price: data.data?.[m]?.price || null };
+            const p = data.data?.[m]?.price;
+            mapped[m] = { price: p ? Number(p) : null };
           }
         } catch (e) {
           console.error("[token-prices] Batch price fetch failed:", e);
-          // Fallback to sequential for safety if batch fails
           for (const m of addresses) {
             mapped[m] = { price: await getCurrentPrice(m) };
           }
