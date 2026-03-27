@@ -43,33 +43,11 @@ export function PumpLoginModal({ open, onOpenChange }: PumpLoginModalProps) {
             <div className="absolute inset-0 bg-primary/10 blur-2xl rounded-full scale-150 opacity-50" />
           </div>
 
-          <div className="w-full space-y-4">
+          <div className="w-full">
             {/* Unified Wallet Button */}
             <div className="bg-[#1A1B1E] p-4 rounded-2xl border border-white/5 hover:border-white/10 transition-all flex justify-center">
               <UnifiedWalletButton />
             </div>
-
-            <div className="flex items-center gap-4 py-2">
-              <div className="h-[1px] flex-1 bg-white/5" />
-              <span className="text-[10px] text-white/20 font-bold uppercase tracking-[0.2em]">Quick Login</span>
-              <div className="h-[1px] flex-1 bg-white/5" />
-            </div>
-
-            <Button
-              onClick={handleSocialLogin}
-              className="w-full h-16 bg-[#1A1B1E] hover:bg-[#25262B] border border-white/5 hover:border-white/10 text-white rounded-2xl flex items-center justify-between px-5 group transition-all duration-300"
-            >
-              <div className="flex items-center gap-4">
-                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <Zap className="w-5 h-5 text-primary fill-primary/20" />
-                </div>
-                <div className="text-left">
-                  <div className="text-[15px] font-bold">More Options</div>
-                  <div className="text-[11px] text-white/30 font-medium">socials, more wallets and setup</div>
-                </div>
-              </div>
-              <ChevronRight className="w-5 h-5 text-white/10 group-hover:text-white/30 transition-colors" />
-            </Button>
           </div>
 
           {/* Feature Highlights Footer */}

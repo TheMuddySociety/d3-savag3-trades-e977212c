@@ -95,7 +95,11 @@ const fmt = (v: number | string | undefined | null): string => {
 - **RPC Hardening**: Removed all WalletConnect-dependent RPC logic from the `withdraw` Edge Function, switching to standard high-performance Solana endpoints.
 
 ### 7. Trending Resilience
-- **DexScreener Fallback**: Implemented a robust fallback mechanism for the `trending` endpoint. If the Birdeye API key is missing or rate-limited, the system automatically switches to DexScreener's Boosted API to fetch the latest trending Solana tokens, preventing empty dashboard states.
+- **DexScreener Fallback**: Implemented a robust fallback mechanism for the `trending` endpoint. If the Birdeye API key is missing or rate-limited, the system automatically switches to DexScreener's Boosted API to fetch the latest trending Solana tokens.
+
+### 8. User Connect Simplification
+- **1-Click Jupiter Flow**: Purged all Reown-style "More Options" and "Social Login" descriptors from the connection UI. The `PumpLoginModal` is now a streamlined, 1-click gateway to the Jupiter Unified Wallet experience, removing potential friction and confusion for veteran Solana users.
+- **SIWS Integrity**: Verified that the custom "Sign-in with Solana" auth flow remains fully operational, providing secure, signature-based access to the Supabase backend without third-party dependencies.
 
 ### ✅ Verification Results
 - **Security**: Verified `profiles` table immutability via SQL migrations.
@@ -103,6 +107,7 @@ const fmt = (v: number | string | undefined | null): string => {
 - **Stability**: Confirmed unified `smartSwap` path routes correctly through the new V1 architecture.
 - **Wallet Architecture**: Verified that removing Reown does not interrupt standard browser wallet connections.
 - **Data Continuity**: Verified that `token-prices` trending endpoint returns high-quality data even without a Birdeye key.
+- **User Experience**: Confirmed the connection flow is now faster and exclusively focused on the Jupiter ecosystem.
 
 ### Expanded Jupiter Swap Configuration (Core for Real Bot Execution)
 This is the production-ready configuration every bot should use. It respects user settings, balances speed/cost/MEV protection, and follows Jupiter V6+ best practices.
