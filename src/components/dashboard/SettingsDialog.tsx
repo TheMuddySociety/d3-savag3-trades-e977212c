@@ -47,12 +47,12 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
 
   // Listen for external open requests (e.g. from Network Alerts)
   useEffect(() => {
-    const handleOpenSettings = (e: any) => {
-      setOpen(true);
+    const handleOpenSettings = () => {
+      onOpenChange(true);
     };
     window.addEventListener('open-settings', handleOpenSettings);
     return () => window.removeEventListener('open-settings', handleOpenSettings);
-  }, []);
+  }, [onOpenChange]);
 
   // Load settings
   useEffect(() => {
