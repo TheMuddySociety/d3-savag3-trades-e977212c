@@ -38,7 +38,7 @@ export {
   createSellInstruction,
   estimateTokensOut,
   estimateSolOut,
-  currentPriceLamports,
+  
 } from './tokenLauncher';
 
 export type { DelegationSessionData } from './beachDelegator';
