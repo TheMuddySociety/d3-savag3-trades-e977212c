@@ -1,6 +1,4 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-// Redis client - dynamic import to avoid build errors when not configured
-let RedisClass: any = null;
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
