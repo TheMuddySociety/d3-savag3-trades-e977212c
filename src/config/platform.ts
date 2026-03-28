@@ -60,8 +60,7 @@ export const PLATFORM_CONFIG = {
    */
   get JUPITER_ULTRA_API_URL() {
     const envUrl = (typeof process !== 'undefined' && process.env?.CUSTOM_JUPITER_ULTRA_URL) || 
-                   (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_CUSTOM_JUPITER_ULTRA_URL) ||
-                   (typeof Deno !== 'undefined' && Deno.env.get("CUSTOM_JUPITER_ULTRA_URL"));
+                   (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_CUSTOM_JUPITER_ULTRA_URL);
     return envUrl || "https://api.jup.ag/ultra/v1";
   },
 
