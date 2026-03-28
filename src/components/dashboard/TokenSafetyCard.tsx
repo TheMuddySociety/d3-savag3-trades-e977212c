@@ -122,8 +122,8 @@ export function TokenSafetyCard({ tokenAddress, tokenName, compact = false, top1
 
   if (!result) return null;
 
-  const config = RISK_CONFIG[result.riskLevel];
-  const RiskIcon = config.icon;
+  const config = RISK_CONFIG[result.riskLevel] || RISK_CONFIG.MEDIUM;
+  const RiskIcon = config.icon || ShieldAlert;
 
   if (compact) {
     return (
