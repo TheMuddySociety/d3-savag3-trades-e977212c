@@ -149,65 +149,49 @@ serve(async (req: Request) => {
       }
 
       try {
-        if (!BIRDEYE_API_KEY) {
-          console.warn("[token-prices] Birdeye key missing, attempting DexScreener fallback");
-          const res = await fetchDexScreenerTrending();
-          const j = await res.json();
-          if (j.success) {
-            cachedTrending = j.data.slice(0, 30);
-            lastTrendingFetch = now;
+        let mapped: any[] = [];
+
+        if (BIRDEYE_API_KEY) {
+          const res = await fetch("https://public-api.birdeye.so/defi/token_trending?sort_by=rank&sort_type=asc&offset=0&limit=30", {
+            headers: { "X-API-KEY": BIRDEYE_API_KEY, "x-chain": "solana", "accept": "application/json" },
+          });
+          if (res.ok) {
+            const data = await res.json();
+            mapped = (data.data?.tokens || []).map((t: any) => {
+              const buys = Number(t.buy24h || 0);
+              const sells = Number(t.sell24h || 0);
+              return {
+                address: t.address, symbol: t.symbol, name: t.name,
+                price: Number(t.price || 0), price_change_24h: Number(t.v24hChangePercent || 0),
+                volume_24h: Number(t.v24hUSD || 0), market_cap: Number(t.mc || t.marketCap || 0),
+                rank: Number(t.rank || 0), holders: Number(t.holder_count || t.holders || 0),
+                unique_traders_24h: buys + sells,
+              };
+            }).slice(0, 30);
+          } else {
+            console.warn(`[token-prices] Birdeye trending ${res.status}, falling back to DexScreener`);
           }
-          return new Response(JSON.stringify({ success: true, data: cachedTrending || [] }), { headers: corsHeaders });
         }
 
-        const res = await fetch("https://public-api.birdeye.so/defi/token_trending?sort_by=rank&sort_type=asc&offset=0&limit=30", {
-          headers: { 
-            "X-API-KEY": BIRDEYE_API_KEY, 
-            "x-chain": "solana",
-            "accept": "application/json"
-          },
-        });
-        
-        if (!res.ok) {
-          console.warn(`[token-prices] Birdeye trending failed (${res.status}), using DexScreener fallback`);
-          const fallbackRes = await fetchDexScreenerTrending();
-          const j = await fallbackRes.json();
-          if (j.success) {
-            cachedTrending = j.data.slice(0, 30);
-            lastTrendingFetch = now;
-          }
-          return new Response(JSON.stringify({ success: true, data: cachedTrending || [] }), { headers: corsHeaders });
+        // DexScreener fallback if Birdeye unavailable or returned empty
+        if (mapped.length === 0) {
+          console.log("[token-prices] Using DexScreener fallback for trending");
+          mapped = await fetchDexScreenerTrendingData();
         }
 
-        const data = await res.json();
-        const mapped = (data.data?.tokens || []).map((t: any) => {
-          const buys = Number(t.buy24h || 0);
-          const sells = Number(t.sell24h || 0);
-          return {
-            address: t.address,
-            symbol: t.symbol,
-            name: t.name,
-            price: Number(t.price || 0),
-            price_change_24h: Number(t.v24hChangePercent || 0),
-            volume_24h: Number(t.v24hUSD || 0),
-            market_cap: Number(t.mc || t.marketCap || 0),
-            rank: Number(t.rank || 0),
-            holders: Number(t.holder_count || t.holders || 0),
-            unique_traders_24h: buys + sells,
-          };
-        }).slice(0, 30);
-
-        cachedTrending = mapped;
-        lastTrendingFetch = now;
-        return new Response(JSON.stringify({ success: true, data: mapped }), { headers: corsHeaders });
-      } catch (e: any) {
-        console.error("[token-prices] trending error, trying fallback:", e.message);
-        const res = await fetchDexScreenerTrending();
-        const j = await res.json();
-        if (j.success) {
-          cachedTrending = j.data.slice(0, 30);
+        if (mapped.length > 0) {
+          cachedTrending = mapped;
           lastTrendingFetch = now;
         }
+        return new Response(JSON.stringify({ success: true, data: mapped }), { headers: corsHeaders });
+      } catch (e: any) {
+        console.error("[token-prices] trending error:", e.message);
+        // Try DexScreener as last resort
+        try {
+          const fallback = await fetchDexScreenerTrendingData();
+          if (fallback.length > 0) { cachedTrending = fallback; lastTrendingFetch = now; }
+          return new Response(JSON.stringify({ success: true, data: fallback }), { headers: corsHeaders });
+        } catch { }
         return new Response(JSON.stringify({ success: true, data: cachedTrending || [] }), { headers: corsHeaders });
       }
     }
