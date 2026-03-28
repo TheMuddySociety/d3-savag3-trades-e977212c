@@ -491,42 +491,46 @@ async function fetchRecentTrades(mint: string) {
   ];
 }
 
-async function fetchDexScreenerTrending() {
+async function fetchDexScreenerTrendingData(): Promise<any[]> {
   try {
-    // Top boosted tokens on Solana
     const res = await fetch("https://api.dexscreener.com/token-boosts/top/v1", {
       headers: { "accept": "application/json" }
     });
     if (!res.ok) throw new Error(`DexScreener failed: ${res.status}`);
     const tokens = await res.json();
     
-    // DexScreener boosted API returns an array of objects with { tokenAddress, url, chainId, ... }
-    const solanaTokens = (Array.isArray(tokens) ? tokens : []).filter(t => t.chainId === 'solana');
-    
-    // We need more details (name, symbol, price) for each token
-    // DexScreener allows fetching up to 30 addresses at once
-    const addresses = solanaTokens.slice(0, 30).map(t => t.tokenAddress).join(',');
-    if (!addresses) return new Response(JSON.stringify({ success: true, data: [] }), { headers: corsHeaders });
+    const solanaTokens = (Array.isArray(tokens) ? tokens : []).filter((t: any) => t.chainId === 'solana');
+    const addresses = solanaTokens.slice(0, 30).map((t: any) => t.tokenAddress).join(',');
+    if (!addresses) return [];
 
-    const detailRes = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${addresses}`);
+    const detailRes = await fetch(`https://api.dexscreener.com/tokens/v1/solana/${addresses}`);
+    if (!detailRes.ok) throw new Error(`DexScreener detail failed: ${detailRes.status}`);
     const detailData = await detailRes.json();
     
-    const mapped = (detailData.pairs || []).map((p: any, i: number) => ({
-      address: p.baseToken.address,
-      symbol: p.baseToken.symbol,
-      name: p.baseToken.name,
-      price: Number(p.priceUsd || 0),
-      price_change_24h: Number(p.priceChange?.h24 || 0),
-      volume_24h: Number(p.volume?.h24 || 0),
-      market_cap: Number(p.fdv || p.marketCap || 0),
-      rank: i + 1,
-      holders: 0, // DexScreener doesn't provide holder count in this endpoint
-      unique_traders_24h: 0,
-    }));
-
-    return new Response(JSON.stringify({ success: true, data: mapped }), { headers: corsHeaders });
+    // Deduplicate by base token address (keep highest volume pair)
+    const seen = new Map<string, any>();
+    for (const p of (Array.isArray(detailData) ? detailData : detailData.pairs || [])) {
+      const addr = p.baseToken?.address;
+      if (!addr) continue;
+      const vol = Number(p.volume?.h24 || 0);
+      if (!seen.has(addr) || vol > (seen.get(addr).volume_24h || 0)) {
+        seen.set(addr, {
+          address: addr,
+          symbol: p.baseToken.symbol,
+          name: p.baseToken.name,
+          price: Number(p.priceUsd || 0),
+          price_change_24h: Number(p.priceChange?.h24 || 0),
+          volume_24h: vol,
+          market_cap: Number(p.fdv || p.marketCap || 0),
+          rank: seen.size + 1,
+          holders: 0,
+          unique_traders_24h: 0,
+        });
+      }
+    }
+    return Array.from(seen.values()).slice(0, 30);
   } catch (e: any) {
     console.error("[token-prices] DexScreener fallback failed:", e.message);
-    return new Response(JSON.stringify({ success: true, data: [] }), { headers: corsHeaders });
+    return [];
   }
 }
