@@ -66,15 +66,6 @@ serve(async (req: Request) => {
       const cacheKey = `full_profile:${targetMint}:${interval}`;
       const cacheTTL = 45;
 
-      // Try Redis cache
-      if (redis) {
-        const cached = await redis.get(cacheKey);
-        if (cached) {
-          console.log(`[token-prices] Cache hit for ${targetMint}`);
-          return new Response(cached, { headers: corsHeaders });
-        }
-      }
-
       const [priceHistory, holdersData, tradesData, currentPrice] = await Promise.allSettled([
         fetchBirdeyeOHLCV(targetMint, interval),
         fetchTokenHoldersWithRiskAnalysis(targetMint),
