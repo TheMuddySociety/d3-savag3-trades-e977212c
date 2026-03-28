@@ -51,8 +51,7 @@ export const PLATFORM_CONFIG = {
    */
   get JUPITER_V2_API_URL() {
     const envUrl = (typeof process !== 'undefined' && process.env?.CUSTOM_JUPITER_SWAP_URL) || 
-                   (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_CUSTOM_JUPITER_SWAP_URL) ||
-                   (typeof Deno !== 'undefined' && Deno.env.get("CUSTOM_JUPITER_SWAP_URL"));
+                   (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_CUSTOM_JUPITER_SWAP_URL);
     return envUrl || "https://api.jup.ag/swap/v2";
   },
 
