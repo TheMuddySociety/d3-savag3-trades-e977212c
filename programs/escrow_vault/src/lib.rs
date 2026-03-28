@@ -48,8 +48,14 @@ pub mod escrow_vault {
         )?;
 
         let vault = &mut ctx.accounts.vault;
-        vault.balance_lamports += lamports;
-        vault.total_deposited += lamports;
+        vault.balance_lamports = vault
+            .balance_lamports
+            .checked_add(lamports)
+            .ok_or(VaultError::Overflow)?;
+        vault.total_deposited = vault
+            .total_deposited
+            .checked_add(lamports)
+            .ok_or(VaultError::Overflow)?;
 
         emit!(VaultDeposit {
             owner: vault.owner,
@@ -67,7 +73,10 @@ pub mod escrow_vault {
 
         require!(!vault.is_locked, VaultError::VaultLocked);
         require!(lamports > 0, VaultError::ZeroAmount);
-        require!(lamports <= vault.balance_lamports, VaultError::InsufficientBalance);
+        require!(
+            lamports <= vault.balance_lamports,
+            VaultError::InsufficientBalance
+        );
         require!(
             lamports <= vault.withdrawal_limit_lamports,
             VaultError::ExceedsWithdrawalLimit
@@ -75,25 +84,38 @@ pub mod escrow_vault {
 
         // Check cooldown
         let current_slot = Clock::get()?.slot;
-        require!(
-            current_slot >= vault.last_withdrawal_slot + vault.cooldown_slots,
-            VaultError::CooldownActive
-        );
+        let cooldown_end = vault
+            .last_withdrawal_slot
+            .checked_add(vault.cooldown_slots)
+            .ok_or(VaultError::Overflow)?;
+        require!(current_slot >= cooldown_end, VaultError::CooldownActive);
 
-        // Transfer SOL from vault PDA to owner
+        // Transfer SOL from vault PDA to owner via CPI with signer seeds
         let owner_key = vault.owner;
-        let seeds = &[
-            b"vault_sol".as_ref(),
-            owner_key.as_ref(),
-            &[ctx.bumps.vault_sol],
-        ];
-        let signer_seeds = &[&seeds[..]];
+        system_program::transfer(
+            CpiContext::new_with_signer(
+                ctx.accounts.system_program.to_account_info(),
+                system_program::Transfer {
+                    from: ctx.accounts.vault_sol.to_account_info(),
+                    to: ctx.accounts.owner.to_account_info(),
+                },
+                &[&[
+                    b"vault_sol",
+                    owner_key.as_ref(),
+                    &[ctx.bumps.vault_sol],
+                ]],
+            ),
+            lamports,
+        )?;
 
-        **ctx.accounts.vault_sol.to_account_info().try_borrow_mut_lamports()? -= lamports;
-        **ctx.accounts.owner.to_account_info().try_borrow_mut_lamports()? += lamports;
-
-        vault.balance_lamports -= lamports;
-        vault.total_withdrawn += lamports;
+        vault.balance_lamports = vault
+            .balance_lamports
+            .checked_sub(lamports)
+            .ok_or(VaultError::Overflow)?;
+        vault.total_withdrawn = vault
+            .total_withdrawn
+            .checked_add(lamports)
+            .ok_or(VaultError::Overflow)?;
         vault.last_withdrawal_slot = current_slot;
 
         emit!(VaultWithdrawal {
@@ -107,15 +129,43 @@ pub mod escrow_vault {
 
     /// Agent spends from the vault for a trade.
     /// Only the designated agent can call this.
+    /// SOL is transferred from the vault PDA to the specified destination.
     pub fn agent_spend(ctx: Context<AgentSpend>, lamports: u64) -> Result<()> {
         let vault = &mut ctx.accounts.vault;
 
         require!(!vault.is_locked, VaultError::VaultLocked);
         require!(lamports > 0, VaultError::ZeroAmount);
-        require!(lamports <= vault.balance_lamports, VaultError::InsufficientBalance);
+        require!(
+            lamports <= vault.balance_lamports,
+            VaultError::InsufficientBalance
+        );
 
-        vault.balance_lamports -= lamports;
-        vault.total_traded += lamports;
+        // Transfer SOL from vault PDA to destination via CPI with signer seeds
+        let owner_key = vault.owner;
+        system_program::transfer(
+            CpiContext::new_with_signer(
+                ctx.accounts.system_program.to_account_info(),
+                system_program::Transfer {
+                    from: ctx.accounts.vault_sol.to_account_info(),
+                    to: ctx.accounts.destination.to_account_info(),
+                },
+                &[&[
+                    b"vault_sol",
+                    owner_key.as_ref(),
+                    &[ctx.bumps.vault_sol],
+                ]],
+            ),
+            lamports,
+        )?;
+
+        vault.balance_lamports = vault
+            .balance_lamports
+            .checked_sub(lamports)
+            .ok_or(VaultError::Overflow)?;
+        vault.total_traded = vault
+            .total_traded
+            .checked_add(lamports)
+            .ok_or(VaultError::Overflow)?;
 
         emit!(AgentTrade {
             owner: vault.owner,
@@ -143,9 +193,12 @@ pub mod escrow_vault {
         )?;
 
         let vault = &mut ctx.accounts.vault;
-        vault.balance_lamports += lamports;
+        vault.balance_lamports = vault
+            .balance_lamports
+            .checked_add(lamports)
+            .ok_or(VaultError::Overflow)?;
 
-        emit!(AgentReturn_ {
+        emit!(AgentReturnEvent {
             owner: vault.owner,
             amount: lamports,
             new_balance: vault.balance_lamports,
@@ -176,7 +229,8 @@ pub struct CreateVault<'info> {
     #[account(mut)]
     pub owner: Signer<'info>,
 
-    /// CHECK: Platform agent
+    /// CHECK: Platform agent public key — stored as-is for delegation.
+    /// Validated only by the owner who chooses to trust this key.
     pub agent: UncheckedAccount<'info>,
 
     #[account(
@@ -188,6 +242,8 @@ pub struct CreateVault<'info> {
     )]
     pub vault: Account<'info, Vault>,
 
+    /// CHECK: SOL vault PDA — validated via seeds. Receives/holds deposited SOL.
+    /// System-owned PDA; transfers use invoke_signed.
     #[account(
         mut,
         seeds = [b"vault_sol", owner.key().as_ref()],
@@ -211,6 +267,7 @@ pub struct Deposit<'info> {
     )]
     pub vault: Account<'info, Vault>,
 
+    /// CHECK: SOL vault PDA — validated via seeds
     #[account(
         mut,
         seeds = [b"vault_sol", owner.key().as_ref()],
@@ -234,6 +291,7 @@ pub struct Withdraw<'info> {
     )]
     pub vault: Account<'info, Vault>,
 
+    /// CHECK: SOL vault PDA — validated via seeds. SOL transferred out via CPI.
     #[account(
         mut,
         seeds = [b"vault_sol", owner.key().as_ref()],
@@ -246,6 +304,7 @@ pub struct Withdraw<'info> {
 
 #[derive(Accounts)]
 pub struct AgentSpend<'info> {
+    #[account(mut)]
     pub agent: Signer<'info>,
 
     #[account(
@@ -255,6 +314,21 @@ pub struct AgentSpend<'info> {
         constraint = vault.agent == agent.key() @ VaultError::Unauthorized
     )]
     pub vault: Account<'info, Vault>,
+
+    /// CHECK: SOL vault PDA — validated via seeds. SOL transferred out via CPI.
+    #[account(
+        mut,
+        seeds = [b"vault_sol", vault.owner.as_ref()],
+        bump
+    )]
+    pub vault_sol: SystemAccount<'info>,
+
+    /// CHECK: Destination for trade SOL (e.g., DEX program, swap account).
+    /// The agent is trusted to specify the correct destination.
+    #[account(mut)]
+    pub destination: UncheckedAccount<'info>,
+
+    pub system_program: Program<'info, System>,
 }
 
 #[derive(Accounts)]
@@ -270,6 +344,7 @@ pub struct AgentReturn<'info> {
     )]
     pub vault: Account<'info, Vault>,
 
+    /// CHECK: SOL vault PDA — validated via seeds
     #[account(
         mut,
         seeds = [b"vault_sol", vault.owner.as_ref()],
@@ -354,7 +429,7 @@ pub struct AgentTrade {
 }
 
 #[event]
-pub struct AgentReturn_ {
+pub struct AgentReturnEvent {
     pub owner: Pubkey,
     pub amount: u64,
     pub new_balance: u64,
@@ -378,4 +453,6 @@ pub enum VaultError {
     VaultLocked,
     #[msg("Vault has non-zero balance — withdraw first")]
     NonZeroBalance,
+    #[msg("Arithmetic overflow")]
+    Overflow,
 }

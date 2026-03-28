@@ -5,6 +5,7 @@ declare_id!("ENz5v4ZMSNdDEYd8DKHonwAPbtb8KV6GX7w5JAeazyqz");
 
 /// Fee Collection Program — collects platform fees on swaps
 /// with configurable fee rates and referral revenue splits.
+/// Uses a two-step admin transfer pattern to prevent lockout.
 #[program]
 pub mod fee_collector {
     use super::*;
@@ -21,6 +22,7 @@ pub mod fee_collector {
 
         let config = &mut ctx.accounts.fee_config;
         config.admin = ctx.accounts.admin.key();
+        config.pending_admin = Pubkey::default();
         config.treasury = ctx.accounts.treasury.key();
         config.fee_bps = fee_bps;
         config.referral_bps = referral_bps;
@@ -40,26 +42,30 @@ pub mod fee_collector {
         trade_lamports: u64,
     ) -> Result<()> {
         let config = &mut ctx.accounts.fee_config;
+
         let fee_amount = (trade_lamports as u128)
             .checked_mul(config.fee_bps as u128)
-            .unwrap()
+            .ok_or(FeeError::ArithmeticError)?
             .checked_div(10_000)
-            .unwrap() as u64;
+            .ok_or(FeeError::ArithmeticError)? as u64;
 
         require!(fee_amount > 0, FeeError::ZeroFee);
 
-        // Calculate referral split
+        // Calculate referral split (capped at fee_amount to prevent underflow)
         let referral_amount = if ctx.accounts.referrer.is_some() {
-            (trade_lamports as u128)
+            let raw = (trade_lamports as u128)
                 .checked_mul(config.referral_bps as u128)
-                .unwrap()
+                .ok_or(FeeError::ArithmeticError)?
                 .checked_div(10_000)
-                .unwrap() as u64
+                .ok_or(FeeError::ArithmeticError)? as u64;
+            std::cmp::min(raw, fee_amount)
         } else {
             0
         };
 
-        let treasury_amount = fee_amount - referral_amount;
+        let treasury_amount = fee_amount
+            .checked_sub(referral_amount)
+            .ok_or(FeeError::ArithmeticError)?;
 
         // Transfer to treasury
         system_program::transfer(
@@ -86,12 +92,21 @@ pub mod fee_collector {
                     ),
                     referral_amount,
                 )?;
-                config.total_referral_paid_lamports += referral_amount;
+                config.total_referral_paid_lamports = config
+                    .total_referral_paid_lamports
+                    .checked_add(referral_amount)
+                    .ok_or(FeeError::ArithmeticError)?;
             }
         }
 
-        config.total_collected_lamports += fee_amount;
-        config.total_transactions += 1;
+        config.total_collected_lamports = config
+            .total_collected_lamports
+            .checked_add(fee_amount)
+            .ok_or(FeeError::ArithmeticError)?;
+        config.total_transactions = config
+            .total_transactions
+            .checked_add(1)
+            .ok_or(FeeError::ArithmeticError)?;
 
         emit!(FeeCollected {
             payer: ctx.accounts.payer.key(),
@@ -120,10 +135,37 @@ pub mod fee_collector {
         Ok(())
     }
 
-    /// Transfer admin to a new wallet.
-    pub fn transfer_admin(ctx: Context<AdminAction>, new_admin: Pubkey) -> Result<()> {
+    /// Propose a new admin. The pending admin must call `accept_admin` to finalize.
+    /// Two-step pattern prevents accidental lockout from single-step transfers.
+    pub fn propose_admin(ctx: Context<AdminAction>, new_admin: Pubkey) -> Result<()> {
         let config = &mut ctx.accounts.fee_config;
-        config.admin = new_admin;
+        config.pending_admin = new_admin;
+
+        emit!(AdminProposed {
+            current_admin: config.admin,
+            proposed_admin: new_admin,
+        });
+
+        Ok(())
+    }
+
+    /// Accept the admin role. Only the pending admin can call this.
+    pub fn accept_admin(ctx: Context<AcceptAdmin>) -> Result<()> {
+        let config = &mut ctx.accounts.fee_config;
+        require!(
+            config.pending_admin != Pubkey::default(),
+            FeeError::NoPendingAdmin
+        );
+
+        let old_admin = config.admin;
+        config.admin = config.pending_admin;
+        config.pending_admin = Pubkey::default();
+
+        emit!(AdminTransferred {
+            old_admin,
+            new_admin: config.admin,
+        });
+
         Ok(())
     }
 }
@@ -135,7 +177,8 @@ pub struct Initialize<'info> {
     #[account(mut)]
     pub admin: Signer<'info>,
 
-    /// CHECK: Treasury wallet to receive fees
+    /// CHECK: Treasury wallet to receive fees — stored as-is.
+    /// Admin is trusted to provide the correct treasury address.
     pub treasury: UncheckedAccount<'info>,
 
     #[account(
@@ -155,11 +198,11 @@ pub struct CollectFee<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,
 
-    /// CHECK: Treasury wallet
+    /// CHECK: Treasury wallet — validated via fee_config constraint
     #[account(mut)]
     pub treasury: UncheckedAccount<'info>,
 
-    /// CHECK: Optional referrer
+    /// CHECK: Optional referrer — receives referral_bps share of fees
     #[account(mut)]
     pub referrer: Option<UncheckedAccount<'info>>,
 
@@ -187,11 +230,25 @@ pub struct AdminAction<'info> {
     pub fee_config: Account<'info, FeeConfig>,
 }
 
+#[derive(Accounts)]
+pub struct AcceptAdmin<'info> {
+    pub new_admin: Signer<'info>,
+
+    #[account(
+        mut,
+        seeds = [b"fee_config"],
+        bump = fee_config.bump,
+        constraint = fee_config.pending_admin == new_admin.key() @ FeeError::Unauthorized
+    )]
+    pub fee_config: Account<'info, FeeConfig>,
+}
+
 // ═══════════ State ═══════════
 
 #[account]
 pub struct FeeConfig {
     pub admin: Pubkey,                      // 32
+    pub pending_admin: Pubkey,              // 32  (Pubkey::default() = none)
     pub treasury: Pubkey,                   // 32
     pub fee_bps: u16,                       // 2
     pub referral_bps: u16,                  // 2
@@ -202,7 +259,8 @@ pub struct FeeConfig {
 }
 
 impl FeeConfig {
-    pub const LEN: usize = 8 + 32 + 32 + 2 + 2 + 8 + 8 + 8 + 1;
+    // 8 (discriminator) + 32 + 32 + 32 + 2 + 2 + 8 + 8 + 8 + 1 = 133
+    pub const LEN: usize = 8 + 32 + 32 + 32 + 2 + 2 + 8 + 8 + 8 + 1;
 }
 
 // ═══════════ Events ═══════════
@@ -214,6 +272,18 @@ pub struct FeeCollected {
     pub fee_amount: u64,
     pub referral_amount: u64,
     pub treasury_amount: u64,
+}
+
+#[event]
+pub struct AdminProposed {
+    pub current_admin: Pubkey,
+    pub proposed_admin: Pubkey,
+}
+
+#[event]
+pub struct AdminTransferred {
+    pub old_admin: Pubkey,
+    pub new_admin: Pubkey,
 }
 
 // ═══════════ Errors ═══════════
@@ -230,4 +300,8 @@ pub enum FeeError {
     ZeroFee,
     #[msg("Invalid treasury")]
     InvalidTreasury,
+    #[msg("Arithmetic error")]
+    ArithmeticError,
+    #[msg("No pending admin — propose one first")]
+    NoPendingAdmin,
 }

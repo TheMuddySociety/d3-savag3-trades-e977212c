@@ -8,6 +8,12 @@ declare_id!("7fLkmNRYhUmqyXAyeVqVyg2QhanSxXPsGRBwUsrjxgxp");
 pub mod beach_delegator {
     use super::*;
 
+    /// Seconds in one day for daily cap reset.
+    const SECONDS_PER_DAY: i64 = 86_400;
+
+    /// Maximum number of strategies allowed per session.
+    const MAX_STRATEGIES: usize = 10;
+
     /// Initialize a new delegation session.
     /// The user authorizes the platform agent to trade on their behalf
     /// within configurable spending limits.
@@ -17,18 +23,24 @@ pub mod beach_delegator {
         daily_cap_lamports: u64,
         strategies: Vec<u8>,
     ) -> Result<()> {
+        require!(
+            strategies.len() <= MAX_STRATEGIES,
+            DelegatorError::TooManyStrategies
+        );
+
+        let now = Clock::get()?;
         let session = &mut ctx.accounts.delegation_session;
         session.owner = ctx.accounts.owner.key();
         session.agent = ctx.accounts.agent.key();
         session.max_trade_lamports = max_trade_lamports;
         session.daily_cap_lamports = daily_cap_lamports;
         session.daily_spent_lamports = 0;
-        session.last_reset_slot = Clock::get()?.slot;
+        session.last_reset_timestamp = now.unix_timestamp;
         session.strategies = strategies;
         session.is_active = true;
         session.total_trades = 0;
         session.total_pnl_lamports = 0;
-        session.created_at = Clock::get()?.unix_timestamp;
+        session.created_at = now.unix_timestamp;
         session.bump = ctx.bumps.delegation_session;
 
         emit!(DelegationCreated {
@@ -58,6 +70,10 @@ pub mod beach_delegator {
             session.daily_cap_lamports = cap;
         }
         if let Some(strats) = strategies {
+            require!(
+                strats.len() <= MAX_STRATEGIES,
+                DelegatorError::TooManyStrategies
+            );
             session.strategies = strats;
         }
 
@@ -86,15 +102,23 @@ pub mod beach_delegator {
             DelegatorError::ExceedsTradeLimit
         );
 
-        // Reset daily counter if needed (~1 day of slots = 216,000 at 400ms)
-        let current_slot = Clock::get()?.slot;
-        if current_slot - session.last_reset_slot > 216_000 {
+        // Reset daily counter if a full day has elapsed (unix_timestamp based)
+        let current_ts = Clock::get()?.unix_timestamp;
+        let elapsed = current_ts
+            .checked_sub(session.last_reset_timestamp)
+            .unwrap_or(0);
+        if elapsed >= SECONDS_PER_DAY {
             session.daily_spent_lamports = 0;
-            session.last_reset_slot = current_slot;
+            session.last_reset_timestamp = current_ts;
         }
 
+        // Check daily cap with overflow-safe addition
+        let projected_spend = session
+            .daily_spent_lamports
+            .checked_add(trade_lamports)
+            .ok_or(DelegatorError::Overflow)?;
         require!(
-            session.daily_spent_lamports + trade_lamports <= session.daily_cap_lamports,
+            projected_spend <= session.daily_cap_lamports,
             DelegatorError::ExceedsDailyCap
         );
 
@@ -104,9 +128,15 @@ pub mod beach_delegator {
             DelegatorError::StrategyNotEnabled
         );
 
-        session.daily_spent_lamports += trade_lamports;
-        session.total_trades += 1;
-        session.total_pnl_lamports += pnl_lamports;
+        session.daily_spent_lamports = projected_spend;
+        session.total_trades = session
+            .total_trades
+            .checked_add(1)
+            .ok_or(DelegatorError::Overflow)?;
+        session.total_pnl_lamports = session
+            .total_pnl_lamports
+            .checked_add(pnl_lamports)
+            .ok_or(DelegatorError::Overflow)?;
 
         emit!(TradeRecorded {
             owner: session.owner,
@@ -147,7 +177,8 @@ pub struct InitializeDelegation<'info> {
     #[account(mut)]
     pub owner: Signer<'info>,
 
-    /// CHECK: The platform agent public key
+    /// CHECK: The platform agent public key — stored for delegation authorization.
+    /// Validated only by the owner who chooses to trust this key.
     pub agent: UncheckedAccount<'info>,
 
     #[account(
@@ -222,18 +253,18 @@ pub struct CloseSession<'info> {
 
 #[account]
 pub struct DelegationSession {
-    pub owner: Pubkey,                // 32
-    pub agent: Pubkey,                // 32
-    pub max_trade_lamports: u64,      // 8
-    pub daily_cap_lamports: u64,      // 8
-    pub daily_spent_lamports: u64,    // 8
-    pub last_reset_slot: u64,         // 8
-    pub total_trades: u64,            // 8
-    pub total_pnl_lamports: i64,      // 8
-    pub created_at: i64,              // 8
-    pub is_active: bool,              // 1
-    pub bump: u8,                     // 1
-    pub strategies: Vec<u8>,          // 4 + max 10
+    pub owner: Pubkey,                    // 32
+    pub agent: Pubkey,                    // 32
+    pub max_trade_lamports: u64,          // 8
+    pub daily_cap_lamports: u64,          // 8
+    pub daily_spent_lamports: u64,        // 8
+    pub last_reset_timestamp: i64,        // 8  (was last_reset_slot)
+    pub total_trades: u64,                // 8
+    pub total_pnl_lamports: i64,          // 8
+    pub created_at: i64,                  // 8
+    pub is_active: bool,                  // 1
+    pub bump: u8,                         // 1
+    pub strategies: Vec<u8>,              // 4 + max 10
 }
 
 impl DelegationSession {
@@ -289,4 +320,8 @@ pub enum DelegatorError {
     StrategyNotEnabled,
     #[msg("Session is still active — deactivate first")]
     SessionStillActive,
+    #[msg("Too many strategies (max 10)")]
+    TooManyStrategies,
+    #[msg("Arithmetic overflow")]
+    Overflow,
 }
