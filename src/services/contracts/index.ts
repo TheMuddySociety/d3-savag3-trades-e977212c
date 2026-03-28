@@ -16,7 +16,7 @@ export {
   findFeeConfigPDA,
   createCollectFeeInstruction,
   calculateFee,
-  calculateReferralSplit,
+  
 } from './feeCollector';
 
 export {
