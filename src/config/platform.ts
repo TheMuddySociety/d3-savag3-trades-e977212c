@@ -5,8 +5,7 @@
 function getDefaultRpcUrl(): string {
   // 1. Check for environment variable (Vite or Deno)
   const envUrl = (typeof process !== 'undefined' && process.env?.CUSTOM_SOLANA_RPC_URL) || 
-                 (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_CUSTOM_SOLANA_RPC_URL) ||
-                 (typeof Deno !== 'undefined' && Deno.env.get("CUSTOM_SOLANA_RPC_URL"));
+                 (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_CUSTOM_SOLANA_RPC_URL);
   
   if (envUrl) return envUrl;
 
@@ -43,8 +42,7 @@ export const PLATFORM_CONFIG = {
    */
   get JUPITER_V6_API_URL() {
     const envUrl = (typeof process !== 'undefined' && process.env?.CUSTOM_JUPITER_RPC_URL) || 
-                   (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_CUSTOM_JUPITER_RPC_URL) ||
-                   (typeof Deno !== 'undefined' && Deno.env.get("CUSTOM_JUPITER_RPC_URL"));
+                   (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_CUSTOM_JUPITER_RPC_URL);
     return envUrl || "https://quote-api.jup.ag/v6";
   },
 
@@ -53,8 +51,7 @@ export const PLATFORM_CONFIG = {
    */
   get JUPITER_V2_API_URL() {
     const envUrl = (typeof process !== 'undefined' && process.env?.CUSTOM_JUPITER_SWAP_URL) || 
-                   (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_CUSTOM_JUPITER_SWAP_URL) ||
-                   (typeof Deno !== 'undefined' && Deno.env.get("CUSTOM_JUPITER_SWAP_URL"));
+                   (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_CUSTOM_JUPITER_SWAP_URL);
     return envUrl || "https://api.jup.ag/swap/v2";
   },
 
@@ -63,8 +60,7 @@ export const PLATFORM_CONFIG = {
    */
   get JUPITER_ULTRA_API_URL() {
     const envUrl = (typeof process !== 'undefined' && process.env?.CUSTOM_JUPITER_ULTRA_URL) || 
-                   (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_CUSTOM_JUPITER_ULTRA_URL) ||
-                   (typeof Deno !== 'undefined' && Deno.env.get("CUSTOM_JUPITER_ULTRA_URL"));
+                   (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_CUSTOM_JUPITER_ULTRA_URL);
     return envUrl || "https://api.jup.ag/ultra/v1";
   },
 
