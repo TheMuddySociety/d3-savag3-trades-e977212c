@@ -84,13 +84,7 @@ serve(async (req: Request) => {
         data_source: BIRDEYE_API_KEY ? "birdeye" : "fallback",
       };
 
-      const resultJson = JSON.stringify(result);
-
-      if (redis) {
-        await redis.set(cacheKey, resultJson, { ex: cacheTTL });
-      }
-
-      return new Response(resultJson, { headers: corsHeaders });
+      return new Response(JSON.stringify(result), { headers: corsHeaders });
     }
 
     // ====================== LEGACY ACTIONS (Backward Compatibility) ======================
