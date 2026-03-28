@@ -6,7 +6,7 @@ export {
   STRATEGY_IDS,
   findDelegationSessionPDA,
   createInitializeDelegationInstruction,
-  createDeactivateInstruction,
+  
   createRecordTradeInstruction,
   solToLamports,
 } from './beachDelegator';
@@ -16,7 +16,7 @@ export {
   findFeeConfigPDA,
   createCollectFeeInstruction,
   calculateFee,
-  calculateReferralSplit,
+  
 } from './feeCollector';
 
 export {
@@ -38,7 +38,7 @@ export {
   createSellInstruction,
   estimateTokensOut,
   estimateSolOut,
-  currentPriceLamports,
+  
 } from './tokenLauncher';
 
 export type { DelegationSessionData } from './beachDelegator';
