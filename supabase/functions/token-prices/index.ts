@@ -352,7 +352,10 @@ serve(async (req: Request) => {
 // ====================== HELPERS (same as before) ======================
 
 async function fetchBirdeyeOHLCV(mint: string, interval: string = "5m") {
-  if (!BIRDEYE_API_KEY) throw new Error("Birdeye API key not set");
+  if (!BIRDEYE_API_KEY) {
+    console.warn("[Birdeye] No API key set – using Jupiter fallback");
+    return await fetchJupiterOHLCVFallback(mint);
+  }
 
   // Normalize interval to Birdeye-accepted values (lowercase, valid periods)
   const VALID_INTERVALS: Record<string, string> = {
