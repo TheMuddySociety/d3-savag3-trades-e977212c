@@ -24,18 +24,19 @@ export function createSolanaClient(options: SolanaClientOptions): SolanaClient {
   const getEndpoint = (moniker: string): string => {
     switch (moniker) {
       case 'mainnet':
-        return 'https://api.mainnet-beta.solana.com';
+      case 'mainnet-beta': {
+        const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || "";
+        return `${SUPABASE_URL}/functions/v1/rpc-proxy`;
+      }
       case 'devnet':
         return 'https://api.devnet.solana.com';
       case 'testnet':
         return 'https://api.testnet.solana.com';
       default:
-        // If not a known moniker, treat as a direct URL
         return moniker;
     }
   };
   
-  // Get the HTTP endpoint
   const endpoint = getEndpoint(urlOrMoniker);
   
   // Create WebSocket endpoint logic
@@ -43,15 +44,13 @@ export function createSolanaClient(options: SolanaClientOptions): SolanaClient {
   if (wsEndpointOverride) {
     wsEndpoint = wsEndpointOverride;
   } else {
-    // If it's a known cluster URL, use standard ws paths
-    if (endpoint === 'https://api.mainnet-beta.solana.com') {
+    if (endpoint.includes('rpc-proxy') || endpoint.includes('mainnet-beta')) {
       wsEndpoint = 'wss://api.mainnet-beta.solana.com';
-    } else if (endpoint === 'https://api.devnet.solana.com') {
+    } else if (endpoint.includes('devnet')) {
       wsEndpoint = 'wss://api.devnet.solana.com';
-    } else if (endpoint === 'https://api.testnet.solana.com') {
+    } else if (endpoint.includes('testnet')) {
       wsEndpoint = 'wss://api.testnet.solana.com';
     } else {
-      // Fallback: replace http with ws in the provided endpoint
       wsEndpoint = endpoint.replace('https://', 'wss://').replace('http://', 'ws://');
     }
   }
