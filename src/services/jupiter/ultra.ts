@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { JupiterV6Service, jupiterV6Service } from './v6';
 import { JupiterV2Service } from './v2';
+import { getCustomApiSettings } from '@/utils/getCustomApiSettings';
 
 export interface UltraOrderResponse {
   inputMint: string;
@@ -57,12 +58,13 @@ export class JupiterUltraService {
     outputMint: string,
     amount: string,
     taker: string,
-    swapMode: 'ExactIn' | 'ExactOut' = 'ExactIn'
+    swapMode: 'ExactIn' | 'ExactOut' = 'ExactIn',
+    jitoTipLamports?: number
   ): Promise<UltraOrderResponse | null> {
     try {
       console.log('Fetching Jupiter Ultra order via proxy...');
       const { data, error } = await supabase.functions.invoke('jupiter-ultra', {
-        body: { action: 'order', inputMint, outputMint, amount, taker, swapMode },
+        body: { action: 'order', inputMint, outputMint, amount, taker, swapMode, jitoTipLamports },
       });
 
       if (error) throw new Error(error.message);
@@ -137,9 +139,11 @@ export class JupiterUltraService {
       }
 
       const taker = wallet.publicKey.toString();
+      const settings = getCustomApiSettings();
+      const jitoTipLamports = settings.jitoEnabled ? Math.floor(settings.jitoTipSOL * 1e9) : undefined;
 
       // 1. Get order via proxy (uses skipUserAccountsRpcCalls for stability)
-      const order = await this.getOrder(inputMint, outputMint, amount, taker, swapMode);
+      const order = await this.getOrder(inputMint, outputMint, amount, taker, swapMode, jitoTipLamports);
       if (!order) return null;
 
       if ((order as any).errorCode || (order as any).error) {

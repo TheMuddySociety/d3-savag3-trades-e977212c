@@ -15,6 +15,9 @@ export interface TradingSettings {
   slippage: number;         // percent (e.g. 0.5 = 0.5%)
   priorityFee: number;      // SOL (e.g. 0.0005)
   mevProtection: boolean;
+  jitoEnabled: boolean;
+  jitoTipSOL: number;
+  jitoBlockEngine: string;
   autoApprove: boolean;
   jupiterApiKey?: string;
   useCustomJupiter?: boolean;
@@ -45,6 +48,9 @@ const DEFAULT_TRADING_SETTINGS: TradingSettings = {
   slippage: 1.0,
   priorityFee: 0.001,
   mevProtection: true,
+  jitoEnabled: true,
+  jitoTipSOL: 0.001,
+  jitoBlockEngine: "mainnet.block-engine.jito.wtf",
   autoApprove: false,
   useCustomJupiter: false,
 };
@@ -60,6 +66,9 @@ export function getCustomApiSettings(): TradingSettings {
         slippage: parsed.slippage ?? DEFAULT_TRADING_SETTINGS.slippage,
         priorityFee: parsed.priorityFee ?? DEFAULT_TRADING_SETTINGS.priorityFee,
         mevProtection: parsed.mevProtection !== false,
+        jitoEnabled: parsed.jitoEnabled !== false,
+        jitoTipSOL: parsed.jitoTipSOL ?? DEFAULT_TRADING_SETTINGS.jitoTipSOL,
+        jitoBlockEngine: parsed.jitoBlockEngine || DEFAULT_TRADING_SETTINGS.jitoBlockEngine,
         autoApprove: !!parsed.autoApprove,
         jupiterApiKey: parsed.jupiterApiKey,
         useCustomJupiter: !!parsed.useCustomJupiter,
@@ -109,13 +118,19 @@ export function buildJupiterSwapConfig(
 
   let prioritizationFeeLamports: JupiterSwapConfig["prioritizationFeeLamports"];
 
-  if (merged.mevProtection) {
-    // Jito MEV protection mode — preferred for sniping/copy trading
+  if (merged.jitoEnabled) {
+    // Specialized Jito MEV tip
+    const jitoTipLamports = Math.floor(merged.jitoTipSOL * 1e9);
     prioritizationFeeLamports = {
-      jitoTipLamports: feeLamports || 10_000, // Fallback: 0.00001 SOL
+      jitoTipLamports: jitoTipLamports || 1_000_000, // Default 0.001 SOL if 0
+    };
+  } else if (merged.mevProtection) {
+    // Legacy MEV protection using regular priority fee as tip
+    prioritizationFeeLamports = {
+      jitoTipLamports: feeLamports || 10_000,
     };
   } else {
-    // Regular priority fee mode — better for DCA/volume (saves cost)
+    // Regular priority fee mode
     prioritizationFeeLamports = feeLamports || "auto";
   }
 

@@ -58,7 +58,7 @@ serve(async (req: Request) => {
     const customSolanaRpc = getEnv("CUSTOM_SOLANA_RPC_URL");
 
     if (action === "order") {
-      const { inputMint, outputMint, amount, taker, swapMode, slippageBps = 300 } = body;
+      const { inputMint, outputMint, amount, taker, swapMode, slippageBps = 300, jitoTipLamports } = body;
       if (!inputMint || !outputMint || !amount || !taker) {
         return new Response(JSON.stringify({ error: "Missing required params" }), {
           status: 400,
@@ -77,6 +77,10 @@ serve(async (req: Request) => {
         skipUserAccountsRpcCalls: "true", // Reduce simulation RPC dependency
         dynamicComputeUnitLimit: "true",  // Use server-side CU estimation
       });
+
+      if (jitoTipLamports) {
+        queryParams.append("jitoTipLamports", String(jitoTipLamports));
+      }
 
       const url = `${SWAP_API_BASE}/order?${queryParams.toString()}`;
       

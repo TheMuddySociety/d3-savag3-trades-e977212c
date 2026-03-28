@@ -68,7 +68,8 @@ export class JupiterV2Service {
     amount: string,
     taker: string,
     slippageBps: number = 300,
-    swapMode: 'ExactIn' | 'ExactOut' = 'ExactIn'
+    swapMode: 'ExactIn' | 'ExactOut' = 'ExactIn',
+    jitoTipLamports?: number
   ): Promise<SwapOrderResponse | null> {
     try {
       const settings = getCustomApiSettings();
@@ -84,6 +85,9 @@ export class JupiterV2Service {
           swapMode,
           slippageBps: String(slippageBps),
         });
+        if (jitoTipLamports) {
+          queryParams.append("jitoTipLamports", String(jitoTipLamports));
+        }
         const res = await fetch(`${PLATFORM_CONFIG.JUPITER_V2_API_URL}/order?${queryParams.toString()}`, {
           headers: this.getHeaders(),
         });
@@ -92,7 +96,7 @@ export class JupiterV2Service {
       } else {
         console.log('[JupiterV2] Fetching Swap V2 order via proxy...');
         const { data, error } = await supabase.functions.invoke('jupiter-ultra', {
-          body: { action: 'order', inputMint, outputMint, amount, taker, swapMode, slippageBps },
+          body: { action: 'order', inputMint, outputMint, amount, taker, swapMode, slippageBps, jitoTipLamports },
         });
         if (error) throw new Error(error.message);
         if (!data?.success) throw new Error(data?.error || 'Order failed');
@@ -160,9 +164,11 @@ export class JupiterV2Service {
       }
 
       const taker = wallet.publicKey.toString();
+      const settings = getCustomApiSettings();
+      const jitoTipLamports = settings.jitoEnabled ? Math.floor(settings.jitoTipSOL * 1e9) : undefined;
 
       // 1. Get Order
-      const order = await this.getOrder(inputMint, outputMint, amount, taker, slippageBps, swapMode);
+      const order = await this.getOrder(inputMint, outputMint, amount, taker, slippageBps, swapMode, jitoTipLamports);
       if (!order || !order.transaction) return null;
 
       // 2. Sign

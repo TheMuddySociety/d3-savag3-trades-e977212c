@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Settings, Shield, Zap, Info, Globe, Key, Eye, EyeOff, Server, CheckCircle, XCircle, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -27,6 +28,9 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
   const [slippage, setSlippage] = useState(1.0);
   const [priorityFee, setPriorityFee] = useState(0.001);
   const [mevProtection, setMevProtection] = useState(true);
+  const [jitoEnabled, setJitoEnabled] = useState(true);
+  const [jitoTipSOL, setJitoTipSOL] = useState(0.001);
+  const [jitoBlockEngine, setJitoBlockEngine] = useState("mainnet.block-engine.jito.wtf");
   const [autoApprove, setAutoApprove] = useState(false);
 
   // ── API / RPC Settings ──
@@ -51,6 +55,9 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
         setSlippage(parsed.slippage || 1.0);
         setPriorityFee(parsed.priorityFee || 0.001);
         setMevProtection(parsed.mevProtection !== false);
+        setJitoEnabled(parsed.jitoEnabled !== false);
+        setJitoTipSOL(parsed.jitoTipSOL || 0.001);
+        setJitoBlockEngine(parsed.jitoBlockEngine || "mainnet.block-engine.jito.wtf");
         setAutoApprove(!!parsed.autoApprove);
         
         // Load API settings from the same merged key
@@ -84,6 +91,9 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
       slippage, 
       priorityFee, 
       mevProtection, 
+      jitoEnabled,
+      jitoTipSOL,
+      jitoBlockEngine,
       autoApprove,
       customRpc: customRpc.trim(),
       heliusApiKey: heliusApiKey.trim(),
@@ -185,20 +195,56 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
               />
             </div>
 
-            {/* MEV Protection */}
+            {/* Jito Bundle Support */}
             <div className="flex items-center justify-between p-3 rounded-lg bg-primary/5 border border-primary/10">
               <div className="space-y-0.5">
                 <Label className="text-sm font-medium flex items-center gap-1.5">
                   <Shield className="h-3.5 w-3.5 text-solana" />
-                  Anti-MEV (Jito)
+                  Jito MEV Bundles
                 </Label>
-                <p className="text-[10px] text-muted-foreground">Protects against sandwich attacks</p>
+                <p className="text-[10px] text-muted-foreground">Submit via block-engine for 0% sandwich risk</p>
               </div>
               <Switch
-                checked={mevProtection}
-                onCheckedChange={setMevProtection}
+                checked={jitoEnabled}
+                onCheckedChange={setJitoEnabled}
               />
             </div>
+
+            {jitoEnabled && (
+              <div className="grid gap-3 p-3 rounded-lg border border-primary/10 bg-primary/5">
+                <div className="grid gap-2">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs font-semibold">Jito Tip (SOL)</Label>
+                    <span className="text-xs font-mono text-primary">{jitoTipSOL} SOL</span>
+                  </div>
+                  <Input 
+                    type="number" 
+                    step="0.001" 
+                    min="0.0001"
+                    value={jitoTipSOL}
+                    onChange={(e) => setJitoTipSOL(parseFloat(e.target.value))}
+                    className="h-8 text-xs bg-background/50"
+                  />
+                  <p className="text-[9px] text-muted-foreground">Miner tip to guarantee inclusion in the next block.</p>
+                </div>
+
+                <div className="grid gap-2">
+                  <Label className="text-xs font-semibold">Block Engine</Label>
+                  <Select value={jitoBlockEngine} onValueChange={setJitoBlockEngine}>
+                    <SelectTrigger className="h-8 text-xs bg-background/50">
+                      <SelectValue placeholder="Select Engine" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="mainnet.block-engine.jito.wtf">Global (Default)</SelectItem>
+                      <SelectItem value="amsterdam.mainnet.block-engine.jito.wtf">Amsterdam</SelectItem>
+                      <SelectItem value="frankfurt.mainnet.block-engine.jito.wtf">Frankfurt</SelectItem>
+                      <SelectItem value="ny.mainnet.block-engine.jito.wtf">New York</SelectItem>
+                      <SelectItem value="tokyo.mainnet.block-engine.jito.wtf">Tokyo</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            )}
 
             {/* Auto-Approve */}
             <div className="flex items-center justify-between p-3 rounded-lg bg-secondary/20 border border-border">
