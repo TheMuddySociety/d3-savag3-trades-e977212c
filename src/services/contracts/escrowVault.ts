@@ -2,7 +2,8 @@
  * TypeScript client SDK for the Escrow Vault program.
  * Users deposit SOL that the D3S Agent can trade from with on-chain limits.
  */
-import { PublicKey, SystemProgram, TransactionInstruction } from '@solana/web3.js';
+import { PublicKey, SystemProgram, TransactionInstruction, Connection } from '@solana/web3.js';
+import * as borsh from '@coral-xyz/borsh';
 
 export const ESCROW_VAULT_PROGRAM_ID = new PublicKey(
   'H96kQMaLEEXqvbqehBMqV8vdkXZV6A8y7GAzyeZDZYXQ'
@@ -16,14 +17,26 @@ export interface VaultData {
   totalWithdrawn: bigint;
   totalTraded: bigint;
   withdrawalLimitLamports: bigint;
-  cooldownSlots: bigint;
-  lastWithdrawalSlot: bigint;
+  cooldownSeconds: bigint;
+  lastWithdrawalTimestamp: bigint;
   isLocked: boolean;
 }
 
-/**
- * Derive the vault PDA for a given owner.
- */
+const VAULT_SCHEMA = borsh.struct([
+  borsh.array(borsh.u8(), 8, 'discriminator'),
+  borsh.publicKey('owner'),
+  borsh.publicKey('agent'),
+  borsh.u64('balanceLamports'),
+  borsh.u64('totalDeposited'),
+  borsh.u64('totalWithdrawn'),
+  borsh.u64('totalTraded'),
+  borsh.u64('withdrawalLimitLamports'),
+  borsh.u64('cooldownSeconds'),
+  borsh.u64('lastWithdrawalTimestamp'),
+  borsh.bool('isLocked'),
+  borsh.u8('bump'),
+]);
+
 export function findVaultPDA(owner: PublicKey): [PublicKey, number] {
   return PublicKey.findProgramAddressSync(
     [Buffer.from('vault'), owner.toBuffer()],
@@ -31,9 +44,6 @@ export function findVaultPDA(owner: PublicKey): [PublicKey, number] {
   );
 }
 
-/**
- * Derive the SOL vault PDA (holds actual lamports).
- */
 export function findVaultSolPDA(owner: PublicKey): [PublicKey, number] {
   return PublicKey.findProgramAddressSync(
     [Buffer.from('vault_sol'), owner.toBuffer()],
@@ -42,24 +52,41 @@ export function findVaultSolPDA(owner: PublicKey): [PublicKey, number] {
 }
 
 /**
- * Build instruction to create a new vault.
+ * Batch fetch multiple vaults for performance.
  */
+export async function getMultipleVaults(
+  connection: Connection,
+  owners: PublicKey[]
+): Promise<(VaultData | null)[]> {
+  if (owners.length === 0) return [];
+  const pdas = owners.map(o => findVaultPDA(o)[0]);
+  const infos = await connection.getMultipleAccountsInfo(pdas);
+  
+  return infos.map(info => {
+    if (!info) return null;
+    try {
+      return VAULT_SCHEMA.decode(info.data) as VaultData;
+    } catch (e) {
+      console.error('Failed to decode vault account:', e);
+      return null;
+    }
+  });
+}
+
 export function createCreateVaultInstruction(
   owner: PublicKey,
   agent: PublicKey,
-  withdrawalLimitLamports: number,
-  cooldownSlots: number
+  withdrawalLimitLamports: bigint,
+  cooldownSeconds: bigint
 ): TransactionInstruction {
   const [vaultPDA] = findVaultPDA(owner);
   const [vaultSolPDA] = findVaultSolPDA(owner);
 
   const discriminator = Buffer.from([0xc8, 0xea, 0x7e, 0xf0, 0x6a, 0x91, 0xb2, 0xd3]);
   const data = Buffer.alloc(discriminator.length + 8 + 8);
-  let offset = 0;
-
-  discriminator.copy(data, offset); offset += 8;
-  data.writeBigUInt64LE(BigInt(withdrawalLimitLamports), offset); offset += 8;
-  data.writeBigUInt64LE(BigInt(cooldownSlots), offset);
+  discriminator.copy(data, 0);
+  data.writeBigUInt64LE(withdrawalLimitLamports, 8);
+  data.writeBigUInt64LE(cooldownSeconds, 16);
 
   return new TransactionInstruction({
     programId: ESCROW_VAULT_PROGRAM_ID,
@@ -67,29 +94,24 @@ export function createCreateVaultInstruction(
       { pubkey: owner, isSigner: true, isWritable: true },
       { pubkey: agent, isSigner: false, isWritable: false },
       { pubkey: vaultPDA, isSigner: false, isWritable: true },
-      { pubkey: vaultSolPDA, isSigner: false, isWritable: false },
+      { pubkey: vaultSolPDA, isSigner: false, isWritable: true }, // Functional in remediation
       { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
     ],
     data,
   });
 }
 
-/**
- * Build instruction to deposit SOL into the vault.
- */
 export function createDepositInstruction(
   owner: PublicKey,
-  lamports: number
+  lamports: bigint
 ): TransactionInstruction {
   const [vaultPDA] = findVaultPDA(owner);
   const [vaultSolPDA] = findVaultSolPDA(owner);
 
   const discriminator = Buffer.from([0xf8, 0xc6, 0x9e, 0x91, 0xe1, 0x75, 0x87, 0xc8]);
   const data = Buffer.alloc(discriminator.length + 8);
-  let offset = 0;
-
-  discriminator.copy(data, offset); offset += 8;
-  data.writeBigUInt64LE(BigInt(lamports), offset);
+  discriminator.copy(data, 0);
+  data.writeBigUInt64LE(lamports, 8);
 
   return new TransactionInstruction({
     programId: ESCROW_VAULT_PROGRAM_ID,
@@ -103,22 +125,17 @@ export function createDepositInstruction(
   });
 }
 
-/**
- * Build instruction to withdraw SOL from the vault.
- */
 export function createWithdrawInstruction(
   owner: PublicKey,
-  lamports: number
+  lamports: bigint
 ): TransactionInstruction {
   const [vaultPDA] = findVaultPDA(owner);
   const [vaultSolPDA] = findVaultSolPDA(owner);
 
   const discriminator = Buffer.from([0xb7, 0x12, 0x46, 0x9c, 0x94, 0x6d, 0xa1, 0x22]);
   const data = Buffer.alloc(discriminator.length + 8);
-  let offset = 0;
-
-  discriminator.copy(data, offset); offset += 8;
-  data.writeBigUInt64LE(BigInt(lamports), offset);
+  discriminator.copy(data, 0);
+  data.writeBigUInt64LE(lamports, 8);
 
   return new TransactionInstruction({
     programId: ESCROW_VAULT_PROGRAM_ID,
@@ -133,8 +150,35 @@ export function createWithdrawInstruction(
 }
 
 /**
- * Build instruction to toggle vault lock (emergency freeze).
+ * D3S Agent spends SOL from vault to trade.
  */
+export function createAgentSpendInstruction(
+  agent: PublicKey,
+  owner: PublicKey,
+  destination: PublicKey,
+  lamports: bigint
+): TransactionInstruction {
+  const [vaultPDA] = findVaultPDA(owner);
+  const [vaultSolPDA] = findVaultSolPDA(owner);
+
+  const discriminator = Buffer.from([0xb3, 0x8a, 0x2a, 0x7f, 0x6e, 0x0a, 0x3d, 0x01]); // Fixed for remediation
+  const data = Buffer.alloc(discriminator.length + 8);
+  discriminator.copy(data, 0);
+  data.writeBigUInt64LE(lamports, 8);
+
+  return new TransactionInstruction({
+    programId: ESCROW_VAULT_PROGRAM_ID,
+    keys: [
+      { pubkey: agent, isSigner: true, isWritable: true },
+      { pubkey: vaultPDA, isSigner: false, isWritable: true },
+      { pubkey: vaultSolPDA, isSigner: false, isWritable: true },
+      { pubkey: destination, isSigner: false, isWritable: true },
+      { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+    ],
+    data,
+  });
+}
+
 export function createToggleLockInstruction(
   owner: PublicKey,
   locked: boolean

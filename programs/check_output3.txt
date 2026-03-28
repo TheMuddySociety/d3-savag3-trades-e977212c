@@ -1,0 +1,2009 @@
+﻿cargo : warning: unexpected `cfg` 
+condition value: `no-entrypoint`
+At line:1 char:1
++ cargo check 2>&1 | Out-File -FilePath 
+"check_output3.txt" -Encoding u ...
++ ~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified 
+   : (warning: unexpe...`no-entrypoint`:S  
+  tring) [], RemoteException
+    + FullyQualifiedErrorId : NativeComman 
+   dError
+ 
+ --> escrow_vault\src\lib.rs:8:1
+  |
+8 | #[program]
+  | ^^^^^^^^^^
+  |
+  = note: expected values for `feature` 
+are: `default` and `idl-build`
+  = note: using a cfg inside a attribute 
+macro will use the cfgs from the 
+destination crate and not the ones from 
+the defining crate
+  = help: try referring to `program` crate 
+for guidance on how handle this unexpected 
+cfg
+  = help: the attribute macro `program` 
+may come from an old version of the 
+`anchor_attribute_program` crate, try 
+updating your dependency with `cargo 
+update -p anchor_attribute_program`
+  = note: see <https://doc.rust-lang.org/ni
+ghtly/rustc/check-cfg/cargo-specifics.html>
+ for more information about checking 
+conditional configuration
+  = note: `#[warn(unexpected_cfgs)]` on by 
+default
+  = note: this warning originates in the 
+attribute macro `program` (in Nightly 
+builds, run with -Z macro-backtrace for 
+more info)
+
+warning: unexpected `cfg` condition value: 
+`cpi`
+ --> escrow_vault\src\lib.rs:8:1
+  |
+8 | #[program]
+  | ^^^^^^^^^^
+  |
+  = note: expected values for `feature` 
+are: `default` and `idl-build`
+  = note: using a cfg inside a attribute 
+macro will use the cfgs from the 
+destination crate and not the ones from 
+the defining crate
+  = help: try referring to `program` crate 
+for guidance on how handle this unexpected 
+cfg
+  = help: the attribute macro `program` 
+may come from an old version of the 
+`anchor_attribute_program` crate, try 
+updating your dependency with `cargo 
+update -p anchor_attribute_program`
+  = note: see <https://doc.rust-lang.org/ni
+ghtly/rustc/check-cfg/cargo-specifics.html>
+ for more information about checking 
+conditional configuration
+  = note: this warning originates in the 
+attribute macro `program` (in Nightly 
+builds, run with -Z macro-backtrace for 
+more info)
+
+warning: unexpected `cfg` condition value: 
+`custom-heap`
+ --> escrow_vault\src\lib.rs:8:1
+  |
+8 | #[program]
+  | ^^^^^^^^^^
+  |
+  = note: expected values for `feature` 
+are: `default` and `idl-build`
+  = note: using a cfg inside a macro will 
+use the cfgs from the destination crate 
+and not the ones from the defining crate
+  = help: try referring to 
+`$crate::custom_heap_default` crate for 
+guidance on how handle this unexpected cfg
+  = help: the macro 
+`$crate::custom_heap_default` may come 
+from an old version of the 
+`solana_program` crate, try updating your 
+dependency with `cargo update -p 
+solana_program`
+  = note: see <https://doc.rust-lang.org/ni
+ghtly/rustc/check-cfg/cargo-specifics.html>
+ for more information about checking 
+conditional configuration
+  = note: this warning originates in the 
+macro `$crate::custom_heap_default` which 
+comes from the expansion of the attribute 
+macro `program` (in Nightly builds, run 
+with -Z macro-backtrace for more info)
+
+warning: unexpected `cfg` condition value: 
+`solana`
+ --> escrow_vault\src\lib.rs:8:1
+  |
+8 | #[program]
+  | ^^^^^^^^^^
+  |
+  = note: expected values for `target_os` 
+are: `aix`, `amdhsa`, `android`, `cuda`, 
+`cygwin`, `dragonfly`, `emscripten`, 
+`espidf`, `freebsd`, `fuchsia`, `haiku`, 
+`helenos`, `hermit`, `horizon`, `hurd`, 
+`illumos`, `ios`, `l4re`, `linux`, 
+`lynxos178`, `macos`, `managarm`, `motor`, 
+`netbsd`, `none`, `nto`, `nuttx`, 
+`openbsd`, `psp`, `psx`, `qurt`, `redox`, 
+`rtems`, `solaris`, and `solid_asp3` and 
+14 more
+  = note: using a cfg inside a macro will 
+use the cfgs from the destination crate 
+and not the ones from the defining crate
+  = help: try referring to 
+`$crate::custom_heap_default` crate for 
+guidance on how handle this unexpected cfg
+  = help: the macro 
+`$crate::custom_heap_default` may come 
+from an old version of the 
+`solana_program` crate, try updating your 
+dependency with `cargo update -p 
+solana_program`
+  = note: see <https://doc.rust-lang.org/ni
+ghtly/rustc/check-cfg/cargo-specifics.html>
+ for more information about checking 
+conditional configuration
+  = note: this warning originates in the 
+macro `$crate::custom_heap_default` which 
+comes from the expansion of the attribute 
+macro `program` (in Nightly builds, run 
+with -Z macro-backtrace for more info)
+
+warning: unexpected `cfg` condition value: 
+`custom-panic`
+ --> escrow_vault\src\lib.rs:8:1
+  |
+8 | #[program]
+  | ^^^^^^^^^^
+  |
+  = note: expected values for `feature` 
+are: `default` and `idl-build`
+  = note: using a cfg inside a macro will 
+use the cfgs from the destination crate 
+and not the ones from the defining crate
+  = help: try referring to 
+`$crate::custom_panic_default` crate for 
+guidance on how handle this unexpected cfg
+  = help: the macro 
+`$crate::custom_panic_default` may come 
+from an old version of the 
+`solana_program` crate, try updating your 
+dependency with `cargo update -p 
+solana_program`
+  = note: see <https://doc.rust-lang.org/ni
+ghtly/rustc/check-cfg/cargo-specifics.html>
+ for more information about checking 
+conditional configuration
+  = note: this warning originates in the 
+macro `$crate::custom_panic_default` which 
+comes from the expansion of the attribute 
+macro `program` (in Nightly builds, run 
+with -Z macro-backtrace for more info)
+
+warning: unexpected `cfg` condition value: 
+`solana`
+ --> escrow_vault\src\lib.rs:8:1
+  |
+8 | #[program]
+  | ^^^^^^^^^^
+  |
+  = note: expected values for `target_os` 
+are: `aix`, `amdhsa`, `android`, `cuda`, 
+`cygwin`, `dragonfly`, `emscripten`, 
+`espidf`, `freebsd`, `fuchsia`, `haiku`, 
+`helenos`, `hermit`, `horizon`, `hurd`, 
+`illumos`, `ios`, `l4re`, `linux`, 
+`lynxos178`, `macos`, `managarm`, `motor`, 
+`netbsd`, `none`, `nto`, `nuttx`, 
+`openbsd`, `psp`, `psx`, `qurt`, `redox`, 
+`rtems`, `solaris`, and `solid_asp3` and 
+14 more
+  = note: using a cfg inside a macro will 
+use the cfgs from the destination crate 
+and not the ones from the defining crate
+  = help: try referring to 
+`$crate::custom_panic_default` crate for 
+guidance on how handle this unexpected cfg
+  = help: the macro 
+`$crate::custom_panic_default` may come 
+from an old version of the 
+`solana_program` crate, try updating your 
+dependency with `cargo update -p 
+solana_program`
+  = note: see <https://doc.rust-lang.org/ni
+ghtly/rustc/check-cfg/cargo-specifics.html>
+ for more information about checking 
+conditional configuration
+  = note: this warning originates in the 
+macro `$crate::custom_panic_default` which 
+comes from the expansion of the attribute 
+macro `program` (in Nightly builds, run 
+with -Z macro-backtrace for more info)
+
+warning: unexpected `cfg` condition value: 
+`anchor-debug`
+ --> escrow_vault\src\lib.rs:8:1
+  |
+8 | #[program]
+  | ^^^^^^^^^^
+  |
+  = note: expected values for `feature` 
+are: `default` and `idl-build`
+  = note: using a cfg inside a attribute 
+macro will use the cfgs from the 
+destination crate and not the ones from 
+the defining crate
+  = help: try referring to `program` crate 
+for guidance on how handle this unexpected 
+cfg
+  = help: the attribute macro `program` 
+may come from an old version of the 
+`anchor_attribute_program` crate, try 
+updating your dependency with `cargo 
+update -p anchor_attribute_program`
+  = note: see <https://doc.rust-lang.org/ni
+ghtly/rustc/check-cfg/cargo-specifics.html>
+ for more information about checking 
+conditional configuration
+  = note: this warning originates in the 
+attribute macro `program` (in Nightly 
+builds, run with -Z macro-backtrace for 
+more info)
+
+warning: unexpected `cfg` condition value: 
+`no-idl`
+ --> escrow_vault\src\lib.rs:8:1
+  |
+8 | #[program]
+  | ^^^^^^^^^^
+  |
+  = note: expected values for `feature` 
+are: `default` and `idl-build`
+  = note: using a cfg inside a attribute 
+macro will use the cfgs from the 
+destination crate and not the ones from 
+the defining crate
+  = help: try referring to `program` crate 
+for guidance on how handle this unexpected 
+cfg
+  = help: the attribute macro `program` 
+may come from an old version of the 
+`anchor_attribute_program` crate, try 
+updating your dependency with `cargo 
+update -p anchor_attribute_program`
+  = note: see <https://doc.rust-lang.org/ni
+ghtly/rustc/check-cfg/cargo-specifics.html>
+ for more information about checking 
+conditional configuration
+  = note: this warning originates in the 
+attribute macro `program` (in Nightly 
+builds, run with -Z macro-backtrace for 
+more info)
+
+warning: unexpected `cfg` condition value: 
+`anchor-debug`
+ --> escrow_vault\src\lib.rs:8:1
+  |
+8 | #[program]
+  | ^^^^^^^^^^
+  |
+  = note: expected values for `feature` 
+are: `default` and `idl-build`
+  = note: using a cfg inside a derive 
+macro will use the cfgs from the 
+destination crate and not the ones from 
+the defining crate
+  = help: try referring to `Accounts` 
+crate for guidance on how handle this 
+unexpected cfg
+  = help: the derive macro `Accounts` may 
+come from an old version of the 
+`anchor_derive_accounts` crate, try 
+updating your dependency with `cargo 
+update -p anchor_derive_accounts`
+  = note: see <https://doc.rust-lang.org/ni
+ghtly/rustc/check-cfg/cargo-specifics.html>
+ for more information about checking 
+conditional configuration
+  = note: this warning originates in the 
+derive macro `Accounts` (in Nightly 
+builds, run with -Z macro-backtrace for 
+more info)
+
+warning: unexpected `cfg` condition value: 
+`no-log-ix-name`
+ --> escrow_vault\src\lib.rs:8:1
+  |
+8 | #[program]
+  | ^^^^^^^^^^
+  |
+  = note: expected values for `feature` 
+are: `default` and `idl-build`
+  = note: using a cfg inside a attribute 
+macro will use the cfgs from the 
+destination crate and not the ones from 
+the defining crate
+  = help: try referring to `program` crate 
+for guidance on how handle this unexpected 
+cfg
+  = help: the attribute macro `program` 
+may come from an old version of the 
+`anchor_attribute_program` crate, try 
+updating your dependency with `cargo 
+update -p anchor_attribute_program`
+  = note: see <https://doc.rust-lang.org/ni
+ghtly/rustc/check-cfg/cargo-specifics.html>
+ for more information about checking 
+conditional configuration
+  = note: this warning originates in the 
+attribute macro `program` (in Nightly 
+builds, run with -Z macro-backtrace for 
+more info)
+
+warning: unexpected `cfg` condition value: 
+`anchor-debug`
+   --> escrow_vault\src\lib.rs:227:10
+    |
+227 | #[derive(Accounts)]
+    |          ^^^^^^^^
+    |
+    = note: expected values for `feature` 
+are: `default` and `idl-build`
+    = note: using a cfg inside a derive 
+macro will use the cfgs from the 
+destination crate and not the ones from 
+the defining crate
+    = help: try referring to `Accounts` 
+crate for guidance on how handle this 
+unexpected cfg
+    = help: the derive macro `Accounts` 
+may come from an old version of the 
+`anchor_derive_accounts` crate, try 
+updating your dependency with `cargo 
+update -p anchor_derive_accounts`
+    = note: see <https://doc.rust-lang.org/
+nightly/rustc/check-cfg/cargo-specifics.htm
+l> for more information about checking 
+conditional configuration
+    = note: this warning originates in the 
+derive macro `Accounts` (in Nightly 
+builds, run with -Z macro-backtrace for 
+more info)
+
+warning: unexpected `cfg` condition value: 
+`anchor-debug`
+   --> escrow_vault\src\lib.rs:257:10
+    |
+257 | #[derive(Accounts)]
+    |          ^^^^^^^^
+    |
+    = note: expected values for `feature` 
+are: `default` and `idl-build`
+    = note: using a cfg inside a derive 
+macro will use the cfgs from the 
+destination crate and not the ones from 
+the defining crate
+    = help: try referring to `Accounts` 
+crate for guidance on how handle this 
+unexpected cfg
+    = help: the derive macro `Accounts` 
+may come from an old version of the 
+`anchor_derive_accounts` crate, try 
+updating your dependency with `cargo 
+update -p anchor_derive_accounts`
+    = note: see <https://doc.rust-lang.org/
+nightly/rustc/check-cfg/cargo-specifics.htm
+l> for more information about checking 
+conditional configuration
+    = note: this warning originates in the 
+derive macro `Accounts` (in Nightly 
+builds, run with -Z macro-backtrace for 
+more info)
+
+warning: unexpected `cfg` condition value: 
+`anchor-debug`
+   --> escrow_vault\src\lib.rs:281:10
+    |
+281 | #[derive(Accounts)]
+    |          ^^^^^^^^
+    |
+    = note: expected values for `feature` 
+are: `default` and `idl-build`
+    = note: using a cfg inside a derive 
+macro will use the cfgs from the 
+destination crate and not the ones from 
+the defining crate
+    = help: try referring to `Accounts` 
+crate for guidance on how handle this 
+unexpected cfg
+    = help: the derive macro `Accounts` 
+may come from an old version of the 
+`anchor_derive_accounts` crate, try 
+updating your dependency with `cargo 
+update -p anchor_derive_accounts`
+    = note: see <https://doc.rust-lang.org/
+nightly/rustc/check-cfg/cargo-specifics.htm
+l> for more information about checking 
+conditional configuration
+    = note: this warning originates in the 
+derive macro `Accounts` (in Nightly 
+builds, run with -Z macro-backtrace for 
+more info)
+
+warning: unexpected `cfg` condition value: 
+`anchor-debug`
+   --> escrow_vault\src\lib.rs:305:10
+    |
+305 | #[derive(Accounts)]
+    |          ^^^^^^^^
+    |
+    = note: expected values for `feature` 
+are: `default` and `idl-build`
+    = note: using a cfg inside a derive 
+macro will use the cfgs from the 
+destination crate and not the ones from 
+the defining crate
+    = help: try referring to `Accounts` 
+crate for guidance on how handle this 
+unexpected cfg
+    = help: the derive macro `Accounts` 
+may come from an old version of the 
+`anchor_derive_accounts` crate, try 
+updating your dependency with `cargo 
+update -p anchor_derive_accounts`
+    = note: see <https://doc.rust-lang.org/
+nightly/rustc/check-cfg/cargo-specifics.htm
+l> for more information about checking 
+conditional configuration
+    = note: this warning originates in the 
+derive macro `Accounts` (in Nightly 
+builds, run with -Z macro-backtrace for 
+more info)
+
+warning: unexpected `cfg` condition value: 
+`anchor-debug`
+   --> escrow_vault\src\lib.rs:334:10
+    |
+334 | #[derive(Accounts)]
+    |          ^^^^^^^^
+    |
+    = note: expected values for `feature` 
+are: `default` and `idl-build`
+    = note: using a cfg inside a derive 
+macro will use the cfgs from the 
+destination crate and not the ones from 
+the defining crate
+    = help: try referring to `Accounts` 
+crate for guidance on how handle this 
+unexpected cfg
+    = help: the derive macro `Accounts` 
+may come from an old version of the 
+`anchor_derive_accounts` crate, try 
+updating your dependency with `cargo 
+update -p anchor_derive_accounts`
+    = note: see <https://doc.rust-lang.org/
+nightly/rustc/check-cfg/cargo-specifics.htm
+l> for more information about checking 
+conditional configuration
+    = note: this warning originates in the 
+derive macro `Accounts` (in Nightly 
+builds, run with -Z macro-backtrace for 
+more info)
+
+warning: unexpected `cfg` condition value: 
+`anchor-debug`
+   --> escrow_vault\src\lib.rs:358:10
+    |
+358 | #[derive(Accounts)]
+    |          ^^^^^^^^
+    |
+    = note: expected values for `feature` 
+are: `default` and `idl-build`
+    = note: using a cfg inside a derive 
+macro will use the cfgs from the 
+destination crate and not the ones from 
+the defining crate
+    = help: try referring to `Accounts` 
+crate for guidance on how handle this 
+unexpected cfg
+    = help: the derive macro `Accounts` 
+may come from an old version of the 
+`anchor_derive_accounts` crate, try 
+updating your dependency with `cargo 
+update -p anchor_derive_accounts`
+    = note: see <https://doc.rust-lang.org/
+nightly/rustc/check-cfg/cargo-specifics.htm
+l> for more information about checking 
+conditional configuration
+    = note: this warning originates in the 
+derive macro `Accounts` (in Nightly 
+builds, run with -Z macro-backtrace for 
+more info)
+
+warning: unexpected `cfg` condition value: 
+`anchor-debug`
+   --> escrow_vault\src\lib.rs:371:10
+    |
+371 | #[derive(Accounts)]
+    |          ^^^^^^^^
+    |
+    = note: expected values for `feature` 
+are: `default` and `idl-build`
+    = note: using a cfg inside a derive 
+macro will use the cfgs from the 
+destination crate and not the ones from 
+the defining crate
+    = help: try referring to `Accounts` 
+crate for guidance on how handle this 
+unexpected cfg
+    = help: the derive macro `Accounts` 
+may come from an old version of the 
+`anchor_derive_accounts` crate, try 
+updating your dependency with `cargo 
+update -p anchor_derive_accounts`
+    = note: see <https://doc.rust-lang.org/
+nightly/rustc/check-cfg/cargo-specifics.htm
+l> for more information about checking 
+conditional configuration
+    = note: this warning originates in the 
+derive macro `Accounts` (in Nightly 
+builds, run with -Z macro-backtrace for 
+more info)
+
+warning: unexpected `cfg` condition value: 
+`no-entrypoint`
+ --> beach_delegator\src\lib.rs:7:1
+  |
+7 | #[program]
+  | ^^^^^^^^^^
+  |
+  = note: expected values for `feature` 
+are: `default` and `idl-build`
+  = note: using a cfg inside a attribute 
+macro will use the cfgs from the 
+destination crate and not the ones from 
+the defining crate
+  = help: try referring to `program` crate 
+for guidance on how handle this unexpected 
+cfg
+  = help: the attribute macro `program` 
+may come from an old version of the 
+`anchor_attribute_program` crate, try 
+updating your dependency with `cargo 
+update -p anchor_attribute_program`
+  = note: see <https://doc.rust-lang.org/ni
+ghtly/rustc/check-cfg/cargo-specifics.html>
+ for more information about checking 
+conditional configuration
+  = note: `#[warn(unexpected_cfgs)]` on by 
+default
+  = note: this warning originates in the 
+attribute macro `program` (in Nightly 
+builds, run with -Z macro-backtrace for 
+more info)
+
+warning: unexpected `cfg` condition value: 
+`cpi`
+ --> beach_delegator\src\lib.rs:7:1
+  |
+7 | #[program]
+  | ^^^^^^^^^^
+  |
+  = note: expected values for `feature` 
+are: `default` and `idl-build`
+  = note: using a cfg inside a attribute 
+macro will use the cfgs from the 
+destination crate and not the ones from 
+the defining crate
+  = help: try referring to `program` crate 
+for guidance on how handle this unexpected 
+cfg
+  = help: the attribute macro `program` 
+may come from an old version of the 
+`anchor_attribute_program` crate, try 
+updating your dependency with `cargo 
+update -p anchor_attribute_program`
+  = note: see <https://doc.rust-lang.org/ni
+ghtly/rustc/check-cfg/cargo-specifics.html>
+ for more information about checking 
+conditional configuration
+  = note: this warning originates in the 
+attribute macro `program` (in Nightly 
+builds, run with -Z macro-backtrace for 
+more info)
+
+warning: unexpected `cfg` condition value: 
+`custom-heap`
+ --> beach_delegator\src\lib.rs:7:1
+  |
+7 | #[program]
+  | ^^^^^^^^^^
+  |
+  = note: expected values for `feature` 
+are: `default` and `idl-build`
+  = note: using a cfg inside a macro will 
+use the cfgs from the destination crate 
+and not the ones from the defining crate
+  = help: try referring to 
+`$crate::custom_heap_default` crate for 
+guidance on how handle this unexpected cfg
+  = help: the macro 
+`$crate::custom_heap_default` may come 
+from an old version of the 
+`solana_program` crate, try updating your 
+dependency with `cargo update -p 
+solana_program`
+  = note: see <https://doc.rust-lang.org/ni
+ghtly/rustc/check-cfg/cargo-specifics.html>
+ for more information about checking 
+conditional configuration
+  = note: this warning originates in the 
+macro `$crate::custom_heap_default` which 
+comes from the expansion of the attribute 
+macro `program` (in Nightly builds, run 
+with -Z macro-backtrace for more info)
+
+warning: unexpected `cfg` condition value: 
+`solana`
+ --> beach_delegator\src\lib.rs:7:1
+  |
+7 | #[program]
+  | ^^^^^^^^^^
+  |
+  = note: expected values for `target_os` 
+are: `aix`, `amdhsa`, `android`, `cuda`, 
+`cygwin`, `dragonfly`, `emscripten`, 
+`espidf`, `freebsd`, `fuchsia`, `haiku`, 
+`helenos`, `hermit`, `horizon`, `hurd`, 
+`illumos`, `ios`, `l4re`, `linux`, 
+`lynxos178`, `macos`, `managarm`, `motor`, 
+`netbsd`, `none`, `nto`, `nuttx`, 
+`openbsd`, `psp`, `psx`, `qurt`, `redox`, 
+`rtems`, `solaris`, and `solid_asp3` and 
+14 more
+  = note: using a cfg inside a macro will 
+use the cfgs from the destination crate 
+and not the ones from the defining crate
+  = help: try referring to 
+`$crate::custom_heap_default` crate for 
+guidance on how handle this unexpected cfg
+  = help: the macro 
+`$crate::custom_heap_default` may come 
+from an old version of the 
+`solana_program` crate, try updating your 
+dependency with `cargo update -p 
+solana_program`
+  = note: see <https://doc.rust-lang.org/ni
+ghtly/rustc/check-cfg/cargo-specifics.html>
+ for more information about checking 
+conditional configuration
+  = note: this warning originates in the 
+macro `$crate::custom_heap_default` which 
+comes from the expansion of the attribute 
+macro `program` (in Nightly builds, run 
+with -Z macro-backtrace for more info)
+
+warning: unexpected `cfg` condition value: 
+`custom-panic`
+ --> beach_delegator\src\lib.rs:7:1
+  |
+7 | #[program]
+  | ^^^^^^^^^^
+  |
+  = note: expected values for `feature` 
+are: `default` and `idl-build`
+  = note: using a cfg inside a macro will 
+use the cfgs from the destination crate 
+and not the ones from the defining crate
+  = help: try referring to 
+`$crate::custom_panic_default` crate for 
+guidance on how handle this unexpected cfg
+  = help: the macro 
+`$crate::custom_panic_default` may come 
+from an old version of the 
+`solana_program` crate, try updating your 
+dependency with `cargo update -p 
+solana_program`
+  = note: see <https://doc.rust-lang.org/ni
+ghtly/rustc/check-cfg/cargo-specifics.html>
+ for more information about checking 
+conditional configuration
+  = note: this warning originates in the 
+macro `$crate::custom_panic_default` which 
+comes from the expansion of the attribute 
+macro `program` (in Nightly builds, run 
+with -Z macro-backtrace for more info)
+
+warning: unexpected `cfg` condition value: 
+`solana`
+ --> beach_delegator\src\lib.rs:7:1
+  |
+7 | #[program]
+  | ^^^^^^^^^^
+  |
+  = note: expected values for `target_os` 
+are: `aix`, `amdhsa`, `android`, `cuda`, 
+`cygwin`, `dragonfly`, `emscripten`, 
+`espidf`, `freebsd`, `fuchsia`, `haiku`, 
+`helenos`, `hermit`, `horizon`, `hurd`, 
+`illumos`, `ios`, `l4re`, `linux`, 
+`lynxos178`, `macos`, `managarm`, `motor`, 
+`netbsd`, `none`, `nto`, `nuttx`, 
+`openbsd`, `psp`, `psx`, `qurt`, `redox`, 
+`rtems`, `solaris`, and `solid_asp3` and 
+14 more
+  = note: using a cfg inside a macro will 
+use the cfgs from the destination crate 
+and not the ones from the defining crate
+  = help: try referring to 
+`$crate::custom_panic_default` crate for 
+guidance on how handle this unexpected cfg
+  = help: the macro 
+`$crate::custom_panic_default` may come 
+from an old version of the 
+`solana_program` crate, try updating your 
+dependency with `cargo update -p 
+solana_program`
+  = note: see <https://doc.rust-lang.org/ni
+ghtly/rustc/check-cfg/cargo-specifics.html>
+ for more information about checking 
+conditional configuration
+  = note: this warning originates in the 
+macro `$crate::custom_panic_default` which 
+comes from the expansion of the attribute 
+macro `program` (in Nightly builds, run 
+with -Z macro-backtrace for more info)
+
+warning: unexpected `cfg` condition value: 
+`anchor-debug`
+ --> beach_delegator\src\lib.rs:7:1
+  |
+7 | #[program]
+  | ^^^^^^^^^^
+  |
+  = note: expected values for `feature` 
+are: `default` and `idl-build`
+  = note: using a cfg inside a attribute 
+macro will use the cfgs from the 
+destination crate and not the ones from 
+the defining crate
+  = help: try referring to `program` crate 
+for guidance on how handle this unexpected 
+cfg
+  = help: the attribute macro `program` 
+may come from an old version of the 
+`anchor_attribute_program` crate, try 
+updating your dependency with `cargo 
+update -p anchor_attribute_program`
+  = note: see <https://doc.rust-lang.org/ni
+ghtly/rustc/check-cfg/cargo-specifics.html>
+ for more information about checking 
+conditional configuration
+  = note: this warning originates in the 
+attribute macro `program` (in Nightly 
+builds, run with -Z macro-backtrace for 
+more info)
+
+warning: unexpected `cfg` condition value: 
+`no-idl`
+ --> beach_delegator\src\lib.rs:7:1
+  |
+7 | #[program]
+  | ^^^^^^^^^^
+  |
+  = note: expected values for `feature` 
+are: `default` and `idl-build`
+  = note: using a cfg inside a attribute 
+macro will use the cfgs from the 
+destination crate and not the ones from 
+the defining crate
+  = help: try referring to `program` crate 
+for guidance on how handle this unexpected 
+cfg
+  = help: the attribute macro `program` 
+may come from an old version of the 
+`anchor_attribute_program` crate, try 
+updating your dependency with `cargo 
+update -p anchor_attribute_program`
+  = note: see <https://doc.rust-lang.org/ni
+ghtly/rustc/check-cfg/cargo-specifics.html>
+ for more information about checking 
+conditional configuration
+  = note: this warning originates in the 
+attribute macro `program` (in Nightly 
+builds, run with -Z macro-backtrace for 
+more info)
+
+warning: unexpected `cfg` condition value: 
+`anchor-debug`
+ --> beach_delegator\src\lib.rs:7:1
+  |
+7 | #[program]
+  | ^^^^^^^^^^
+  |
+  = note: expected values for `feature` 
+are: `default` and `idl-build`
+  = note: using a cfg inside a derive 
+macro will use the cfgs from the 
+destination crate and not the ones from 
+the defining crate
+  = help: try referring to `Accounts` 
+crate for guidance on how handle this 
+unexpected cfg
+  = help: the derive macro `Accounts` may 
+come from an old version of the 
+`anchor_derive_accounts` crate, try 
+updating your dependency with `cargo 
+update -p anchor_derive_accounts`
+  = note: see <https://doc.rust-lang.org/ni
+ghtly/rustc/check-cfg/cargo-specifics.html>
+ for more information about checking 
+conditional configuration
+  = note: this warning originates in the 
+derive macro `Accounts` (in Nightly 
+builds, run with -Z macro-backtrace for 
+more info)
+
+warning: unexpected `cfg` condition value: 
+`no-log-ix-name`
+ --> beach_delegator\src\lib.rs:7:1
+  |
+7 | #[program]
+  | ^^^^^^^^^^
+  |
+  = note: expected values for `feature` 
+are: `default` and `idl-build`
+  = note: using a cfg inside a attribute 
+macro will use the cfgs from the 
+destination crate and not the ones from 
+the defining crate
+  = help: try referring to `program` crate 
+for guidance on how handle this unexpected 
+cfg
+  = help: the attribute macro `program` 
+may come from an old version of the 
+`anchor_attribute_program` crate, try 
+updating your dependency with `cargo 
+update -p anchor_attribute_program`
+  = note: see <https://doc.rust-lang.org/ni
+ghtly/rustc/check-cfg/cargo-specifics.html>
+ for more information about checking 
+conditional configuration
+  = note: this warning originates in the 
+attribute macro `program` (in Nightly 
+builds, run with -Z macro-backtrace for 
+more info)
+
+warning: unexpected `cfg` condition value: 
+`anchor-debug`
+   --> beach_delegator\src\lib.rs:175:10
+    |
+175 | #[derive(Accounts)]
+    |          ^^^^^^^^
+    |
+    = note: expected values for `feature` 
+are: `default` and `idl-build`
+    = note: using a cfg inside a derive 
+macro will use the cfgs from the 
+destination crate and not the ones from 
+the defining crate
+    = help: try referring to `Accounts` 
+crate for guidance on how handle this 
+unexpected cfg
+    = help: the derive macro `Accounts` 
+may come from an old version of the 
+`anchor_derive_accounts` crate, try 
+updating your dependency with `cargo 
+update -p anchor_derive_accounts`
+    = note: see <https://doc.rust-lang.org/
+nightly/rustc/check-cfg/cargo-specifics.htm
+l> for more information about checking 
+conditional configuration
+    = note: this warning originates in the 
+derive macro `Accounts` (in Nightly 
+builds, run with -Z macro-backtrace for 
+more info)
+
+warning: unexpected `cfg` condition value: 
+`anchor-debug`
+   --> beach_delegator\src\lib.rs:196:10
+    |
+196 | #[derive(Accounts)]
+    |          ^^^^^^^^
+    |
+    = note: expected values for `feature` 
+are: `default` and `idl-build`
+    = note: using a cfg inside a derive 
+macro will use the cfgs from the 
+destination crate and not the ones from 
+the defining crate
+    = help: try referring to `Accounts` 
+crate for guidance on how handle this 
+unexpected cfg
+    = help: the derive macro `Accounts` 
+may come from an old version of the 
+`anchor_derive_accounts` crate, try 
+updating your dependency with `cargo 
+update -p anchor_derive_accounts`
+    = note: see <https://doc.rust-lang.org/
+nightly/rustc/check-cfg/cargo-specifics.htm
+l> for more information about checking 
+conditional configuration
+    = note: this warning originates in the 
+derive macro `Accounts` (in Nightly 
+builds, run with -Z macro-backtrace for 
+more info)
+
+warning: unexpected `cfg` condition value: 
+`anchor-debug`
+   --> beach_delegator\src\lib.rs:210:10
+    |
+210 | #[derive(Accounts)]
+    |          ^^^^^^^^
+    |
+    = note: expected values for `feature` 
+are: `default` and `idl-build`
+    = note: using a cfg inside a derive 
+macro will use the cfgs from the 
+destination crate and not the ones from 
+the defining crate
+    = help: try referring to `Accounts` 
+crate for guidance on how handle this 
+unexpected cfg
+    = help: the derive macro `Accounts` 
+may come from an old version of the 
+`anchor_derive_accounts` crate, try 
+updating your dependency with `cargo 
+update -p anchor_derive_accounts`
+    = note: see <https://doc.rust-lang.org/
+nightly/rustc/check-cfg/cargo-specifics.htm
+l> for more information about checking 
+conditional configuration
+    = note: this warning originates in the 
+derive macro `Accounts` (in Nightly 
+builds, run with -Z macro-backtrace for 
+more info)
+
+warning: unexpected `cfg` condition value: 
+`anchor-debug`
+   --> beach_delegator\src\lib.rs:223:10
+    |
+223 | #[derive(Accounts)]
+    |          ^^^^^^^^
+    |
+    = note: expected values for `feature` 
+are: `default` and `idl-build`
+    = note: using a cfg inside a derive 
+macro will use the cfgs from the 
+destination crate and not the ones from 
+the defining crate
+    = help: try referring to `Accounts` 
+crate for guidance on how handle this 
+unexpected cfg
+    = help: the derive macro `Accounts` 
+may come from an old version of the 
+`anchor_derive_accounts` crate, try 
+updating your dependency with `cargo 
+update -p anchor_derive_accounts`
+    = note: see <https://doc.rust-lang.org/
+nightly/rustc/check-cfg/cargo-specifics.htm
+l> for more information about checking 
+conditional configuration
+    = note: this warning originates in the 
+derive macro `Accounts` (in Nightly 
+builds, run with -Z macro-backtrace for 
+more info)
+
+warning: unexpected `cfg` condition value: 
+`anchor-debug`
+   --> beach_delegator\src\lib.rs:236:10
+    |
+236 | #[derive(Accounts)]
+    |          ^^^^^^^^
+    |
+    = note: expected values for `feature` 
+are: `default` and `idl-build`
+    = note: using a cfg inside a derive 
+macro will use the cfgs from the 
+destination crate and not the ones from 
+the defining crate
+    = help: try referring to `Accounts` 
+crate for guidance on how handle this 
+unexpected cfg
+    = help: the derive macro `Accounts` 
+may come from an old version of the 
+`anchor_derive_accounts` crate, try 
+updating your dependency with `cargo 
+update -p anchor_derive_accounts`
+    = note: see <https://doc.rust-lang.org/
+nightly/rustc/check-cfg/cargo-specifics.htm
+l> for more information about checking 
+conditional configuration
+    = note: this warning originates in the 
+derive macro `Accounts` (in Nightly 
+builds, run with -Z macro-backtrace for 
+more info)
+
+warning: unexpected `cfg` condition value: 
+`no-entrypoint`
+ --> fee_collector\src\lib.rs:9:1
+  |
+9 | #[program]
+  | ^^^^^^^^^^
+  |
+  = note: expected values for `feature` 
+are: `default` and `idl-build`
+  = note: using a cfg inside a attribute 
+macro will use the cfgs from the 
+destination crate and not the ones from 
+the defining crate
+  = help: try referring to `program` crate 
+for guidance on how handle this unexpected 
+cfg
+  = help: the attribute macro `program` 
+may come from an old version of the 
+`anchor_attribute_program` crate, try 
+updating your dependency with `cargo 
+update -p anchor_attribute_program`
+  = note: see <https://doc.rust-lang.org/ni
+ghtly/rustc/check-cfg/cargo-specifics.html>
+ for more information about checking 
+conditional configuration
+  = note: `#[warn(unexpected_cfgs)]` on by 
+default
+  = note: this warning originates in the 
+attribute macro `program` (in Nightly 
+builds, run with -Z macro-backtrace for 
+more info)
+
+warning: unexpected `cfg` condition value: 
+`cpi`
+ --> fee_collector\src\lib.rs:9:1
+  |
+9 | #[program]
+  | ^^^^^^^^^^
+  |
+  = note: expected values for `feature` 
+are: `default` and `idl-build`
+  = note: using a cfg inside a attribute 
+macro will use the cfgs from the 
+destination crate and not the ones from 
+the defining crate
+  = help: try referring to `program` crate 
+for guidance on how handle this unexpected 
+cfg
+  = help: the attribute macro `program` 
+may come from an old version of the 
+`anchor_attribute_program` crate, try 
+updating your dependency with `cargo 
+update -p anchor_attribute_program`
+  = note: see <https://doc.rust-lang.org/ni
+ghtly/rustc/check-cfg/cargo-specifics.html>
+ for more information about checking 
+conditional configuration
+  = note: this warning originates in the 
+attribute macro `program` (in Nightly 
+builds, run with -Z macro-backtrace for 
+more info)
+
+warning: unexpected `cfg` condition value: 
+`custom-heap`
+ --> fee_collector\src\lib.rs:9:1
+  |
+9 | #[program]
+  | ^^^^^^^^^^
+  |
+  = note: expected values for `feature` 
+are: `default` and `idl-build`
+  = note: using a cfg inside a macro will 
+use the cfgs from the destination crate 
+and not the ones from the defining crate
+  = help: try referring to 
+`$crate::custom_heap_default` crate for 
+guidance on how handle this unexpected cfg
+  = help: the macro 
+`$crate::custom_heap_default` may come 
+from an old version of the 
+`solana_program` crate, try updating your 
+dependency with `cargo update -p 
+solana_program`
+  = note: see <https://doc.rust-lang.org/ni
+ghtly/rustc/check-cfg/cargo-specifics.html>
+ for more information about checking 
+conditional configuration
+  = note: this warning originates in the 
+macro `$crate::custom_heap_default` which 
+comes from the expansion of the attribute 
+macro `program` (in Nightly builds, run 
+with -Z macro-backtrace for more info)
+
+warning: unexpected `cfg` condition value: 
+`solana`
+ --> fee_collector\src\lib.rs:9:1
+  |
+9 | #[program]
+  | ^^^^^^^^^^
+  |
+  = note: expected values for `target_os` 
+are: `aix`, `amdhsa`, `android`, `cuda`, 
+`cygwin`, `dragonfly`, `emscripten`, 
+`espidf`, `freebsd`, `fuchsia`, `haiku`, 
+`helenos`, `hermit`, `horizon`, `hurd`, 
+`illumos`, `ios`, `l4re`, `linux`, 
+`lynxos178`, `macos`, `managarm`, `motor`, 
+`netbsd`, `none`, `nto`, `nuttx`, 
+`openbsd`, `psp`, `psx`, `qurt`, `redox`, 
+`rtems`, `solaris`, and `solid_asp3` and 
+14 more
+  = note: using a cfg inside a macro will 
+use the cfgs from the destination crate 
+and not the ones from the defining crate
+  = help: try referring to 
+`$crate::custom_heap_default` crate for 
+guidance on how handle this unexpected cfg
+  = help: the macro 
+`$crate::custom_heap_default` may come 
+from an old version of the 
+`solana_program` crate, try updating your 
+dependency with `cargo update -p 
+solana_program`
+  = note: see <https://doc.rust-lang.org/ni
+ghtly/rustc/check-cfg/cargo-specifics.html>
+ for more information about checking 
+conditional configuration
+  = note: this warning originates in the 
+macro `$crate::custom_heap_default` which 
+comes from the expansion of the attribute 
+macro `program` (in Nightly builds, run 
+with -Z macro-backtrace for more info)
+
+warning: unexpected `cfg` condition value: 
+`custom-panic`
+ --> fee_collector\src\lib.rs:9:1
+  |
+9 | #[program]
+  | ^^^^^^^^^^
+  |
+  = note: expected values for `feature` 
+are: `default` and `idl-build`
+  = note: using a cfg inside a macro will 
+use the cfgs from the destination crate 
+and not the ones from the defining crate
+  = help: try referring to 
+`$crate::custom_panic_default` crate for 
+guidance on how handle this unexpected cfg
+  = help: the macro 
+`$crate::custom_panic_default` may come 
+from an old version of the 
+`solana_program` crate, try updating your 
+dependency with `cargo update -p 
+solana_program`
+  = note: see <https://doc.rust-lang.org/ni
+ghtly/rustc/check-cfg/cargo-specifics.html>
+ for more information about checking 
+conditional configuration
+  = note: this warning originates in the 
+macro `$crate::custom_panic_default` which 
+comes from the expansion of the attribute 
+macro `program` (in Nightly builds, run 
+with -Z macro-backtrace for more info)
+
+warning: unexpected `cfg` condition value: 
+`solana`
+ --> fee_collector\src\lib.rs:9:1
+  |
+9 | #[program]
+  | ^^^^^^^^^^
+  |
+  = note: expected values for `target_os` 
+are: `aix`, `amdhsa`, `android`, `cuda`, 
+`cygwin`, `dragonfly`, `emscripten`, 
+`espidf`, `freebsd`, `fuchsia`, `haiku`, 
+`helenos`, `hermit`, `horizon`, `hurd`, 
+`illumos`, `ios`, `l4re`, `linux`, 
+`lynxos178`, `macos`, `managarm`, `motor`, 
+`netbsd`, `none`, `nto`, `nuttx`, 
+`openbsd`, `psp`, `psx`, `qurt`, `redox`, 
+`rtems`, `solaris`, and `solid_asp3` and 
+14 more
+  = note: using a cfg inside a macro will 
+use the cfgs from the destination crate 
+and not the ones from the defining crate
+  = help: try referring to 
+`$crate::custom_panic_default` crate for 
+guidance on how handle this unexpected cfg
+  = help: the macro 
+`$crate::custom_panic_default` may come 
+from an old version of the 
+`solana_program` crate, try updating your 
+dependency with `cargo update -p 
+solana_program`
+  = note: see <https://doc.rust-lang.org/ni
+ghtly/rustc/check-cfg/cargo-specifics.html>
+ for more information about checking 
+conditional configuration
+  = note: this warning originates in the 
+macro `$crate::custom_panic_default` which 
+comes from the expansion of the attribute 
+macro `program` (in Nightly builds, run 
+with -Z macro-backtrace for more info)
+
+warning: unexpected `cfg` condition value: 
+`anchor-debug`
+ --> fee_collector\src\lib.rs:9:1
+  |
+9 | #[program]
+  | ^^^^^^^^^^
+  |
+  = note: expected values for `feature` 
+are: `default` and `idl-build`
+  = note: using a cfg inside a attribute 
+macro will use the cfgs from the 
+destination crate and not the ones from 
+the defining crate
+  = help: try referring to `program` crate 
+for guidance on how handle this unexpected 
+cfg
+  = help: the attribute macro `program` 
+may come from an old version of the 
+`anchor_attribute_program` crate, try 
+updating your dependency with `cargo 
+update -p anchor_attribute_program`
+  = note: see <https://doc.rust-lang.org/ni
+ghtly/rustc/check-cfg/cargo-specifics.html>
+ for more information about checking 
+conditional configuration
+  = note: this warning originates in the 
+attribute macro `program` (in Nightly 
+builds, run with -Z macro-backtrace for 
+more info)
+
+warning: unexpected `cfg` condition value: 
+`no-idl`
+ --> fee_collector\src\lib.rs:9:1
+  |
+9 | #[program]
+  | ^^^^^^^^^^
+  |
+  = note: expected values for `feature` 
+are: `default` and `idl-build`
+  = note: using a cfg inside a attribute 
+macro will use the cfgs from the 
+destination crate and not the ones from 
+the defining crate
+  = help: try referring to `program` crate 
+for guidance on how handle this unexpected 
+cfg
+  = help: the attribute macro `program` 
+may come from an old version of the 
+`anchor_attribute_program` crate, try 
+updating your dependency with `cargo 
+update -p anchor_attribute_program`
+  = note: see <https://doc.rust-lang.org/ni
+ghtly/rustc/check-cfg/cargo-specifics.html>
+ for more information about checking 
+conditional configuration
+  = note: this warning originates in the 
+attribute macro `program` (in Nightly 
+builds, run with -Z macro-backtrace for 
+more info)
+
+warning: unexpected `cfg` condition value: 
+`anchor-debug`
+ --> fee_collector\src\lib.rs:9:1
+  |
+9 | #[program]
+  | ^^^^^^^^^^
+  |
+  = note: expected values for `feature` 
+are: `default` and `idl-build`
+  = note: using a cfg inside a derive 
+macro will use the cfgs from the 
+destination crate and not the ones from 
+the defining crate
+  = help: try referring to `Accounts` 
+crate for guidance on how handle this 
+unexpected cfg
+  = help: the derive macro `Accounts` may 
+come from an old version of the 
+`anchor_derive_accounts` crate, try 
+updating your dependency with `cargo 
+update -p anchor_derive_accounts`
+  = note: see <https://doc.rust-lang.org/ni
+ghtly/rustc/check-cfg/cargo-specifics.html>
+ for more information about checking 
+conditional configuration
+  = note: this warning originates in the 
+derive macro `Accounts` (in Nightly 
+builds, run with -Z macro-backtrace for 
+more info)
+
+warning: unexpected `cfg` condition value: 
+`no-log-ix-name`
+ --> fee_collector\src\lib.rs:9:1
+  |
+9 | #[program]
+  | ^^^^^^^^^^
+  |
+  = note: expected values for `feature` 
+are: `default` and `idl-build`
+  = note: using a cfg inside a attribute 
+macro will use the cfgs from the 
+destination crate and not the ones from 
+the defining crate
+  = help: try referring to `program` crate 
+for guidance on how handle this unexpected 
+cfg
+  = help: the attribute macro `program` 
+may come from an old version of the 
+`anchor_attribute_program` crate, try 
+updating your dependency with `cargo 
+update -p anchor_attribute_program`
+  = note: see <https://doc.rust-lang.org/ni
+ghtly/rustc/check-cfg/cargo-specifics.html>
+ for more information about checking 
+conditional configuration
+  = note: this warning originates in the 
+attribute macro `program` (in Nightly 
+builds, run with -Z macro-backtrace for 
+more info)
+
+warning: unexpected `cfg` condition value: 
+`anchor-debug`
+   --> fee_collector\src\lib.rs:175:10
+    |
+175 | #[derive(Accounts)]
+    |          ^^^^^^^^
+    |
+    = note: expected values for `feature` 
+are: `default` and `idl-build`
+    = note: using a cfg inside a derive 
+macro will use the cfgs from the 
+destination crate and not the ones from 
+the defining crate
+    = help: try referring to `Accounts` 
+crate for guidance on how handle this 
+unexpected cfg
+    = help: the derive macro `Accounts` 
+may come from an old version of the 
+`anchor_derive_accounts` crate, try 
+updating your dependency with `cargo 
+update -p anchor_derive_accounts`
+    = note: see <https://doc.rust-lang.org/
+nightly/rustc/check-cfg/cargo-specifics.htm
+l> for more information about checking 
+conditional configuration
+    = note: this warning originates in the 
+derive macro `Accounts` (in Nightly 
+builds, run with -Z macro-backtrace for 
+more info)
+
+warning: unexpected `cfg` condition value: 
+`anchor-debug`
+   --> fee_collector\src\lib.rs:196:10
+    |
+196 | #[derive(Accounts)]
+    |          ^^^^^^^^
+    |
+    = note: expected values for `feature` 
+are: `default` and `idl-build`
+    = note: using a cfg inside a derive 
+macro will use the cfgs from the 
+destination crate and not the ones from 
+the defining crate
+    = help: try referring to `Accounts` 
+crate for guidance on how handle this 
+unexpected cfg
+    = help: the derive macro `Accounts` 
+may come from an old version of the 
+`anchor_derive_accounts` crate, try 
+updating your dependency with `cargo 
+update -p anchor_derive_accounts`
+    = note: see <https://doc.rust-lang.org/
+nightly/rustc/check-cfg/cargo-specifics.htm
+l> for more information about checking 
+conditional configuration
+    = note: this warning originates in the 
+derive macro `Accounts` (in Nightly 
+builds, run with -Z macro-backtrace for 
+more info)
+
+warning: unexpected `cfg` condition value: 
+`anchor-debug`
+   --> fee_collector\src\lib.rs:220:10
+    |
+220 | #[derive(Accounts)]
+    |          ^^^^^^^^
+    |
+    = note: expected values for `feature` 
+are: `default` and `idl-build`
+    = note: using a cfg inside a derive 
+macro will use the cfgs from the 
+destination crate and not the ones from 
+the defining crate
+    = help: try referring to `Accounts` 
+crate for guidance on how handle this 
+unexpected cfg
+    = help: the derive macro `Accounts` 
+may come from an old version of the 
+`anchor_derive_accounts` crate, try 
+updating your dependency with `cargo 
+update -p anchor_derive_accounts`
+    = note: see <https://doc.rust-lang.org/
+nightly/rustc/check-cfg/cargo-specifics.htm
+l> for more information about checking 
+conditional configuration
+    = note: this warning originates in the 
+derive macro `Accounts` (in Nightly 
+builds, run with -Z macro-backtrace for 
+more info)
+
+warning: unexpected `cfg` condition value: 
+`anchor-debug`
+   --> fee_collector\src\lib.rs:233:10
+    |
+233 | #[derive(Accounts)]
+    |          ^^^^^^^^
+    |
+    = note: expected values for `feature` 
+are: `default` and `idl-build`
+    = note: using a cfg inside a derive 
+macro will use the cfgs from the 
+destination crate and not the ones from 
+the defining crate
+    = help: try referring to `Accounts` 
+crate for guidance on how handle this 
+unexpected cfg
+    = help: the derive macro `Accounts` 
+may come from an old version of the 
+`anchor_derive_accounts` crate, try 
+updating your dependency with `cargo 
+update -p anchor_derive_accounts`
+    = note: see <https://doc.rust-lang.org/
+nightly/rustc/check-cfg/cargo-specifics.htm
+l> for more information about checking 
+conditional configuration
+    = note: this warning originates in the 
+derive macro `Accounts` (in Nightly 
+builds, run with -Z macro-backtrace for 
+more info)
+
+warning: `escrow_vault` (lib) generated 22 
+warnings (5 duplicates)
+warning: `beach_delegator` (lib) generated 
+20 warnings (5 duplicates)
+warning: `fee_collector` (lib) generated 
+19 warnings (5 duplicates)
+    Checking token_launcher v0.1.0 
+(C:\Users\kamee\D3 SAVAG3 Trades\d3-savag3-
+trades-e977212c\programs\token_launcher)
+warning: unexpected `cfg` condition value: 
+`no-entrypoint`
+  --> token_launcher\src\lib.rs:12:1
+   |
+12 | #[program]
+   | ^^^^^^^^^^
+   |
+   = note: expected values for `feature` 
+are: `default` and `idl-build`
+   = note: using a cfg inside a attribute 
+macro will use the cfgs from the 
+destination crate and not the ones from 
+the defining crate
+   = help: try referring to `program` 
+crate for guidance on how handle this 
+unexpected cfg
+   = help: the attribute macro `program` 
+may come from an old version of the 
+`anchor_attribute_program` crate, try 
+updating your dependency with `cargo 
+update -p anchor_attribute_program`
+   = note: see <https://doc.rust-lang.org/n
+ightly/rustc/check-cfg/cargo-specifics.html
+> for more information about checking 
+conditional configuration
+   = note: `#[warn(unexpected_cfgs)]` on 
+by default
+   = note: this warning originates in the 
+attribute macro `program` (in Nightly 
+builds, run with -Z macro-backtrace for 
+more info)
+
+warning: unexpected `cfg` condition value: 
+`cpi`
+  --> token_launcher\src\lib.rs:12:1
+   |
+12 | #[program]
+   | ^^^^^^^^^^
+   |
+   = note: expected values for `feature` 
+are: `default` and `idl-build`
+   = note: using a cfg inside a attribute 
+macro will use the cfgs from the 
+destination crate and not the ones from 
+the defining crate
+   = help: try referring to `program` 
+crate for guidance on how handle this 
+unexpected cfg
+   = help: the attribute macro `program` 
+may come from an old version of the 
+`anchor_attribute_program` crate, try 
+updating your dependency with `cargo 
+update -p anchor_attribute_program`
+   = note: see <https://doc.rust-lang.org/n
+ightly/rustc/check-cfg/cargo-specifics.html
+> for more information about checking 
+conditional configuration
+   = note: this warning originates in the 
+attribute macro `program` (in Nightly 
+builds, run with -Z macro-backtrace for 
+more info)
+
+warning: unexpected `cfg` condition value: 
+`custom-heap`
+  --> token_launcher\src\lib.rs:12:1
+   |
+12 | #[program]
+   | ^^^^^^^^^^
+   |
+   = note: expected values for `feature` 
+are: `default` and `idl-build`
+   = note: using a cfg inside a macro will 
+use the cfgs from the destination crate 
+and not the ones from the defining crate
+   = help: try referring to 
+`$crate::custom_heap_default` crate for 
+guidance on how handle this unexpected cfg
+   = help: the macro 
+`$crate::custom_heap_default` may come 
+from an old version of the 
+`solana_program` crate, try updating your 
+dependency with `cargo update -p 
+solana_program`
+   = note: see <https://doc.rust-lang.org/n
+ightly/rustc/check-cfg/cargo-specifics.html
+> for more information about checking 
+conditional configuration
+   = note: this warning originates in the 
+macro `$crate::custom_heap_default` which 
+comes from the expansion of the attribute 
+macro `program` (in Nightly builds, run 
+with -Z macro-backtrace for more info)
+
+warning: unexpected `cfg` condition value: 
+`solana`
+  --> token_launcher\src\lib.rs:12:1
+   |
+12 | #[program]
+   | ^^^^^^^^^^
+   |
+   = note: expected values for `target_os` 
+are: `aix`, `amdhsa`, `android`, `cuda`, 
+`cygwin`, `dragonfly`, `emscripten`, 
+`espidf`, `freebsd`, `fuchsia`, `haiku`, 
+`helenos`, `hermit`, `horizon`, `hurd`, 
+`illumos`, `ios`, `l4re`, `linux`, 
+`lynxos178`, `macos`, `managarm`, `motor`, 
+`netbsd`, `none`, `nto`, `nuttx`, 
+`openbsd`, `psp`, `psx`, `qurt`, `redox`, 
+`rtems`, `solaris`, and `solid_asp3` and 
+14 more
+   = note: using a cfg inside a macro will 
+use the cfgs from the destination crate 
+and not the ones from the defining crate
+   = help: try referring to 
+`$crate::custom_heap_default` crate for 
+guidance on how handle this unexpected cfg
+   = help: the macro 
+`$crate::custom_heap_default` may come 
+from an old version of the 
+`solana_program` crate, try updating your 
+dependency with `cargo update -p 
+solana_program`
+   = note: see <https://doc.rust-lang.org/n
+ightly/rustc/check-cfg/cargo-specifics.html
+> for more information about checking 
+conditional configuration
+   = note: this warning originates in the 
+macro `$crate::custom_heap_default` which 
+comes from the expansion of the attribute 
+macro `program` (in Nightly builds, run 
+with -Z macro-backtrace for more info)
+
+warning: unexpected `cfg` condition value: 
+`custom-panic`
+  --> token_launcher\src\lib.rs:12:1
+   |
+12 | #[program]
+   | ^^^^^^^^^^
+   |
+   = note: expected values for `feature` 
+are: `default` and `idl-build`
+   = note: using a cfg inside a macro will 
+use the cfgs from the destination crate 
+and not the ones from the defining crate
+   = help: try referring to 
+`$crate::custom_panic_default` crate for 
+guidance on how handle this unexpected cfg
+   = help: the macro 
+`$crate::custom_panic_default` may come 
+from an old version of the 
+`solana_program` crate, try updating your 
+dependency with `cargo update -p 
+solana_program`
+   = note: see <https://doc.rust-lang.org/n
+ightly/rustc/check-cfg/cargo-specifics.html
+> for more information about checking 
+conditional configuration
+   = note: this warning originates in the 
+macro `$crate::custom_panic_default` which 
+comes from the expansion of the attribute 
+macro `program` (in Nightly builds, run 
+with -Z macro-backtrace for more info)
+
+warning: unexpected `cfg` condition value: 
+`solana`
+  --> token_launcher\src\lib.rs:12:1
+   |
+12 | #[program]
+   | ^^^^^^^^^^
+   |
+   = note: expected values for `target_os` 
+are: `aix`, `amdhsa`, `android`, `cuda`, 
+`cygwin`, `dragonfly`, `emscripten`, 
+`espidf`, `freebsd`, `fuchsia`, `haiku`, 
+`helenos`, `hermit`, `horizon`, `hurd`, 
+`illumos`, `ios`, `l4re`, `linux`, 
+`lynxos178`, `macos`, `managarm`, `motor`, 
+`netbsd`, `none`, `nto`, `nuttx`, 
+`openbsd`, `psp`, `psx`, `qurt`, `redox`, 
+`rtems`, `solaris`, and `solid_asp3` and 
+14 more
+   = note: using a cfg inside a macro will 
+use the cfgs from the destination crate 
+and not the ones from the defining crate
+   = help: try referring to 
+`$crate::custom_panic_default` crate for 
+guidance on how handle this unexpected cfg
+   = help: the macro 
+`$crate::custom_panic_default` may come 
+from an old version of the 
+`solana_program` crate, try updating your 
+dependency with `cargo update -p 
+solana_program`
+   = note: see <https://doc.rust-lang.org/n
+ightly/rustc/check-cfg/cargo-specifics.html
+> for more information about checking 
+conditional configuration
+   = note: this warning originates in the 
+macro `$crate::custom_panic_default` which 
+comes from the expansion of the attribute 
+macro `program` (in Nightly builds, run 
+with -Z macro-backtrace for more info)
+
+warning: unexpected `cfg` condition value: 
+`anchor-debug`
+  --> token_launcher\src\lib.rs:12:1
+   |
+12 | #[program]
+   | ^^^^^^^^^^
+   |
+   = note: expected values for `feature` 
+are: `default` and `idl-build`
+   = note: using a cfg inside a attribute 
+macro will use the cfgs from the 
+destination crate and not the ones from 
+the defining crate
+   = help: try referring to `program` 
+crate for guidance on how handle this 
+unexpected cfg
+   = help: the attribute macro `program` 
+may come from an old version of the 
+`anchor_attribute_program` crate, try 
+updating your dependency with `cargo 
+update -p anchor_attribute_program`
+   = note: see <https://doc.rust-lang.org/n
+ightly/rustc/check-cfg/cargo-specifics.html
+> for more information about checking 
+conditional configuration
+   = note: this warning originates in the 
+attribute macro `program` (in Nightly 
+builds, run with -Z macro-backtrace for 
+more info)
+
+warning: unexpected `cfg` condition value: 
+`no-idl`
+  --> token_launcher\src\lib.rs:12:1
+   |
+12 | #[program]
+   | ^^^^^^^^^^
+   |
+   = note: expected values for `feature` 
+are: `default` and `idl-build`
+   = note: using a cfg inside a attribute 
+macro will use the cfgs from the 
+destination crate and not the ones from 
+the defining crate
+   = help: try referring to `program` 
+crate for guidance on how handle this 
+unexpected cfg
+   = help: the attribute macro `program` 
+may come from an old version of the 
+`anchor_attribute_program` crate, try 
+updating your dependency with `cargo 
+update -p anchor_attribute_program`
+   = note: see <https://doc.rust-lang.org/n
+ightly/rustc/check-cfg/cargo-specifics.html
+> for more information about checking 
+conditional configuration
+   = note: this warning originates in the 
+attribute macro `program` (in Nightly 
+builds, run with -Z macro-backtrace for 
+more info)
+
+warning: unexpected `cfg` condition value: 
+`anchor-debug`
+  --> token_launcher\src\lib.rs:12:1
+   |
+12 | #[program]
+   | ^^^^^^^^^^
+   |
+   = note: expected values for `feature` 
+are: `default` and `idl-build`
+   = note: using a cfg inside a derive 
+macro will use the cfgs from the 
+destination crate and not the ones from 
+the defining crate
+   = help: try referring to `Accounts` 
+crate for guidance on how handle this 
+unexpected cfg
+   = help: the derive macro `Accounts` may 
+come from an old version of the 
+`anchor_derive_accounts` crate, try 
+updating your dependency with `cargo 
+update -p anchor_derive_accounts`
+   = note: see <https://doc.rust-lang.org/n
+ightly/rustc/check-cfg/cargo-specifics.html
+> for more information about checking 
+conditional configuration
+   = note: this warning originates in the 
+derive macro `Accounts` (in Nightly 
+builds, run with -Z macro-backtrace for 
+more info)
+
+warning: unexpected `cfg` condition value: 
+`no-log-ix-name`
+  --> token_launcher\src\lib.rs:12:1
+   |
+12 | #[program]
+   | ^^^^^^^^^^
+   |
+   = note: expected values for `feature` 
+are: `default` and `idl-build`
+   = note: using a cfg inside a attribute 
+macro will use the cfgs from the 
+destination crate and not the ones from 
+the defining crate
+   = help: try referring to `program` 
+crate for guidance on how handle this 
+unexpected cfg
+   = help: the attribute macro `program` 
+may come from an old version of the 
+`anchor_attribute_program` crate, try 
+updating your dependency with `cargo 
+update -p anchor_attribute_program`
+   = note: see <https://doc.rust-lang.org/n
+ightly/rustc/check-cfg/cargo-specifics.html
+> for more information about checking 
+conditional configuration
+   = note: this warning originates in the 
+attribute macro `program` (in Nightly 
+builds, run with -Z macro-backtrace for 
+more info)
+
+warning: unexpected `cfg` condition value: 
+`anchor-debug`
+   --> token_launcher\src\lib.rs:357:10
+    |
+357 | #[derive(Accounts)]
+    |          ^^^^^^^^
+    |
+    = note: expected values for `feature` 
+are: `default` and `idl-build`
+    = note: using a cfg inside a derive 
+macro will use the cfgs from the 
+destination crate and not the ones from 
+the defining crate
+    = help: try referring to `Accounts` 
+crate for guidance on how handle this 
+unexpected cfg
+    = help: the derive macro `Accounts` 
+may come from an old version of the 
+`anchor_derive_accounts` crate, try 
+updating your dependency with `cargo 
+update -p anchor_derive_accounts`
+    = note: see <https://doc.rust-lang.org/
+nightly/rustc/check-cfg/cargo-specifics.htm
+l> for more information about checking 
+conditional configuration
+    = note: this warning originates in the 
+derive macro `Accounts` (in Nightly 
+builds, run with -Z macro-backtrace for 
+more info)
+
+warning: unexpected `cfg` condition value: 
+`anchor-debug`
+   --> token_launcher\src\lib.rs:385:10
+    |
+385 | #[derive(Accounts)]
+    |          ^^^^^^^^
+    |
+    = note: expected values for `feature` 
+are: `default` and `idl-build`
+    = note: using a cfg inside a derive 
+macro will use the cfgs from the 
+destination crate and not the ones from 
+the defining crate
+    = help: try referring to `Accounts` 
+crate for guidance on how handle this 
+unexpected cfg
+    = help: the derive macro `Accounts` 
+may come from an old version of the 
+`anchor_derive_accounts` crate, try 
+updating your dependency with `cargo 
+update -p anchor_derive_accounts`
+    = note: see <https://doc.rust-lang.org/
+nightly/rustc/check-cfg/cargo-specifics.htm
+l> for more information about checking 
+conditional configuration
+    = note: this warning originates in the 
+derive macro `Accounts` (in Nightly 
+builds, run with -Z macro-backtrace for 
+more info)
+
+warning: unexpected `cfg` condition value: 
+`anchor-debug`
+   --> token_launcher\src\lib.rs:415:10
+    |
+415 | #[derive(Accounts)]
+    |          ^^^^^^^^
+    |
+    = note: expected values for `feature` 
+are: `default` and `idl-build`
+    = note: using a cfg inside a derive 
+macro will use the cfgs from the 
+destination crate and not the ones from 
+the defining crate
+    = help: try referring to `Accounts` 
+crate for guidance on how handle this 
+unexpected cfg
+    = help: the derive macro `Accounts` 
+may come from an old version of the 
+`anchor_derive_accounts` crate, try 
+updating your dependency with `cargo 
+update -p anchor_derive_accounts`
+    = note: see <https://doc.rust-lang.org/
+nightly/rustc/check-cfg/cargo-specifics.htm
+l> for more information about checking 
+conditional configuration
+    = note: this warning originates in the 
+derive macro `Accounts` (in Nightly 
+builds, run with -Z macro-backtrace for 
+more info)
+
+warning: unexpected `cfg` condition value: 
+`anchor-debug`
+   --> token_launcher\src\lib.rs:445:10
+    |
+445 | #[derive(Accounts)]
+    |          ^^^^^^^^
+    |
+    = note: expected values for `feature` 
+are: `default` and `idl-build`
+    = note: using a cfg inside a derive 
+macro will use the cfgs from the 
+destination crate and not the ones from 
+the defining crate
+    = help: try referring to `Accounts` 
+crate for guidance on how handle this 
+unexpected cfg
+    = help: the derive macro `Accounts` 
+may come from an old version of the 
+`anchor_derive_accounts` crate, try 
+updating your dependency with `cargo 
+update -p anchor_derive_accounts`
+    = note: see <https://doc.rust-lang.org/
+nightly/rustc/check-cfg/cargo-specifics.htm
+l> for more information about checking 
+conditional configuration
+    = note: this warning originates in the 
+derive macro `Accounts` (in Nightly 
+builds, run with -Z macro-backtrace for 
+more info)
+
+warning: unexpected `cfg` condition value: 
+`anchor-debug`
+   --> token_launcher\src\lib.rs:458:10
+    |
+458 | #[derive(Accounts)]
+    |          ^^^^^^^^
+    |
+    = note: expected values for `feature` 
+are: `default` and `idl-build`
+    = note: using a cfg inside a derive 
+macro will use the cfgs from the 
+destination crate and not the ones from 
+the defining crate
+    = help: try referring to `Accounts` 
+crate for guidance on how handle this 
+unexpected cfg
+    = help: the derive macro `Accounts` 
+may come from an old version of the 
+`anchor_derive_accounts` crate, try 
+updating your dependency with `cargo 
+update -p anchor_derive_accounts`
+    = note: see <https://doc.rust-lang.org/
+nightly/rustc/check-cfg/cargo-specifics.htm
+l> for more information about checking 
+conditional configuration
+    = note: this warning originates in the 
+derive macro `Accounts` (in Nightly 
+builds, run with -Z macro-backtrace for 
+more info)
+
+warning: unexpected `cfg` condition value: 
+`anchor-debug`
+   --> token_launcher\src\lib.rs:472:10
+    |
+472 | #[derive(Accounts)]
+    |          ^^^^^^^^
+    |
+    = note: expected values for `feature` 
+are: `default` and `idl-build`
+    = note: using a cfg inside a derive 
+macro will use the cfgs from the 
+destination crate and not the ones from 
+the defining crate
+    = help: try referring to `Accounts` 
+crate for guidance on how handle this 
+unexpected cfg
+    = help: the derive macro `Accounts` 
+may come from an old version of the 
+`anchor_derive_accounts` crate, try 
+updating your dependency with `cargo 
+update -p anchor_derive_accounts`
+    = note: see <https://doc.rust-lang.org/
+nightly/rustc/check-cfg/cargo-specifics.htm
+l> for more information about checking 
+conditional configuration
+    = note: this warning originates in the 
+derive macro `Accounts` (in Nightly 
+builds, run with -Z macro-backtrace for 
+more info)
+
+warning: unexpected `cfg` condition value: 
+`anchor-debug`
+   --> token_launcher\src\lib.rs:494:10
+    |
+494 | #[derive(Accounts)]
+    |          ^^^^^^^^
+    |
+    = note: expected values for `feature` 
+are: `default` and `idl-build`
+    = note: using a cfg inside a derive 
+macro will use the cfgs from the 
+destination crate and not the ones from 
+the defining crate
+    = help: try referring to `Accounts` 
+crate for guidance on how handle this 
+unexpected cfg
+    = help: the derive macro `Accounts` 
+may come from an old version of the 
+`anchor_derive_accounts` crate, try 
+updating your dependency with `cargo 
+update -p anchor_derive_accounts`
+    = note: see <https://doc.rust-lang.org/
+nightly/rustc/check-cfg/cargo-specifics.htm
+l> for more information about checking 
+conditional configuration
+    = note: this warning originates in the 
+derive macro `Accounts` (in Nightly 
+builds, run with -Z macro-backtrace for 
+more info)
+
+warning: `token_launcher` (lib) generated 
+22 warnings (5 duplicates)
+    Finished `dev` profile [unoptimized + 
+debuginfo] target(s) in 1.54s

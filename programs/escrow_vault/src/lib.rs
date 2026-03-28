@@ -13,7 +13,7 @@ pub mod escrow_vault {
     pub fn create_vault(
         ctx: Context<CreateVault>,
         withdrawal_limit_lamports: u64,
-        cooldown_slots: u64,
+        cooldown_seconds: u64,
     ) -> Result<()> {
         let vault = &mut ctx.accounts.vault;
         vault.owner = ctx.accounts.owner.key();
@@ -23,8 +23,8 @@ pub mod escrow_vault {
         vault.total_withdrawn = 0;
         vault.total_traded = 0;
         vault.withdrawal_limit_lamports = withdrawal_limit_lamports;
-        vault.cooldown_slots = cooldown_slots;
-        vault.last_withdrawal_slot = 0;
+        vault.cooldown_seconds = cooldown_seconds;
+        vault.last_withdrawal_timestamp = 0;
         vault.is_locked = false;
         vault.bump = ctx.bumps.vault;
 
@@ -83,12 +83,12 @@ pub mod escrow_vault {
         );
 
         // Check cooldown
-        let current_slot = Clock::get()?.slot;
+        let current_time = Clock::get()?.unix_timestamp as u64;
         let cooldown_end = vault
-            .last_withdrawal_slot
-            .checked_add(vault.cooldown_slots)
+            .last_withdrawal_timestamp
+            .checked_add(vault.cooldown_seconds)
             .ok_or(VaultError::Overflow)?;
-        require!(current_slot >= cooldown_end, VaultError::CooldownActive);
+        require!(current_time >= cooldown_end, VaultError::CooldownActive);
 
         // Transfer SOL from vault PDA to owner via CPI with signer seeds
         let owner_key = vault.owner;
@@ -116,7 +116,7 @@ pub mod escrow_vault {
             .total_withdrawn
             .checked_add(lamports)
             .ok_or(VaultError::Overflow)?;
-        vault.last_withdrawal_slot = current_slot;
+        vault.last_withdrawal_timestamp = current_time;
 
         emit!(VaultWithdrawal {
             owner: vault.owner,
@@ -394,8 +394,8 @@ pub struct Vault {
     pub total_withdrawn: u64,                // 8
     pub total_traded: u64,                   // 8
     pub withdrawal_limit_lamports: u64,      // 8
-    pub cooldown_slots: u64,                 // 8
-    pub last_withdrawal_slot: u64,           // 8
+    pub cooldown_seconds: u64,               // 8
+    pub last_withdrawal_timestamp: u64,      // 8
     pub is_locked: bool,                     // 1
     pub bump: u8,                            // 1
 }

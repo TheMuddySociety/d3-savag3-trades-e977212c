@@ -1,15 +1,20 @@
 /**
  * TypeScript client SDK for the Token Launch program.
- * Bonding curve token launches, Pump.fun style.
+ * Bonding curve token launches, 2026 Pro standards.
  */
-import { PublicKey, SystemProgram, TransactionInstruction } from '@solana/web3.js';
+import { PublicKey, SystemProgram, TransactionInstruction, Connection, AccountInfo } from '@solana/web3.js';
+import * as borsh from '@coral-xyz/borsh';
 
 export const TOKEN_LAUNCHER_PROGRAM_ID = new PublicKey(
   'AucLeAW92yJiJuDCmtatTcpYyWQ6VAk9HQjXFR2EAN4v'
 );
 
-// Use SPL Token program ID
 const SPL_TOKEN_PROGRAM_ID = new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');
+
+export interface FeeRecipient {
+  recipient: PublicKey;
+  bps: number;
+}
 
 export interface LaunchData {
   creator: PublicKey;
@@ -18,17 +23,51 @@ export interface LaunchData {
   symbol: string;
   uri: string;
   totalSupply: bigint;
-  tokensSold: bigint;
-  solRaised: bigint;
+  virtualSolReserves: bigint;
+  realSolReserves: bigint;
+  realTokenReserves: bigint;
   graduationMcapLamports: bigint;
   isGraduated: boolean;
   isActive: boolean;
+  isCtoApproved: boolean;
+  feeSharingLocked: boolean;
   createdAt: bigint;
+  feeRecipients: FeeRecipient[];
 }
 
 /**
- * Derive the launch PDA for a given token mint.
+ * Borsh schema for the Launch account (aligned with 800-byte Rust struct).
+ * Note: discriminator is 8 bytes.
  */
+const LAUNCH_SCHEMA = borsh.struct([
+  borsh.array(borsh.u8(), 8, 'discriminator'), // 8
+  borsh.publicKey('creator'),     // 32
+  borsh.publicKey('tokenMint'),   // 32
+  borsh.str('name'),              // 4 + 32
+  borsh.str('symbol'),            // 4 + 10
+  borsh.str('uri'),               // 4 + 200
+  borsh.u64('totalSupply'),       // 8
+  borsh.u64('virtualSolReserves'),// 8
+  borsh.u64('realSolReserves'),   // 8
+  borsh.u64('realTokenReserves'), // 8
+  borsh.u64('graduationMcapLamports'), // 8
+  borsh.bool('isGraduated'),      // 1
+  borsh.bool('isActive'),         // 1
+  borsh.bool('isCtoApproved'),    // 1
+  borsh.bool('feeSharingLocked'), // 1
+  borsh.i64('createdAt'),         // 8
+  borsh.u8('bump'),               // 1
+  borsh.vec(                      // 4 + sharing
+    borsh.struct([
+      borsh.publicKey('recipient'),
+      borsh.u16('bps'),
+    ]),
+    'feeRecipients'
+  ),
+  borsh.option(borsh.publicKey(), 'pendingCtoAdmin'),
+  borsh.option(borsh.array(borsh.u8(), 32), 'evidenceHash'),
+]);
+
 export function findLaunchPDA(tokenMint: PublicKey): [PublicKey, number] {
   return PublicKey.findProgramAddressSync(
     [Buffer.from('launch'), tokenMint.toBuffer()],
@@ -36,9 +75,6 @@ export function findLaunchPDA(tokenMint: PublicKey): [PublicKey, number] {
   );
 }
 
-/**
- * Derive the curve authority PDA for a given token mint.
- */
 export function findCurveAuthorityPDA(tokenMint: PublicKey): [PublicKey, number] {
   return PublicKey.findProgramAddressSync(
     [Buffer.from('curve_authority'), tokenMint.toBuffer()],
@@ -46,9 +82,6 @@ export function findCurveAuthorityPDA(tokenMint: PublicKey): [PublicKey, number]
   );
 }
 
-/**
- * Derive the SOL vault PDA for a given token mint.
- */
 export function findSolVaultPDA(tokenMint: PublicKey): [PublicKey, number] {
   return PublicKey.findProgramAddressSync(
     [Buffer.from('sol_vault'), tokenMint.toBuffer()],
@@ -57,14 +90,34 @@ export function findSolVaultPDA(tokenMint: PublicKey): [PublicKey, number] {
 }
 
 /**
- * Build instruction to buy tokens from the bonding curve.
+ * Fetch and decode multiple launch accounts in one RPC call (Efficiency!).
+ * Critical for staying within free-tier RPC limits.
  */
+export async function getMultipleLaunches(
+  connection: Connection,
+  mints: PublicKey[]
+): Promise<(LaunchData | null)[]> {
+  if (mints.length === 0) return [];
+  const pdas = mints.map(m => findLaunchPDA(m)[0]);
+  const infos = await connection.getMultipleAccountsInfo(pdas);
+  
+  return infos.map(info => {
+    if (!info) return null;
+    try {
+      return LAUNCH_SCHEMA.decode(info.data) as LaunchData;
+    } catch (e) {
+      console.error('Failed to decode launch account:', e);
+      return null;
+    }
+  });
+}
+
 export function createBuyInstruction(
   buyer: PublicKey,
   tokenMint: PublicKey,
   curveVault: PublicKey,
   buyerTokenAccount: PublicKey,
-  solAmount: number
+  solAmount: bigint
 ): TransactionInstruction {
   const [launchPDA] = findLaunchPDA(tokenMint);
   const [solVaultPDA] = findSolVaultPDA(tokenMint);
@@ -73,7 +126,7 @@ export function createBuyInstruction(
   const discriminator = Buffer.from([0x66, 0x06, 0x3d, 0x12, 0x01, 0xda, 0xeb, 0xea]);
   const data = Buffer.alloc(discriminator.length + 8);
   discriminator.copy(data, 0);
-  data.writeBigUInt64LE(BigInt(solAmount), 8);
+  data.writeBigUInt64LE(solAmount, 8);
 
   return new TransactionInstruction({
     programId: TOKEN_LAUNCHER_PROGRAM_ID,
@@ -91,23 +144,21 @@ export function createBuyInstruction(
   });
 }
 
-/**
- * Build instruction to sell tokens back to the bonding curve.
- */
 export function createSellInstruction(
   seller: PublicKey,
   tokenMint: PublicKey,
   curveVault: PublicKey,
   sellerTokenAccount: PublicKey,
-  tokenAmount: number
+  tokenAmount: bigint
 ): TransactionInstruction {
   const [launchPDA] = findLaunchPDA(tokenMint);
   const [solVaultPDA] = findSolVaultPDA(tokenMint);
+  const [curveAuthority] = findCurveAuthorityPDA(tokenMint);
 
   const discriminator = Buffer.from([0x33, 0xe6, 0x85, 0xa4, 0x01, 0x7f, 0x83, 0x96]);
   const data = Buffer.alloc(discriminator.length + 8);
   discriminator.copy(data, 0);
-  data.writeBigUInt64LE(BigInt(tokenAmount), 8);
+  data.writeBigUInt64LE(tokenAmount, 8);
 
   return new TransactionInstruction({
     programId: TOKEN_LAUNCHER_PROGRAM_ID,
@@ -117,53 +168,60 @@ export function createSellInstruction(
       { pubkey: curveVault, isSigner: false, isWritable: true },
       { pubkey: sellerTokenAccount, isSigner: false, isWritable: true },
       { pubkey: solVaultPDA, isSigner: false, isWritable: true },
+      { pubkey: curveAuthority, isSigner: false, isWritable: false },
       { pubkey: SPL_TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
+      { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
     ],
     data,
   });
 }
 
 /**
- * Estimate tokens received for a given SOL amount on the bonding curve.
+ * Constant Product AMM Math (x * y = k)
+ * Estimate tokens received for a SOL input.
  */
 export function estimateTokensOut(
-  solAmount: number,
-  totalSupply: number,
-  tokensSold: number,
-  solRaised: number
-): number {
-  const remaining = totalSupply - tokensSold;
-  if (remaining <= 0) return 0;
-
-  if (solRaised === 0) {
-    return Math.min(
-      Math.floor((solAmount * remaining) / 1_000_000_000),
-      remaining
-    );
-  }
-
-  return Math.min(
-    Math.floor((solAmount * remaining) / (solRaised + solAmount)),
-    remaining
-  );
+  solIn: bigint,
+  virtualSol: bigint,
+  realSol: bigint,
+  realTokens: bigint
+): bigint {
+  if (solIn <= 0n) return 0n;
+  
+  const currentSolReserves = virtualSol + realSol;
+  const k = currentSolReserves * realTokens;
+  const newSolReserves = currentSolReserves + solIn;
+  const newTokensReserves = k / newSolReserves;
+  
+  return realTokens - newTokensReserves;
 }
 
 /**
- * Estimate SOL received for selling tokens on the bonding curve.
+ * Estimate SOL received for a token input.
  */
 export function estimateSolOut(
-  tokenAmount: number,
-  tokensSold: number,
-  solRaised: number
-): number {
-  if (tokensSold <= 0) return 0;
-  return Math.floor((tokenAmount * solRaised) / tokensSold);
+  tokensIn: bigint,
+  virtualSol: bigint,
+  realSol: bigint,
+  realTokens: bigint
+): bigint {
+  if (tokensIn <= 0n) return 0n;
+  if (tokensIn >= realTokens) return realSol; // Cannot drain virtual reserves
+  
+  const currentSolReserves = virtualSol + realSol;
+  const k = currentSolReserves * realTokens;
+  const newTokensReserves = realTokens + tokensIn;
+  const newSolReserves = k / newTokensReserves;
+  
+  return currentSolReserves - newSolReserves;
 }
 
 /**
- * Calculate current token price in lamports.
+ * Current price in SOL per Token.
  */
-export function currentPriceLamports(tokensSold: number, solRaised: number): number {
-  if (tokensSold <= 0) return 0;
-  return Math.floor(solRaised / tokensSold);
+export function getCurrentPrice(virtualSol: bigint, realSol: bigint, realTokens: bigint): number {
+  if (realTokens === 0n) return 0;
+  const totalSol = Number(virtualSol + realSol) / 1e9;
+  const totalTokens = Number(realTokens) / 1e6; // Assuming 6 decimals
+  return totalSol / totalTokens;
 }

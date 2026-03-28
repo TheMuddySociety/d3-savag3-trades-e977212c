@@ -16,6 +16,8 @@ pub mod token_launcher {
     /// Minimum virtual SOL (1 SOL) to prevent negligible initial pricing.
     const MIN_VIRTUAL_SOL: u64 = 1_000_000_000;
     const MAX_URI_LEN: usize = 200;
+    const MIGRATION_FEE_SOL: u64 = 15_000_000; // 0.015 SOL
+    const MAX_FEE_RECIPIENTS: usize = 10;
 
     /// Create a new token launch with constant-product bonding curve.
     ///
@@ -70,8 +72,14 @@ pub mod token_launcher {
         launch.graduation_mcap_lamports = graduation_mcap_lamports;
         launch.is_graduated = false;
         launch.is_active = true;
+        launch.is_cto_approved = false;
+        launch.fee_sharing_locked = false;
         launch.created_at = Clock::get()?.unix_timestamp;
         launch.bump = ctx.bumps.launch;
+        launch.fee_recipients = vec![FeeRecipient {
+            recipient: ctx.accounts.creator.key(),
+            bps: 10000, // 100% to creator initially
+        }];
 
         emit!(LaunchCreated {
             creator: launch.creator,
@@ -81,6 +89,82 @@ pub mod token_launcher {
             initial_supply,
             virtual_sol_reserves,
             graduation_mcap: graduation_mcap_lamports,
+        });
+
+        Ok(())
+    }
+
+    /// Update fee sharing configuration.
+    /// Can only be done once per the "one-time redirect" rule to prevent vamping.
+    pub fn update_fee_shares(
+        ctx: Context<UpdateFeeShares>,
+        shares: Vec<FeeRecipient>,
+    ) -> Result<()> {
+        let launch = &mut ctx.accounts.launch;
+        require!(!launch.fee_sharing_locked, LaunchError::FeeSharingLocked);
+        require!(shares.len() > 0 && shares.len() <= MAX_FEE_RECIPIENTS, LaunchError::InvalidFeeRecipientCount);
+        
+        let mut total_bps: u16 = 0;
+        for share in &shares {
+            total_bps = total_bps.checked_add(share.bps).ok_or(LaunchError::Overflow)?;
+        }
+        require!(total_bps == 10000, LaunchError::InvalidFeeSplit);
+
+        launch.fee_recipients = shares;
+        launch.fee_sharing_locked = true; // Permanent lock after one update
+
+        Ok(())
+    }
+
+    /// Propose a Community Takeover.
+    /// requires evidence hash of dev abandonment.
+    pub fn propose_cto(
+        ctx: Context<ProposeCto>,
+        evidence_hash: [u8; 32],
+    ) -> Result<()> {
+        let launch = &mut ctx.accounts.launch;
+        require!(!launch.is_graduated, LaunchError::AlreadyGraduated);
+        
+        // In a real app, this would trigger a platform review or DAO vote.
+        // For now, we store the proposal.
+        launch.pending_cto_admin = Some(ctx.accounts.proposer.key());
+        launch.evidence_hash = Some(evidence_hash);
+
+        Ok(())
+    }
+
+    /// Complete Graduation to Raydium CPMM.
+    /// Deducts migration fee and marks as graduated.
+    /// Implementation for actual CPMM pool creation placeholder.
+    pub fn graduate(ctx: Context<Graduate>) -> Result<()> {
+        let launch = &mut ctx.accounts.launch;
+        require!(launch.real_sol_reserves >= launch.graduation_mcap_lamports, LaunchError::GraduationThresholdNotMet);
+        require!(!launch.is_graduated, LaunchError::AlreadyGraduated);
+
+        // Deduct migration fee
+        system_program::transfer(
+            CpiContext::new_with_signer(
+                ctx.accounts.system_program.to_account_info(),
+                system_program::Transfer {
+                    from: ctx.accounts.sol_vault.to_account_info(),
+                    to: ctx.accounts.migration_fee_receiver.to_account_info(),
+                },
+                &[&[
+                    b"sol_vault",
+                    launch.token_mint.as_ref(),
+                    &[ctx.bumps.sol_vault],
+                ]],
+            ),
+            MIGRATION_FEE_SOL,
+        )?;
+
+        launch.is_graduated = true;
+        launch.is_active = false;
+
+        emit!(LaunchGraduated {
+            token_mint: launch.token_mint,
+            real_sol_reserves: launch.real_sol_reserves,
+            remaining_tokens: launch.real_token_reserves,
         });
 
         Ok(())
@@ -359,6 +443,55 @@ pub struct Sell<'info> {
 }
 
 #[derive(Accounts)]
+pub struct UpdateFeeShares<'info> {
+    #[account(mut)]
+    pub caller: Signer<'info>,
+
+    #[account(
+        mut,
+        seeds = [b"launch", launch.token_mint.as_ref()], bump = launch.bump,
+        constraint = (launch.creator == caller.key() || launch.pending_cto_admin == Some(caller.key())) @ LaunchError::Unauthorized
+    )]
+    pub launch: Account<'info, Launch>,
+}
+
+#[derive(Accounts)]
+pub struct ProposeCto<'info> {
+    #[account(mut)]
+    pub proposer: Signer<'info>,
+
+    #[account(
+        mut,
+        seeds = [b"launch", launch.token_mint.as_ref()], bump = launch.bump,
+    )]
+    pub launch: Account<'info, Launch>,
+
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct Graduate<'info> {
+    #[account(mut)]
+    pub payer: Signer<'info>,
+
+    #[account(
+        mut,
+        seeds = [b"launch", launch.token_mint.as_ref()], bump = launch.bump,
+    )]
+    pub launch: Account<'info, Launch>,
+
+    /// CHECK: SOL vault PDA — validated via seeds
+    #[account(mut, seeds = [b"sol_vault", launch.token_mint.as_ref()], bump)]
+    pub sol_vault: SystemAccount<'info>,
+
+    /// CHECK: Migration fee receiver (platform wallet)
+    #[account(mut)]
+    pub migration_fee_receiver: UncheckedAccount<'info>,
+
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
 pub struct CancelLaunch<'info> {
     pub creator: Signer<'info>,
 
@@ -380,20 +513,30 @@ pub struct Launch {
     pub symbol: String,                      // 4 + 10
     pub uri: String,                         // 4 + 200
     pub total_supply: u64,                   // 8
-    pub virtual_sol_reserves: u64,           // 8  constant after init
-    pub real_sol_reserves: u64,              // 8  actual SOL deposited
-    pub real_token_reserves: u64,            // 8  tokens remaining in vault
+    pub virtual_sol_reserves: u64,           // 8
+    pub real_sol_reserves: u64,              // 8
+    pub real_token_reserves: u64,            // 8
     pub graduation_mcap_lamports: u64,       // 8
     pub is_graduated: bool,                  // 1
     pub is_active: bool,                     // 1
+    pub is_cto_approved: bool,               // 1
+    pub fee_sharing_locked: bool,            // 1
     pub created_at: i64,                     // 8
     pub bump: u8,                            // 1
+    pub fee_recipients: Vec<FeeRecipient>,   // 4 + (32 + 2) * 10 = 344
+    pub pending_cto_admin: Option<Pubkey>,   // 1 + 32 = 33
+    pub evidence_hash: Option<[u8; 32]>,     // 1 + 32 = 33
+}
+
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Default, Copy)]
+pub struct FeeRecipient {
+    pub recipient: Pubkey,
+    pub bps: u16,
 }
 
 impl Launch {
-    // 8 + 32 + 32 + 36 + 14 + 204 + 8*5 + 1 + 1 + 8 + 1 = 377
-    pub const LEN: usize = 8 + 32 + 32 + (4 + 32) + (4 + 10) + (4 + 200)
-        + 8 + 8 + 8 + 8 + 8 + 1 + 1 + 8 + 1;
+    // 8 + 32 + 32 + 36 + 14 + 204 + 8*5 + 1*4 + 8 + 1 + 4 + 340 + 33 + 33 = 787
+    pub const LEN: usize = 800; // Buffered size
 }
 
 // ═══════════ Events ═══════════
@@ -469,4 +612,14 @@ pub enum LaunchError {
     ZeroGraduationThreshold,
     #[msg("Arithmetic overflow")]
     Overflow,
+    #[msg("Fee sharing is locked (one-time redirect only)")]
+    FeeSharingLocked,
+    #[msg("Invalid fee recipient count (max 10)")]
+    InvalidFeeRecipientCount,
+    #[msg("Invalid fee split — must total 10,000 basis points")]
+    InvalidFeeSplit,
+    #[msg("No proposal found")]
+    NoProposal,
+    #[msg("Graduation threshold not met")]
+    GraduationThresholdNotMet,
 }
