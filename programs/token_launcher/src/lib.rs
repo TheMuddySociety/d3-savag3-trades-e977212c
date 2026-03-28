@@ -4,22 +4,25 @@ use anchor_spl::token::{self, Mint, Token, TokenAccount, MintTo};
 
 declare_id!("AucLeAW92yJiJuDCmtatTcpYyWQ6VAk9HQjXFR2EAN4v");
 
-/// Token Launch Program — custom bonding curve for launching tokens
-/// directly from the D3S app, Pump.fun style.
+/// Token Launch Program — Constant-product bonding curve (x·y=k) with virtual
+/// SOL reserves for fair token launches. Pump.fun-style economics.
 ///
-/// Includes per-buy token cap (10% of supply) to prevent first-buyer
-/// dominance and front-running exploits.
+/// Virtual reserves set a non-zero starting price, preventing first-buyer
+/// dominance. Buy and sell use the same invariant, ensuring symmetry.
 #[program]
 pub mod token_launcher {
     use super::*;
 
-    /// Maximum percentage of total supply a single buy can acquire (10%).
-    const MAX_BUY_PCT: u64 = 10;
-
-    /// Maximum URI length in bytes.
+    /// Minimum virtual SOL (1 SOL) to prevent negligible initial pricing.
+    const MIN_VIRTUAL_SOL: u64 = 1_000_000_000;
     const MAX_URI_LEN: usize = 200;
 
-    /// Create a new token launch with bonding curve parameters.
+    /// Create a new token launch with constant-product bonding curve.
+    ///
+    /// `virtual_sol_reserves` sets curve depth and starting price:
+    ///   initial_price = virtual_sol / total_supply
+    /// Higher virtual SOL → higher floor price, less first-buyer advantage.
+    /// Typical: 30 SOL (30_000_000_000 lamports).
     pub fn create_launch(
         ctx: Context<CreateLaunch>,
         name: String,
@@ -27,11 +30,14 @@ pub mod token_launcher {
         uri: String,
         initial_supply: u64,
         graduation_mcap_lamports: u64,
+        virtual_sol_reserves: u64,
     ) -> Result<()> {
         require!(name.len() <= 32, LaunchError::NameTooLong);
         require!(symbol.len() <= 10, LaunchError::SymbolTooLong);
         require!(uri.len() <= MAX_URI_LEN, LaunchError::UriTooLong);
         require!(initial_supply > 0, LaunchError::ZeroSupply);
+        require!(virtual_sol_reserves >= MIN_VIRTUAL_SOL, LaunchError::VirtualSolTooLow);
+        require!(graduation_mcap_lamports > 0, LaunchError::ZeroGraduationThreshold);
 
         // Mint initial supply to the bonding curve vault
         token::mint_to(
@@ -58,8 +64,9 @@ pub mod token_launcher {
         launch.symbol = symbol.clone();
         launch.uri = uri;
         launch.total_supply = initial_supply;
-        launch.tokens_sold = 0;
-        launch.sol_raised = 0;
+        launch.virtual_sol_reserves = virtual_sol_reserves;
+        launch.real_sol_reserves = 0;
+        launch.real_token_reserves = initial_supply;
         launch.graduation_mcap_lamports = graduation_mcap_lamports;
         launch.is_graduated = false;
         launch.is_active = true;
@@ -72,6 +79,7 @@ pub mod token_launcher {
             name,
             symbol,
             initial_supply,
+            virtual_sol_reserves,
             graduation_mcap: graduation_mcap_lamports,
         });
 
@@ -79,49 +87,36 @@ pub mod token_launcher {
     }
 
     /// Buy tokens from the bonding curve.
-    /// Price = sol_raised / tokens_sold (linear curve).
-    /// Per-buy cap: max 10% of total supply per transaction.
+    ///
+    /// Constant-product: tokens_out = T * sol_in / (S + sol_in)
+    /// where S = virtual_sol + real_sol, T = real_token_reserves.
     pub fn buy(ctx: Context<Buy>, sol_amount: u64) -> Result<()> {
         let launch = &mut ctx.accounts.launch;
 
         require!(launch.is_active, LaunchError::LaunchInactive);
         require!(!launch.is_graduated, LaunchError::AlreadyGraduated);
         require!(sol_amount > 0, LaunchError::ZeroAmount);
+        require!(launch.real_token_reserves > 0, LaunchError::SoldOut);
 
-        // Linear bonding curve: price increases as more tokens are sold
-        let remaining = launch
-            .total_supply
-            .checked_sub(launch.tokens_sold)
+        // S = virtual_sol + real_sol
+        let effective_sol = (launch.virtual_sol_reserves as u128)
+            .checked_add(launch.real_sol_reserves as u128)
             .ok_or(LaunchError::Overflow)?;
-        require!(remaining > 0, LaunchError::SoldOut);
 
-        let tokens_out = if launch.sol_raised == 0 {
-            // First buyer gets a base rate
-            let raw = (sol_amount as u128)
-                .checked_mul(remaining as u128)
-                .ok_or(LaunchError::Overflow)?
-                .checked_div(1_000_000_000)
-                .ok_or(LaunchError::Overflow)? as u64;
-            std::cmp::min(raw, remaining)
-        } else {
-            let denominator = (launch.sol_raised as u128)
-                .checked_add(sol_amount as u128)
-                .ok_or(LaunchError::Overflow)?;
-            let raw = (sol_amount as u128)
-                .checked_mul(remaining as u128)
-                .ok_or(LaunchError::Overflow)?
-                .checked_div(denominator)
-                .ok_or(LaunchError::Overflow)? as u64;
-            std::cmp::min(raw, remaining)
-        };
+        // tokens_out = T * sol_in / (S + sol_in)
+        let denominator = effective_sol
+            .checked_add(sol_amount as u128)
+            .ok_or(LaunchError::Overflow)?;
+        let tokens_out = (launch.real_token_reserves as u128)
+            .checked_mul(sol_amount as u128)
+            .ok_or(LaunchError::Overflow)?
+            .checked_div(denominator)
+            .ok_or(LaunchError::Overflow)? as u64;
 
         require!(tokens_out > 0, LaunchError::ZeroTokensOut);
+        require!(tokens_out <= launch.real_token_reserves, LaunchError::SoldOut);
 
-        // Per-buy cap: max 10% of total supply per transaction
-        let max_per_buy = launch.total_supply / MAX_BUY_PCT;
-        require!(tokens_out <= max_per_buy, LaunchError::BuyLimitExceeded);
-
-        // Transfer SOL from buyer to curve
+        // Transfer SOL from buyer to sol_vault
         system_program::transfer(
             CpiContext::new(
                 ctx.accounts.system_program.to_account_info(),
@@ -135,12 +130,6 @@ pub mod token_launcher {
 
         // Transfer tokens from curve vault to buyer
         let mint_key = launch.token_mint;
-        let seeds = &[
-            b"curve_authority",
-            mint_key.as_ref(),
-            &[ctx.bumps.curve_authority],
-        ];
-
         token::transfer(
             CpiContext::new_with_signer(
                 ctx.accounts.token_program.to_account_info(),
@@ -149,66 +138,79 @@ pub mod token_launcher {
                     to: ctx.accounts.buyer_token_account.to_account_info(),
                     authority: ctx.accounts.curve_authority.to_account_info(),
                 },
-                &[seeds],
+                &[&[
+                    b"curve_authority",
+                    mint_key.as_ref(),
+                    &[ctx.bumps.curve_authority],
+                ]],
             ),
             tokens_out,
         )?;
 
-        launch.tokens_sold = launch
-            .tokens_sold
-            .checked_add(tokens_out)
-            .ok_or(LaunchError::Overflow)?;
-        launch.sol_raised = launch
-            .sol_raised
-            .checked_add(sol_amount)
-            .ok_or(LaunchError::Overflow)?;
+        launch.real_sol_reserves = launch.real_sol_reserves
+            .checked_add(sol_amount).ok_or(LaunchError::Overflow)?;
+        launch.real_token_reserves = launch.real_token_reserves
+            .checked_sub(tokens_out).ok_or(LaunchError::Overflow)?;
 
-        // Check graduation
-        if launch.sol_raised >= launch.graduation_mcap_lamports {
+        // Graduate when real SOL raised exceeds threshold
+        if launch.real_sol_reserves >= launch.graduation_mcap_lamports {
             launch.is_graduated = true;
             launch.is_active = false;
-
             emit!(LaunchGraduated {
                 token_mint: launch.token_mint,
-                sol_raised: launch.sol_raised,
-                tokens_sold: launch.tokens_sold,
+                real_sol_reserves: launch.real_sol_reserves,
+                remaining_tokens: launch.real_token_reserves,
             });
         }
+
+        // Marginal price for event: (virtual_sol + real_sol) / real_token_reserves
+        let new_eff_sol = (launch.virtual_sol_reserves as u128)
+            .saturating_add(launch.real_sol_reserves as u128);
+        let price = if launch.real_token_reserves > 0 {
+            new_eff_sol.checked_div(launch.real_token_reserves as u128).unwrap_or(0) as u64
+        } else { 0 };
 
         emit!(TokenPurchased {
             buyer: ctx.accounts.buyer.key(),
             token_mint: launch.token_mint,
             sol_amount,
             tokens_received: tokens_out,
-            new_price_lamports: if launch.tokens_sold > 0 {
-                launch.sol_raised / launch.tokens_sold
-            } else {
-                0
-            },
+            marginal_price_lamports: price,
         });
 
         Ok(())
     }
 
     /// Sell tokens back to the bonding curve.
-    /// SOL returned via CPI transfer with PDA signer seeds.
+    ///
+    /// Constant-product: sol_out = S * tokens_in / (T + tokens_in)
+    /// SOL returned is capped at real_sol_reserves (virtual SOL stays).
+    ///
+    /// Sells are allowed even after cancellation (is_active=false) so holders
+    /// can reclaim SOL. Only graduation blocks sells.
     pub fn sell(ctx: Context<Sell>, token_amount: u64) -> Result<()> {
         let launch = &mut ctx.accounts.launch;
 
-        require!(launch.is_active, LaunchError::LaunchInactive);
         require!(!launch.is_graduated, LaunchError::AlreadyGraduated);
         require!(token_amount > 0, LaunchError::ZeroAmount);
-        require!(
-            launch.tokens_sold >= token_amount,
-            LaunchError::ExceedsSold
-        );
 
-        // Calculate SOL to return (reverse bonding curve)
-        let sol_out = (token_amount as u128)
-            .checked_mul(launch.sol_raised as u128)
+        let effective_sol = (launch.virtual_sol_reserves as u128)
+            .checked_add(launch.real_sol_reserves as u128)
+            .ok_or(LaunchError::Overflow)?;
+
+        let denominator = (launch.real_token_reserves as u128)
+            .checked_add(token_amount as u128)
+            .ok_or(LaunchError::Overflow)?;
+
+        let sol_out_raw = effective_sol
+            .checked_mul(token_amount as u128)
             .ok_or(LaunchError::Overflow)?
-            .checked_div(launch.tokens_sold as u128)
+            .checked_div(denominator)
             .ok_or(LaunchError::Overflow)? as u64;
+
+        // Cap: cannot withdraw virtual SOL
+        let sol_out = std::cmp::min(sol_out_raw, launch.real_sol_reserves);
+        require!(sol_out > 0, LaunchError::ZeroSolOut);
 
         // Transfer tokens back to curve vault
         token::transfer(
@@ -223,7 +225,7 @@ pub mod token_launcher {
             token_amount,
         )?;
 
-        // Transfer SOL back to seller from vault PDA via CPI with signer seeds
+        // Transfer SOL from sol_vault to seller via CPI with PDA signer
         let mint_key = launch.token_mint;
         system_program::transfer(
             CpiContext::new_with_signer(
@@ -241,14 +243,10 @@ pub mod token_launcher {
             sol_out,
         )?;
 
-        launch.tokens_sold = launch
-            .tokens_sold
-            .checked_sub(token_amount)
-            .ok_or(LaunchError::Overflow)?;
-        launch.sol_raised = launch
-            .sol_raised
-            .checked_sub(sol_out)
-            .ok_or(LaunchError::Overflow)?;
+        launch.real_token_reserves = launch.real_token_reserves
+            .checked_add(token_amount).ok_or(LaunchError::Overflow)?;
+        launch.real_sol_reserves = launch.real_sol_reserves
+            .checked_sub(sol_out).ok_or(LaunchError::Overflow)?;
 
         emit!(TokenSold {
             seller: ctx.accounts.seller.key(),
@@ -260,7 +258,8 @@ pub mod token_launcher {
         Ok(())
     }
 
-    /// Creator cancels the launch and refunds remaining SOL.
+    /// Creator cancels the launch. No new buys, but sells remain open
+    /// so holders can exit at the current curve price.
     pub fn cancel_launch(ctx: Context<CancelLaunch>) -> Result<()> {
         let launch = &mut ctx.accounts.launch;
         require!(!launch.is_graduated, LaunchError::AlreadyGraduated);
@@ -279,16 +278,11 @@ pub struct CreateLaunch<'info> {
     pub token_mint: Account<'info, Mint>,
 
     #[account(
-        init,
-        payer = creator,
-        space = Launch::LEN,
-        seeds = [b"launch", token_mint.key().as_ref()],
-        bump
+        init, payer = creator, space = Launch::LEN,
+        seeds = [b"launch", token_mint.key().as_ref()], bump
     )]
     pub launch: Account<'info, Launch>,
 
-    /// Token account owned by curve authority PDA.
-    /// Validated: mint must match token_mint, owner must be curve_authority.
     #[account(
         mut,
         constraint = curve_vault.mint == token_mint.key() @ LaunchError::InvalidMint,
@@ -297,10 +291,7 @@ pub struct CreateLaunch<'info> {
     pub curve_vault: Account<'info, TokenAccount>,
 
     /// CHECK: PDA authority for the curve — validated via seeds
-    #[account(
-        seeds = [b"curve_authority", token_mint.key().as_ref()],
-        bump
-    )]
+    #[account(seeds = [b"curve_authority", token_mint.key().as_ref()], bump)]
     pub curve_authority: UncheckedAccount<'info>,
 
     pub token_program: Program<'info, Token>,
@@ -312,14 +303,9 @@ pub struct Buy<'info> {
     #[account(mut)]
     pub buyer: Signer<'info>,
 
-    #[account(
-        mut,
-        seeds = [b"launch", launch.token_mint.as_ref()],
-        bump = launch.bump
-    )]
+    #[account(mut, seeds = [b"launch", launch.token_mint.as_ref()], bump = launch.bump)]
     pub launch: Account<'info, Launch>,
 
-    /// Curve token vault — validated: mint and owner must match launch.
     #[account(
         mut,
         constraint = curve_vault.mint == launch.token_mint @ LaunchError::InvalidMint,
@@ -327,26 +313,15 @@ pub struct Buy<'info> {
     )]
     pub curve_vault: Account<'info, TokenAccount>,
 
-    /// Buyer's token account — validated: mint must match launch.
-    #[account(
-        mut,
-        constraint = buyer_token_account.mint == launch.token_mint @ LaunchError::InvalidMint,
-    )]
+    #[account(mut, constraint = buyer_token_account.mint == launch.token_mint @ LaunchError::InvalidMint)]
     pub buyer_token_account: Account<'info, TokenAccount>,
 
-    /// CHECK: SOL vault PDA — validated via seeds. Receives SOL from buyers.
-    #[account(
-        mut,
-        seeds = [b"sol_vault", launch.token_mint.as_ref()],
-        bump
-    )]
+    /// CHECK: SOL vault PDA — validated via seeds
+    #[account(mut, seeds = [b"sol_vault", launch.token_mint.as_ref()], bump)]
     pub sol_vault: SystemAccount<'info>,
 
     /// CHECK: Curve authority PDA — validated via seeds
-    #[account(
-        seeds = [b"curve_authority", launch.token_mint.as_ref()],
-        bump
-    )]
+    #[account(seeds = [b"curve_authority", launch.token_mint.as_ref()], bump)]
     pub curve_authority: UncheckedAccount<'info>,
 
     pub token_program: Program<'info, Token>,
@@ -358,14 +333,9 @@ pub struct Sell<'info> {
     #[account(mut)]
     pub seller: Signer<'info>,
 
-    #[account(
-        mut,
-        seeds = [b"launch", launch.token_mint.as_ref()],
-        bump = launch.bump
-    )]
+    #[account(mut, seeds = [b"launch", launch.token_mint.as_ref()], bump = launch.bump)]
     pub launch: Account<'info, Launch>,
 
-    /// Curve token vault — validated: mint and owner must match launch.
     #[account(
         mut,
         constraint = curve_vault.mint == launch.token_mint @ LaunchError::InvalidMint,
@@ -373,26 +343,15 @@ pub struct Sell<'info> {
     )]
     pub curve_vault: Account<'info, TokenAccount>,
 
-    /// Seller's token account — validated: mint must match launch.
-    #[account(
-        mut,
-        constraint = seller_token_account.mint == launch.token_mint @ LaunchError::InvalidMint,
-    )]
+    #[account(mut, constraint = seller_token_account.mint == launch.token_mint @ LaunchError::InvalidMint)]
     pub seller_token_account: Account<'info, TokenAccount>,
 
-    /// CHECK: SOL vault PDA — validated via seeds. SOL transferred out via CPI.
-    #[account(
-        mut,
-        seeds = [b"sol_vault", launch.token_mint.as_ref()],
-        bump
-    )]
+    /// CHECK: SOL vault PDA — validated via seeds
+    #[account(mut, seeds = [b"sol_vault", launch.token_mint.as_ref()], bump)]
     pub sol_vault: SystemAccount<'info>,
 
-    /// CHECK: Curve authority PDA — used for curve_vault owner validation.
-    #[account(
-        seeds = [b"curve_authority", launch.token_mint.as_ref()],
-        bump
-    )]
+    /// CHECK: Curve authority PDA — for curve_vault owner validation
+    #[account(seeds = [b"curve_authority", launch.token_mint.as_ref()], bump)]
     pub curve_authority: UncheckedAccount<'info>,
 
     pub token_program: Program<'info, Token>,
@@ -405,8 +364,7 @@ pub struct CancelLaunch<'info> {
 
     #[account(
         mut,
-        seeds = [b"launch", launch.token_mint.as_ref()],
-        bump = launch.bump,
+        seeds = [b"launch", launch.token_mint.as_ref()], bump = launch.bump,
         constraint = launch.creator == creator.key() @ LaunchError::Unauthorized
     )]
     pub launch: Account<'info, Launch>,
@@ -422,8 +380,9 @@ pub struct Launch {
     pub symbol: String,                      // 4 + 10
     pub uri: String,                         // 4 + 200
     pub total_supply: u64,                   // 8
-    pub tokens_sold: u64,                    // 8
-    pub sol_raised: u64,                     // 8
+    pub virtual_sol_reserves: u64,           // 8  constant after init
+    pub real_sol_reserves: u64,              // 8  actual SOL deposited
+    pub real_token_reserves: u64,            // 8  tokens remaining in vault
     pub graduation_mcap_lamports: u64,       // 8
     pub is_graduated: bool,                  // 1
     pub is_active: bool,                     // 1
@@ -432,7 +391,9 @@ pub struct Launch {
 }
 
 impl Launch {
-    pub const LEN: usize = 8 + 32 + 32 + (4 + 32) + (4 + 10) + (4 + 200) + 8 + 8 + 8 + 8 + 1 + 1 + 8 + 1;
+    // 8 + 32 + 32 + 36 + 14 + 204 + 8*5 + 1 + 1 + 8 + 1 = 377
+    pub const LEN: usize = 8 + 32 + 32 + (4 + 32) + (4 + 10) + (4 + 200)
+        + 8 + 8 + 8 + 8 + 8 + 1 + 1 + 8 + 1;
 }
 
 // ═══════════ Events ═══════════
@@ -444,6 +405,7 @@ pub struct LaunchCreated {
     pub name: String,
     pub symbol: String,
     pub initial_supply: u64,
+    pub virtual_sol_reserves: u64,
     pub graduation_mcap: u64,
 }
 
@@ -453,7 +415,7 @@ pub struct TokenPurchased {
     pub token_mint: Pubkey,
     pub sol_amount: u64,
     pub tokens_received: u64,
-    pub new_price_lamports: u64,
+    pub marginal_price_lamports: u64,
 }
 
 #[event]
@@ -467,8 +429,8 @@ pub struct TokenSold {
 #[event]
 pub struct LaunchGraduated {
     pub token_mint: Pubkey,
-    pub sol_raised: u64,
-    pub tokens_sold: u64,
+    pub real_sol_reserves: u64,
+    pub remaining_tokens: u64,
 }
 
 // ═══════════ Errors ═══════════
@@ -495,14 +457,16 @@ pub enum LaunchError {
     SoldOut,
     #[msg("Zero tokens out — trade too small")]
     ZeroTokensOut,
-    #[msg("Sell amount exceeds tokens sold")]
-    ExceedsSold,
+    #[msg("Zero SOL out — trade too small")]
+    ZeroSolOut,
     #[msg("Invalid mint — does not match launch token")]
     InvalidMint,
     #[msg("Invalid vault owner — must be curve authority PDA")]
     InvalidVaultOwner,
-    #[msg("Buy exceeds per-transaction limit (10% of supply)")]
-    BuyLimitExceeded,
+    #[msg("Virtual SOL too low (min 1 SOL)")]
+    VirtualSolTooLow,
+    #[msg("Graduation threshold must be > 0")]
+    ZeroGraduationThreshold,
     #[msg("Arithmetic overflow")]
     Overflow,
 }
