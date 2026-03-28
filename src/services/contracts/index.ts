@@ -6,7 +6,7 @@ export {
   STRATEGY_IDS,
   findDelegationSessionPDA,
   createInitializeDelegationInstruction,
-  createDeactivateInstruction,
+  
   createRecordTradeInstruction,
   solToLamports,
 } from './beachDelegator';
