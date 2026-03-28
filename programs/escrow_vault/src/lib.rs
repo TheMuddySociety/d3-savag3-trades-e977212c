@@ -188,12 +188,12 @@ pub struct CreateVault<'info> {
     )]
     pub vault: Account<'info, Vault>,
 
-    /// CHECK: SOL vault PDA
     #[account(
+        mut,
         seeds = [b"vault_sol", owner.key().as_ref()],
         bump
     )]
-    pub vault_sol: UncheckedAccount<'info>,
+    pub vault_sol: SystemAccount<'info>,
 
     pub system_program: Program<'info, System>,
 }
@@ -211,13 +211,12 @@ pub struct Deposit<'info> {
     )]
     pub vault: Account<'info, Vault>,
 
-    /// CHECK: SOL vault PDA
     #[account(
         mut,
         seeds = [b"vault_sol", owner.key().as_ref()],
         bump
     )]
-    pub vault_sol: UncheckedAccount<'info>,
+    pub vault_sol: SystemAccount<'info>,
 
     pub system_program: Program<'info, System>,
 }
@@ -235,13 +234,12 @@ pub struct Withdraw<'info> {
     )]
     pub vault: Account<'info, Vault>,
 
-    /// CHECK: SOL vault PDA
     #[account(
         mut,
         seeds = [b"vault_sol", owner.key().as_ref()],
         bump
     )]
-    pub vault_sol: UncheckedAccount<'info>,
+    pub vault_sol: SystemAccount<'info>,
 
     pub system_program: Program<'info, System>,
 }
@@ -272,13 +270,12 @@ pub struct AgentReturn<'info> {
     )]
     pub vault: Account<'info, Vault>,
 
-    /// CHECK: SOL vault PDA
     #[account(
         mut,
         seeds = [b"vault_sol", vault.owner.as_ref()],
         bump
     )]
-    pub vault_sol: UncheckedAccount<'info>,
+    pub vault_sol: SystemAccount<'info>,
 
     pub system_program: Program<'info, System>,
 }
