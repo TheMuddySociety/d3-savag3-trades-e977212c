@@ -1,6 +1,4 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-// Redis client - dynamic import to avoid build errors when not configured
-let RedisClass: any = null;
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -68,15 +66,6 @@ serve(async (req: Request) => {
       const cacheKey = `full_profile:${targetMint}:${interval}`;
       const cacheTTL = 45;
 
-      // Try Redis cache
-      if (redis) {
-        const cached = await redis.get(cacheKey);
-        if (cached) {
-          console.log(`[token-prices] Cache hit for ${targetMint}`);
-          return new Response(cached, { headers: corsHeaders });
-        }
-      }
-
       const [priceHistory, holdersData, tradesData, currentPrice] = await Promise.allSettled([
         fetchBirdeyeOHLCV(targetMint, interval),
         fetchTokenHoldersWithRiskAnalysis(targetMint),
@@ -95,13 +84,7 @@ serve(async (req: Request) => {
         data_source: BIRDEYE_API_KEY ? "birdeye" : "fallback",
       };
 
-      const resultJson = JSON.stringify(result);
-
-      if (redis) {
-        await redis.set(cacheKey, resultJson, { ex: cacheTTL });
-      }
-
-      return new Response(resultJson, { headers: corsHeaders });
+      return new Response(JSON.stringify(result), { headers: corsHeaders });
     }
 
     // ====================== LEGACY ACTIONS (Backward Compatibility) ======================
