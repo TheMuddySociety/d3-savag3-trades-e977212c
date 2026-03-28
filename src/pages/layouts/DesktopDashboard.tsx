@@ -15,6 +15,7 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import { useAdminCheck } from "@/hooks/useAdminCheck";
 import { DesktopSidebar, DesktopPanel } from "@/components/layout/DesktopSidebar";
 import { Header } from "@/components/layout/Header";
+import { NetworkDegradationAlert } from "@/components/dashboard/NetworkDegradationAlert";
 
 export function DesktopDashboard() {
   const [activePanel, setActivePanel] = useState<DesktopPanel>('tokens');
@@ -123,6 +124,7 @@ export function DesktopDashboard() {
 
   return (
     <div className="min-h-screen bg-background">
+      <NetworkDegradationAlert />
       <DesktopSidebar
         activePanel={activePanel}
         onPanelChange={setActivePanel}

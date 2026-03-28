@@ -45,6 +45,15 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
   const [testingRpc, setTestingRpc] = useState(false);
   const [rpcStatus, setRpcStatus] = useState<"idle" | "ok" | "fail">("idle");
 
+  // Listen for external open requests (e.g. from Network Alerts)
+  useEffect(() => {
+    const handleOpenSettings = (e: any) => {
+      setOpen(true);
+    };
+    window.addEventListener('open-settings', handleOpenSettings);
+    return () => window.removeEventListener('open-settings', handleOpenSettings);
+  }, []);
+
   // Load settings
   useEffect(() => {
     if (!open) return;

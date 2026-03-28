@@ -16,6 +16,7 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 import { MobileBottomNav, MobileTab } from "@/components/layout/MobileBottomNav";
 import { MobileHeader } from "@/components/layout/MobileHeader";
+import { NetworkDegradationAlert } from "@/components/dashboard/NetworkDegradationAlert";
 import { Loader2 } from "lucide-react";
 
 // ─── PULL INDICATOR ───────────────────────────────────────
@@ -84,6 +85,7 @@ export function MobileDashboard() {
 
   return (
     <div className="min-h-screen bg-background">
+      <NetworkDegradationAlert />
       <MobileHeader />
       <div
         ref={containerRef}

@@ -27,11 +27,9 @@ export function ConnectionStatus({ compact = false }: { compact?: boolean }) {
       });
       const lat = Math.round(performance.now() - rpcStart);
       setRpcLatency(lat);
-      if (error) {
-        setRpcStatus('down');
-      } else {
-        setRpcStatus(lat > 2000 ? 'degraded' : 'ok');
-      }
+      const status = error ? 'down' : (lat > 2000 ? 'degraded' : 'ok');
+      setRpcStatus(status);
+      localStorage.setItem('solana_network_status', status);
     } catch {
       setRpcStatus('down');
       setRpcLatency(undefined);
