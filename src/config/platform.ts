@@ -42,8 +42,7 @@ export const PLATFORM_CONFIG = {
    */
   get JUPITER_V6_API_URL() {
     const envUrl = (typeof process !== 'undefined' && process.env?.CUSTOM_JUPITER_RPC_URL) || 
-                   (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_CUSTOM_JUPITER_RPC_URL) ||
-                   (typeof Deno !== 'undefined' && Deno.env.get("CUSTOM_JUPITER_RPC_URL"));
+                   (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_CUSTOM_JUPITER_RPC_URL);
     return envUrl || "https://quote-api.jup.ag/v6";
   },
 
